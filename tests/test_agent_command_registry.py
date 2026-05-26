@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from FionaAgent import command_registry
+from Agent import command_registry
 from QuikTieper.config import save_config
 
 

@@ -9,6 +9,7 @@ dependencies = [
   "numpy>=2.0.0",
   "pandas>=2.0.0",
   "pynput>=1.7.7",
+  "requests>=2.31.0",
 ]
 
 [project.scripts]
@@ -19,7 +20,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "FionaAgent", "PhiConnect", "SeeOnDesk"]
+packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient"]
 
 [tool.setuptools.package-data]
 CamComs = ["esp32payload/*"]

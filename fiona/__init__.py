@@ -5,17 +5,19 @@ Fiona is split into sibling subsystems:
 - QuikTieper: local access layer for keyboard, mouse, and app actions
 - CamComs: communication and encrypted message transport
 - Vsee: 3D coordinate hologram viewer
-- FionaAgent: local LM Studio bridge for the future agent layer
+- Agent: local LM Studio bridge for the future agent layer
 - PhiConnect: encrypted computer-to-computer chat
 - SeeOnDesk: desktop-awareness snapshots
+- DataClient: topic search, scraping, summarization, and CSV export
 """
 
 from __future__ import annotations
 
 import sys
 
+import Agent as Agent
 import CamComs as CamComs
-import FionaAgent as FionaAgent
+import DataClient as DataClient
 import PhiConnect as PhiConnect
 import QuikTieper as QuikTieper
 import SeeOnDesk as SeeOnDesk
@@ -36,7 +38,8 @@ from CamComs import (
 from QuikTieper import AppLauncher, Binding
 
 sys.modules.setdefault(__name__ + ".CamComs", CamComs)
-sys.modules.setdefault(__name__ + ".FionaAgent", FionaAgent)
+sys.modules.setdefault(__name__ + ".Agent", Agent)
+sys.modules.setdefault(__name__ + ".DataClient", DataClient)
 sys.modules.setdefault(__name__ + ".PhiConnect", PhiConnect)
 sys.modules.setdefault(__name__ + ".QuikTieper", QuikTieper)
 sys.modules.setdefault(__name__ + ".SeeOnDesk", SeeOnDesk)
@@ -52,12 +55,13 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "AppLauncher",
+    "Agent",
     "Binding",
     "CamComs",
     "CamComsCryptoError",
     "CamComsHttpClient",
     "CamComsIdentity",
-    "FionaAgent",
+    "DataClient",
     "PhiConnect",
     "SeeOnDesk",
     "ChordListener",

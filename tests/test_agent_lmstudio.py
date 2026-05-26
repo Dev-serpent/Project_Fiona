@@ -4,7 +4,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from FionaAgent import LMStudioClient
+from Agent import LMStudioClient
 
 
 class LMStudioClientTests(unittest.TestCase):
@@ -26,7 +26,7 @@ class LMStudioClientTests(unittest.TestCase):
             captured_payloads.append(json.loads(request.data.decode("utf-8")))
             return FakeResponse()
 
-        with patch("FionaAgent.lmstudio.urlopen", fake_urlopen):
+        with patch("Agent.lmstudio.urlopen", fake_urlopen):
             client = LMStudioClient(base_url="http://127.0.0.1:1234/v1", model="test-model")
             self.assertEqual(client.ask("status"), "agent ready")
 

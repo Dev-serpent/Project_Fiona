@@ -38,7 +38,8 @@ from CamComs import (
     save_trusted_sender,
     trusted_public_key_path,
 )
-from FionaAgent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
+from Agent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
+from DataClient import deep_research_topic, mine_topic
 from QuikTieper.remote import RemoteActionRunner
 from SeeOnDesk import active_window_info, desktop_snapshot
 
@@ -73,6 +74,10 @@ def main() -> None:
         _run_agent(args)
         return
 
+    if args.layer in {"dataclient", "data"}:
+        _run_dataclient(args)
+        return
+
     if args.layer == "vsee":
         _run_vsee(args)
         return
@@ -91,13 +96,14 @@ def main() -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fiona",
-        description="Fiona umbrella CLI for local control, encrypted communication, holography, and agent bridges.",
+        description="Fiona umbrella CLI for local control, encrypted communication, data gathering, holography, and agent bridges.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Command groups:
   fiona quiktieper ...   QuikTieper app bindings, listener, and GUI editor
   fiona host ...         Unified host service setup, status, logs, and lifecycle
   fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
   fiona agent ...        LM Studio bridge and agent-visible command registry
+  fiona dataclient ...   Search, scrape, summarize, and export topic research
   fiona seeondesk ...    Desktop awareness and active-window identification
   fiona vsee             Standalone Vsee Holography app
   fiona phiconnect       Standalone encrypted PhiConnect chat app
@@ -133,6 +139,29 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     agent_ask.add_argument("--system", default="You are Fiona, a local workstation control assistant.")
     agent_ask.add_argument("--temperature", type=float, default=0.3)
     agent_ask.add_argument("--max-tokens", type=int, default=512)
+
+    dataclient = subparsers.add_parser(
+        "dataclient",
+        aliases=["data"],
+        help="Run Fiona DataClient topic search and scraping tools.",
+    )
+    dataclient_subparsers = dataclient.add_subparsers(dest="dataclient_command")
+    data_mine = dataclient_subparsers.add_parser("mine", help="Search a topic, summarize pages, and save a CSV.")
+    data_mine.add_argument("topic", nargs="+")
+    data_mine.add_argument("--out", type=Path, required=True, help="CSV output path.")
+    data_mine.add_argument("--max-links", type=int, default=30)
+    data_mine.add_argument("--max-sentences", type=int, default=5)
+    data_mine.add_argument("--sleep", type=float, default=0.5, dest="sleep_seconds")
+    data_deep = dataclient_subparsers.add_parser("deep", help="Run bounded deep research from search results.")
+    data_deep.add_argument("topic", nargs="+")
+    data_deep.add_argument("--out", type=Path, required=True, help="CSV output path.")
+    data_deep.add_argument("--seed-links", type=int, default=10)
+    data_deep.add_argument("--page-limit", type=int, default=50)
+    data_deep.add_argument("--depth", type=int, default=1)
+    data_deep.add_argument("--max-sentences", type=int, default=5)
+    data_deep.add_argument("--sleep", type=float, default=0.5, dest="sleep_seconds")
+    data_deep.add_argument("--cross-domain", action="store_true", help="Allow crawling links outside each seed page domain.")
+    dataclient_subparsers.add_parser("gui", help="Open the standalone DataClient GUI.")
 
     seeondesk = subparsers.add_parser(
         "seeondesk",
@@ -522,6 +551,40 @@ def _run_agent(args: argparse.Namespace) -> None:
         )
         return
     raise SystemExit(f"unknown agent command: {args.agent_command}")
+
+
+def _run_dataclient(args: argparse.Namespace) -> None:
+    if args.dataclient_command in {None, "gui"}:
+        from DataClient.gui import launch_dataclient
+
+        launch_dataclient()
+        return
+    if args.dataclient_command == "mine":
+        pages = mine_topic(
+            " ".join(args.topic),
+            args.out,
+            max_links=args.max_links,
+            max_sentences=args.max_sentences,
+            sleep_seconds=args.sleep_seconds,
+            log=print,
+        )
+        print(f"Saved {len(pages)} pages into {args.out}")
+        return
+    if args.dataclient_command == "deep":
+        pages = deep_research_topic(
+            " ".join(args.topic),
+            args.out,
+            seed_links=args.seed_links,
+            page_limit=args.page_limit,
+            max_depth=args.depth,
+            max_sentences=args.max_sentences,
+            same_domain_only=not args.cross_domain,
+            sleep_seconds=args.sleep_seconds,
+            log=print,
+        )
+        print(f"Saved {len(pages)} pages into {args.out}")
+        return
+    raise SystemExit(f"unknown DataClient command: {args.dataclient_command}")
 
 
 def _run_vsee(args: argparse.Namespace) -> None:

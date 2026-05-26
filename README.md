@@ -27,14 +27,15 @@ If `fiona` prints `command not found`, the package has not been installed into t
 
 ## Current Architecture
 
-Fiona is the umbrella package. It exposes six sibling subsystems:
+Fiona is the umbrella package. It exposes seven sibling subsystems:
 
 - `QuikTieper`: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.
 - `CamComs`: communication layer for encoded/encrypted messages, currently focused on ESP32 sender to Fiona host receiver.
 - `Vsee`: 3D coordinate hologram viewer for point/edge wireframe shapes.
-- `FionaAgent`: local LM Studio bridge for the future agent layer.
+- `Agent`: local LM Studio bridge for the future agent layer.
 - `PhiConnect`: standalone encrypted computer-to-computer chat using CamComs crypto.
 - `SeeOnDesk`: desktop-awareness layer for identifying the current session and focused app/window.
+- `DataClient`: standalone research/data collection app for topic search, page scraping, summarization, deep research, and CSV export.
 
 Project layout:
 
@@ -44,9 +45,10 @@ QuikTieper/            local access/action layer
 CamComs/               communication/encryption/host service layer
 CamComs/esp32payload/  ESP32 sender payload template
 Vsee/                  3D point/edge hologram model
-FionaAgent/            local LM Studio client
+Agent/                 local LM Studio client
 PhiConnect/            encrypted computer-to-computer chat app
 SeeOnDesk/             desktop awareness and active-window identification
+DataClient/            research/data collection app
 scripts/               local launch wrappers
 tests/                 Python tests
 DEVELOPERNOTE.md       detailed project notes and latest verification log
@@ -81,6 +83,7 @@ Core Python dependencies are declared in `pyproject.toml`:
 - `pynput`
 - `numpy`
 - `pandas`
+- `requests`
 
 LM Studio is optional. Fiona talks to it over its local OpenAI-compatible server API when the agent bridge is used.
 
@@ -130,6 +133,12 @@ Open the separate encrypted chat window:
 
 ```bash
 python3 -m fiona.cli phiconnect
+```
+
+Open the separate DataClient research window:
+
+```bash
+python3 -m fiona.cli dataclient
 ```
 
 ## SeeOnDesk
@@ -522,9 +531,44 @@ Current capabilities:
 
 Two computers can communicate by exchanging public key JSON files, trusting each other's keys, then pointing each PhiConnect instance at the other machine's IP and port.
 
-## FionaAgent And LM Studio
+## DataClient
 
-FionaAgent is the first bridge toward the future AI agent. It talks to LM Studio as a local inference server, using LM Studio's OpenAI-compatible API.
+DataClient is a standalone research and data collection app. It is separate from `fiona edit`, like Vsee and PhiConnect.
+
+Open the DataClient GUI:
+
+```bash
+python3 -m fiona.cli dataclient
+```
+
+The GUI supports quick topic mining and deep research mode. Quick mode searches DuckDuckGo HTML results, scrapes the selected number of pages, summarizes page text, and saves a CSV. Deep mode starts from search results, follows same-domain links up to a controlled depth/page limit, and records each page's depth and parent URL.
+
+CLI quick mining:
+
+```bash
+python3 -m fiona.cli dataclient mine "local desktop automation" --out ./research.csv --max-links 30
+```
+
+CLI deep research:
+
+```bash
+python3 -m fiona.cli dataclient deep "local desktop automation" --out ./deep-research.csv --seed-links 10 --depth 1 --page-limit 50
+```
+
+DataClient CSV columns:
+
+- `topic`
+- `url`
+- `title`
+- `summary`
+- `depth`
+- `parent_url`
+
+Deep mode is intentionally bounded. By default it stays on the same domain as each seed page and only crawls one level deep. Use `--cross-domain` only when you intentionally want broader crawling.
+
+## Agent And LM Studio
+
+Agent is the first bridge toward the future AI agent. It talks to LM Studio as a local inference server, using LM Studio's OpenAI-compatible API.
 
 Start LM Studio's local server from LM Studio's Developer tab, or with:
 
@@ -592,6 +636,7 @@ Working today:
 - shared Tkinter GUI
 - standalone `Vsee Holography` GUI
 - standalone `PhiConnect` encrypted chat GUI
+- standalone DataClient research GUI
 - SeeOnDesk desktop-awareness CLI
 - QuikTieper binding editor/listener/action runner
 - CamComs encryption/decryption/transport/receiver
@@ -599,6 +644,7 @@ Working today:
 - host service config/status/run commands
 - user systemd service unit generation for the host service
 - LM Studio local inference bridge
+- DataClient quick mining and bounded deep research CSV export
 - encrypted computer-to-computer chat through PhiConnect
 - Vsee point/edge hologram viewer
 - project-restricted GUI debug editor
@@ -628,12 +674,12 @@ python -m unittest discover -s tests -v
 Compile the main packages:
 
 ```bash
-python -m compileall CamComs FionaAgent PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
 ```
 
 Current latest known result:
 
 ```text
-58 tests OK
+66 tests OK
 compileall OK
 ```

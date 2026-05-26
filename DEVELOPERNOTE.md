@@ -4,14 +4,15 @@ This file records the current Fiona project structure, runtime setup, and latest
 
 ## Project Structure
 
-Fiona is the umbrella project. It exposes six sibling subsystems:
+Fiona is the umbrella project. It exposes seven sibling subsystems:
 
 - `QuikTieper`: the local access layer for keyboard, mouse, app launch, clicks, and shortcuts
 - `CamComs`: the communication layer for encoded/encrypted host communication
 - `Vsee`: the 3D coordinate hologram viewer
-- `FionaAgent`: the local LM Studio bridge for future agent inference
+- `Agent`: the local LM Studio bridge for future agent inference
 - `PhiConnect`: the standalone encrypted computer-to-computer chat app
 - `SeeOnDesk`: the desktop-awareness layer for active app/window identification
+- `DataClient`: the standalone research/data collection app
 
 Current file structure:
 
@@ -22,9 +23,10 @@ Fiona/
 ├── CamComs/                communication/encryption layer implementation
 │   └── esp32payload/       ESP32 sender payload template
 ├── Vsee/                   3D point/edge hologram viewer model
-├── FionaAgent/             local LM Studio bridge
+├── Agent/                  local LM Studio bridge
 ├── PhiConnect/             encrypted computer-to-computer chat app
 ├── SeeOnDesk/              desktop awareness and active-window identification
+├── DataClient/             research/data collection app
 ├── tests/                  Python tests
 ├── scripts/                local launch wrappers
 ├── .backups/               timestamped backup snapshots
@@ -54,9 +56,10 @@ QuikTieper/            access layer implementation
 CamComs/               communication/encryption layer implementation
 CamComs/esp32payload/  ESP32 sender payload template
 Vsee/                  3D coordinate hologram viewer implementation
-FionaAgent/            local LM Studio bridge
+Agent/                 local LM Studio bridge
 PhiConnect/            encrypted computer-to-computer chat implementation
 SeeOnDesk/             desktop awareness and active-window identification
+DataClient/            research/data collection implementation
 tests/                 Python verification tests
 ```
 
@@ -103,6 +106,9 @@ fiona host run
 fiona phiconnect
 fiona seeondesk active
 fiona seeondesk status
+fiona dataclient
+fiona dataclient mine "topic" --out ./research.csv
+fiona dataclient deep "topic" --out ./deep.csv --depth 1 --page-limit 50
 ```
 
 ## Missing Issues
@@ -139,7 +145,7 @@ Recently fixed:
 - The GUI now includes a Debug tab that can view/edit project text files, restricted to `tests`, `scripts`, `QuikTieper`, and `CamComs`.
 - The project now includes `Vsee`, a separate sibling package for point/edge 3D hologram viewing.
 - The GUI now includes a Vsee tab with editable point and edge tables, a dark grid canvas, and rotation/scale controls for rendering connected 3D wireframe shapes.
-- The project now includes `FionaAgent`, a local LM Studio bridge for OpenAI-compatible chat-completion inference.
+- The project now includes `Agent`, a local LM Studio bridge for OpenAI-compatible chat-completion inference.
 - Fiona now exposes `fiona agent status` and `fiona agent ask` for LM Studio integration.
 - Fiona now exposes `fiona vsee` for a separate `Vsee Holography` window outside the main `fiona edit` GUI.
 - The project now includes `PhiConnect`, a standalone encrypted computer-to-computer chat app outside `fiona edit`.
@@ -147,6 +153,9 @@ Recently fixed:
 - The project now includes `SeeOnDesk`, a sibling package for desktop-awareness snapshots.
 - Fiona now exposes `fiona seeondesk active` and `fiona seeondesk status`.
 - SeeOnDesk currently identifies the active app/window through `kdotool` on KDE/Wayland and `xdotool`/`xprop` fallback paths when available.
+- The project now includes `DataClient`, a standalone research app outside `fiona edit`.
+- Fiona now exposes `fiona dataclient` for the GUI, `fiona dataclient mine` for quick topic mining, and `fiona dataclient deep` for bounded deep research.
+- DataClient exports CSV files with topic, URL, title, summary, depth, and parent URL fields.
 - Fiona now exposes `fiona host install-service` to print or write a user systemd service file for startup/background operation.
 - Launcher scripts point at `/home/Dhruv/Documents/Projects/Fiona`.
 - README matches the current Fiona / QuikTieper / CamComs structure.
@@ -154,7 +163,7 @@ Recently fixed:
 
 ## Missing From Jarvis Except The AI Agent
 
-Recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), encrypted communication layer (`CamComs`), GUI, host-service skeleton, audit log, trusted-device storage, debug editor, basic `Vsee` wireframe hologram viewer, separate Vsee Holography window, standalone PhiConnect encrypted chat, a desktop-awareness layer (`SeeOnDesk`), and a local LM Studio inference bridge (`FionaAgent`). Ignoring the AI agent itself, these are the remaining systems needed for it to feel like a Jarvis-style host:
+Recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), encrypted communication layer (`CamComs`), GUI, host-service skeleton, audit log, trusted-device storage, debug editor, basic `Vsee` wireframe hologram viewer, separate Vsee Holography window, standalone PhiConnect encrypted chat, a desktop-awareness layer (`SeeOnDesk`), a standalone research app (`DataClient`), and a local LM Studio inference bridge (`Agent`). Ignoring the AI agent itself, these are the remaining systems needed for it to feel like a Jarvis-style host:
 
 1. Real always-on service lifecycle: `fiona host install-service` can generate the user systemd unit, but Fiona still needs service enable/disable/status wrappers, clean shutdown, restart policy tuning, and GUI status integration.
 2. Real ESP32 device link: the ESP32 payload is still a template. It needs real firmware crypto, Wi-Fi provisioning, host IP discovery/static config, retries, acknowledgements, reconnect behavior, queueing, and hardware testing.
@@ -217,6 +226,7 @@ Required Python packages:
 - `cryptography`
 - `numpy`
 - `pandas`
+- `requests`
 - `wayland-automation` for optional Wayland pointer automation fallback
 
 Required system tools for the launcher:
@@ -419,7 +429,7 @@ python -m unittest discover -s tests -v
 Latest result, run on 2026-05-26:
 
 ```text
-Ran 58 tests in 0.359s
+Ran 66 tests in 0.403s
 
 OK
 ```
@@ -459,7 +469,7 @@ Latest output:
 Compile the main packages:
 
 ```bash
-python -m compileall CamComs FionaAgent PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
 ```
 
 Latest result, run on 2026-05-26:

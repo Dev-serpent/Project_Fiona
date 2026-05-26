@@ -29,6 +29,7 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("Fiona umbrella CLI", stdout)
         self.assertIn("fiona quiktieper ...", stdout)
         self.assertIn("seeondesk", stdout)
+        self.assertIn("dataclient", stdout)
         self.assertIn("phiconnect", stdout)
 
     def test_seeondesk_help_shows_awareness_commands(self) -> None:
@@ -39,6 +40,16 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("usage: fiona seeondesk", stdout)
         self.assertIn("active", stdout)
         self.assertIn("status", stdout)
+
+    def test_dataclient_help_shows_miner_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("dataclient", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona dataclient", stdout)
+        self.assertIn("mine", stdout)
+        self.assertIn("deep", stdout)
+        self.assertIn("gui", stdout)
 
     def test_help_word_maps_to_top_level_help(self) -> None:
         code, stdout, _stderr = self._run_cli("help")
