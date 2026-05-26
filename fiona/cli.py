@@ -1,0 +1,576 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from CamComs import (
+    DEFAULT_AUDIT_LOG_PATH,
+    DEFAULT_CAMCOMS_DIR,
+    DEFAULT_FIONA_CONFIG_PATH,
+    DEFAULT_TRUSTED_DIR,
+    AuditLog,
+    CamComsIdentity,
+    CamComsHttpClient,
+    HostService,
+    PublicKeyBundle,
+    default_host_service_config,
+    decode_envelope,
+    decrypt_text,
+    encode_envelope,
+    encrypt_and_send_instruction,
+    encrypt_message,
+    instruction_from_text,
+    instruction_to_text,
+    install_host_service_unit,
+    list_trusted_senders,
+    read_host_service_logs,
+    remove_trusted_sender,
+    press_instruction,
+    private_key_path,
+    public_key_path,
+    render_host_service_unit,
+    run_host_receiver,
+    run_user_service_command,
+    save_host_service_config,
+    save_trusted_sender,
+    trusted_public_key_path,
+)
+from FionaAgent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
+from QuikTieper.remote import RemoteActionRunner
+from SeeOnDesk import active_window_info, desktop_snapshot
+
+
+QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-keys", "normalize-app-cmds"}
+
+
+def main() -> None:
+    argv = _normalize_help_args(sys.argv[1:])
+    if not argv:
+        _build_parser().print_help()
+        return
+    if _should_delegate_to_quiktieper(argv):
+        _run_quiktieper(argv)
+        return
+    if argv and argv[0] in {"quiktieper", "qt"}:
+        _run_quiktieper(argv[1:])
+        return
+
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    if args.layer in {"camcoms", "cc"}:
+        _run_camcoms(args)
+        return
+
+    if args.layer == "host":
+        _run_camcoms_service(args)
+        return
+
+    if args.layer == "agent":
+        _run_agent(args)
+        return
+
+    if args.layer == "vsee":
+        _run_vsee(args)
+        return
+
+    if args.layer == "phiconnect":
+        _run_phiconnect(args)
+        return
+
+    if args.layer in {"seeondesk", "sod"}:
+        _run_seeondesk(args)
+        return
+
+    parser.print_help()
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="fiona",
+        description="Fiona umbrella CLI for local control, encrypted communication, holography, and agent bridges.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Command groups:
+  fiona quiktieper ...   QuikTieper app bindings, listener, and GUI editor
+  fiona host ...         Unified host service setup, status, logs, and lifecycle
+  fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
+  fiona agent ...        LM Studio bridge and agent-visible command registry
+  fiona seeondesk ...    Desktop awareness and active-window identification
+  fiona vsee             Standalone Vsee Holography app
+  fiona phiconnect       Standalone encrypted PhiConnect chat app
+
+Shortcuts:
+  fiona edit             Same as fiona quiktieper edit
+  fiona run              Same as fiona quiktieper run
+  fiona list             Same as fiona quiktieper list
+
+Use "fiona <group> --help" for a group-specific command grid.""",
+    )
+    subparsers = parser.add_subparsers(dest="layer")
+
+    quiktieper = subparsers.add_parser(
+        "quiktieper",
+        aliases=["qt"],
+        help="Run QuikTieper launcher/listener/editor commands.",
+    )
+    quiktieper.add_argument("quiktieper_args", nargs=argparse.REMAINDER)
+
+    host = subparsers.add_parser("host", help="Manage the unified Fiona host service.")
+    _add_service_subcommands(host)
+
+    agent = subparsers.add_parser("agent", help="Talk to a local LM Studio model.")
+    agent_subparsers = agent.add_subparsers(dest="agent_command", required=True)
+    agent_commands = agent_subparsers.add_parser("commands", help="List Fiona commands available to a future agent.")
+    agent_commands.add_argument("--config", type=Path, default=None, help="QuikTieper bindings file used for app names.")
+    agent_status = agent_subparsers.add_parser("status", help="Check the LM Studio local server.")
+    _add_lmstudio_args(agent_status)
+    agent_ask = agent_subparsers.add_parser("ask", help="Send a prompt to LM Studio.")
+    _add_lmstudio_args(agent_ask)
+    agent_ask.add_argument("prompt", nargs="+")
+    agent_ask.add_argument("--system", default="You are Fiona, a local workstation control assistant.")
+    agent_ask.add_argument("--temperature", type=float, default=0.3)
+    agent_ask.add_argument("--max-tokens", type=int, default=512)
+
+    seeondesk = subparsers.add_parser(
+        "seeondesk",
+        aliases=["sod"],
+        help="Identify the current desktop session and focused app/window.",
+    )
+    seeondesk_subparsers = seeondesk.add_subparsers(dest="seeondesk_command", required=True)
+    seeondesk_subparsers.add_parser("active", help="Show the currently focused app/window.")
+    seeondesk_subparsers.add_parser("status", help="Show a desktop-awareness snapshot.")
+
+    vsee = subparsers.add_parser("vsee", help="Open the standalone Vsee Holography window.")
+    vsee.add_argument("--points", type=Path, default=None)
+    vsee.add_argument("--edges", type=Path, default=None)
+
+    subparsers.add_parser("phiconnect", help="Open the standalone PhiConnect encrypted chat window.")
+
+    camcoms = subparsers.add_parser(
+        "camcoms",
+        aliases=["cc"],
+        help="Run CamComs encryption and encoded IP message commands.",
+    )
+    camcoms_subparsers = camcoms.add_subparsers(dest="camcoms_command", required=True)
+
+    keygen = camcoms_subparsers.add_parser("keygen", help="Create a CamComs device identity.")
+    keygen.add_argument("--device-id", default="host")
+    keygen.add_argument("--private-out", type=Path, default=None)
+    keygen.add_argument("--public-out", type=Path, default=None)
+    keygen.add_argument("--passphrase", default=None)
+
+    public = camcoms_subparsers.add_parser("public", help="Export public keys from a private identity file.")
+    public.add_argument("--private", type=Path, default=None)
+    public.add_argument("--public-out", type=Path, default=None)
+    public.add_argument("--passphrase", default=None)
+
+    camcoms_subparsers.add_parser("paths", help="Show visible default CamComs key storage paths.")
+
+    trust = camcoms_subparsers.add_parser("trust", help="List, add, or remove trusted sender public keys.")
+    trust_action = trust.add_mutually_exclusive_group(required=True)
+    trust_action.add_argument("--public", type=Path, help="Public key JSON to trust.")
+    trust_action.add_argument("--list", action="store_true", help="List trusted sender public keys.")
+    trust_action.add_argument("--remove", help="Remove a trusted sender by device id.")
+    trust.add_argument("--trusted-dir", type=Path, default=DEFAULT_TRUSTED_DIR)
+
+    encrypt = camcoms_subparsers.add_parser("encrypt", help="Encrypt a message for another device.")
+    encrypt.add_argument("--sender-private", type=Path, default=None)
+    encrypt.add_argument("--recipient-public", type=Path, default=None)
+    encrypt.add_argument("--sender-passphrase", default=None)
+    encrypt_input = encrypt.add_mutually_exclusive_group(required=True)
+    encrypt_input.add_argument("--instruction-json")
+    encrypt_input.add_argument("--press", nargs="+")
+    encrypt.add_argument("--type", default="instruction", dest="message_type")
+    encrypt.add_argument("--json", action="store_true", help="Print the envelope JSON instead of encoded text.")
+
+    decrypt = camcoms_subparsers.add_parser("decrypt", help="Decrypt an encoded message or envelope JSON.")
+    decrypt.add_argument("--recipient-private", type=Path, required=True)
+    decrypt.add_argument("--recipient-passphrase", default=None)
+    decrypt.add_argument("--sender-public", type=Path, default=None)
+    decrypt_input = decrypt.add_mutually_exclusive_group(required=True)
+    decrypt_input.add_argument("--encoded")
+    decrypt_input.add_argument("--envelope", type=Path)
+
+    send = camcoms_subparsers.add_parser("send", help="POST an encoded CamComs message to an IP endpoint.")
+    send.add_argument("--host", required=True)
+    send.add_argument("--port", type=int, default=8080)
+    send.add_argument("--path", default="/")
+    send.add_argument("--timeout", type=float, default=5.0)
+    send_input = send.add_mutually_exclusive_group(required=True)
+    send_input.add_argument("--encoded")
+    send_input.add_argument("--envelope", type=Path)
+
+    compose_send = camcoms_subparsers.add_parser("compose-send", help="Encrypt an instruction and send it in one step.")
+    compose_send.add_argument("--host", required=True)
+    compose_send.add_argument("--port", type=int, default=8080)
+    compose_send.add_argument("--path", default="/")
+    compose_send.add_argument("--timeout", type=float, default=5.0)
+    compose_send.add_argument("--sender-private", type=Path, default=None)
+    compose_send.add_argument("--recipient-public", type=Path, default=None)
+    compose_send.add_argument("--sender-passphrase", default=None)
+    compose_input = compose_send.add_mutually_exclusive_group(required=True)
+    compose_input.add_argument("--instruction-json")
+    compose_input.add_argument("--press", nargs="+")
+
+    receive = camcoms_subparsers.add_parser("receive", help="Run the host receiver for ESP32 messages.")
+    receive.add_argument("--host", default="0.0.0.0")
+    receive.add_argument("--port", type=int, default=8080)
+    receive.add_argument("--private", type=Path, default=None)
+    receive.add_argument("--passphrase", default=None)
+    receive.add_argument("--trusted-dir", type=Path, default=DEFAULT_TRUSTED_DIR)
+    receive.add_argument("--execute", action="store_true", help="Execute approved QuikTieper actions instead of dry-run.")
+
+    service = camcoms_subparsers.add_parser("service", help="Manage the CamComs host service.")
+    _add_service_subcommands(service)
+
+    audit = camcoms_subparsers.add_parser("audit", help="Show recent CamComs host audit log events.")
+    audit.add_argument("--path", type=Path, default=DEFAULT_AUDIT_LOG_PATH)
+    audit.add_argument("--limit", type=int, default=50)
+
+    camcoms_subparsers.add_parser("smoke-test", help="Run a local encrypt/decrypt check.")
+    return parser
+
+
+def _add_service_subcommands(parser: argparse.ArgumentParser) -> None:
+    service_subparsers = parser.add_subparsers(dest="service_command", required=True)
+    service_init = service_subparsers.add_parser("init", help="Write the default Fiona host service config.")
+    service_init.add_argument("--config", type=Path, default=DEFAULT_FIONA_CONFIG_PATH)
+    service_init.add_argument("--force", action="store_true")
+    service_status = service_subparsers.add_parser("status", help="Show host service config and health checks.")
+    service_status.add_argument("--config", type=Path, default=DEFAULT_FIONA_CONFIG_PATH)
+    service_status.add_argument("--check-port", action="store_true")
+    service_run = service_subparsers.add_parser("run", help="Run the Fiona host service.")
+    service_run.add_argument("--config", type=Path, default=DEFAULT_FIONA_CONFIG_PATH)
+    service_run.add_argument("--passphrase", default=None)
+    service_install = service_subparsers.add_parser("install-service", help="Install or print a user systemd service.")
+    service_install.add_argument("--config", type=Path, default=DEFAULT_FIONA_CONFIG_PATH)
+    service_install.add_argument("--name", default="fiona-host.service")
+    service_install.add_argument("--working-directory", type=Path, default=Path.cwd())
+    service_install.add_argument("--python", default=sys.executable, dest="python_executable")
+    service_install.add_argument("--print", action="store_true", dest="print_only")
+    service_logs = service_subparsers.add_parser("logs", help="Show Fiona host user-service logs.")
+    service_logs.add_argument("--name", default="fiona-host.service")
+    service_logs.add_argument("--lines", type=int, default=80)
+    service_logs.add_argument("--follow", action="store_true")
+    for action in ("enable", "disable", "restart", "stop"):
+        service_action = service_subparsers.add_parser(action, help=f"Run systemctl --user {action} for the Fiona host service.")
+        service_action.add_argument("--name", default="fiona-host.service")
+
+
+def _add_lmstudio_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--base-url", default=DEFAULT_LM_STUDIO_BASE_URL)
+    parser.add_argument("--model", default="local-model")
+    parser.add_argument("--api-key", default="lm-studio")
+    parser.add_argument("--timeout", type=float, default=30.0)
+
+
+def _should_delegate_to_quiktieper(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    if argv[0] in {"-h", "--help"}:
+        return False
+    if argv[0] in QUIKTIEPER_COMMANDS:
+        return True
+    return argv[0].startswith("--")
+
+
+def _run_quiktieper(args: list[str]) -> None:
+    from QuikTieper.cli import main as quiktieper_main
+
+    if args == ["help"]:
+        args = ["--help"]
+    original_argv = sys.argv
+    try:
+        sys.argv = [original_argv[0], *args]
+        quiktieper_main()
+    finally:
+        sys.argv = original_argv
+
+
+def _normalize_help_args(argv: list[str]) -> list[str]:
+    if argv == ["help"]:
+        return ["--help"]
+    normalized = list(argv)
+    if len(normalized) >= 2 and normalized[-1] == "help":
+        normalized[-1] = "--help"
+    return normalized
+
+
+def _run_camcoms(args: argparse.Namespace) -> None:
+    command = args.camcoms_command
+    if command == "keygen":
+        identity = CamComsIdentity.generate(args.device_id)
+        private_out = args.private_out or private_key_path(identity.device_id)
+        public_out = args.public_out or public_key_path(identity.device_id)
+        _write_or_print(identity.to_private_dict(args.passphrase), private_out, label="private")
+        _write_or_print(identity.public_bundle.to_dict(), public_out, label="public")
+        return
+
+    if command == "public":
+        private_path = args.private or private_key_path("host")
+        identity = CamComsIdentity.from_private_dict(_read_json(private_path), passphrase=args.passphrase)
+        public_out = args.public_out or public_key_path(identity.device_id)
+        _write_or_print(identity.public_bundle.to_dict(), public_out, label="public")
+        return
+
+    if command == "paths":
+        print(
+            _pretty_json(
+                {
+                    "camcoms_dir": str(DEFAULT_CAMCOMS_DIR),
+                    "host_private": str(private_key_path("host")),
+                    "host_public": str(public_key_path("host")),
+                    "esp32_private": str(private_key_path("esp32")),
+                    "esp32_public": str(public_key_path("esp32")),
+                    "trusted_dir": str(DEFAULT_TRUSTED_DIR),
+                    "esp32_trusted_public": str(trusted_public_key_path("esp32")),
+                }
+            )
+        )
+        return
+
+    if command == "trust":
+        if args.list:
+            trusted = [bundle.to_dict() for bundle in list_trusted_senders(args.trusted_dir)]
+            print(_pretty_json({"trusted_dir": str(args.trusted_dir), "senders": trusted}))
+            return
+        if args.remove:
+            removed = remove_trusted_sender(args.remove, args.trusted_dir)
+            print(f"{'Removed' if removed else 'No trusted sender found for'} {args.remove}")
+            return
+        bundle = PublicKeyBundle.from_dict(_read_json(args.public))
+        path = save_trusted_sender(bundle, args.trusted_dir)
+        print(f"Trusted sender {bundle.device_id} at {path}")
+        return
+
+    if command == "encrypt":
+        sender_private = args.sender_private or private_key_path("esp32")
+        recipient_public = args.recipient_public or public_key_path("host")
+        sender = CamComsIdentity.from_private_dict(_read_json(sender_private), passphrase=args.sender_passphrase)
+        recipient = PublicKeyBundle.from_dict(_read_json(recipient_public))
+        instruction_text = _instruction_text_from_args(args)
+        envelope = encrypt_message(
+            instruction_text,
+            sender=sender,
+            recipient=recipient,
+            message_type=args.message_type,
+        )
+        print(_pretty_json(envelope) if args.json else encode_envelope(envelope))
+        return
+
+    if command == "decrypt":
+        recipient = CamComsIdentity.from_private_dict(
+            _read_json(args.recipient_private),
+            passphrase=args.recipient_passphrase,
+        )
+        expected_sender = PublicKeyBundle.from_dict(_read_json(args.sender_public)) if args.sender_public else None
+        envelope = decode_envelope(args.encoded) if args.encoded else _read_json(args.envelope)
+        print(decrypt_text(envelope, recipient=recipient, expected_sender=expected_sender))
+        return
+
+    if command == "send":
+        encoded_message = args.encoded or encode_envelope(_read_json(args.envelope))
+        client = CamComsHttpClient(
+            host=args.host,
+            port=args.port,
+            path=args.path,
+            timeout_seconds=args.timeout,
+        )
+        print(client.send_encoded(encoded_message))
+        return
+
+    if command == "compose-send":
+        sender_private = args.sender_private or private_key_path("host")
+        recipient_public = args.recipient_public or public_key_path("esp32")
+        sender = CamComsIdentity.from_private_dict(_read_json(sender_private), passphrase=args.sender_passphrase)
+        recipient = PublicKeyBundle.from_dict(_read_json(recipient_public))
+        print(
+            encrypt_and_send_instruction(
+                sender=sender,
+                recipient=recipient,
+                host=args.host,
+                port=args.port,
+                path=args.path,
+                timeout_seconds=args.timeout,
+                instruction_json=args.instruction_json,
+                press_keys=args.press,
+            )
+        )
+        return
+
+    if command == "receive":
+        private_path = args.private or private_key_path("host")
+        host_identity = CamComsIdentity.from_private_dict(_read_json(private_path), passphrase=args.passphrase)
+        print(f"Listening for CamComs messages on {args.host}:{args.port}")
+        print(f"Trusted sender keys: {args.trusted_dir}")
+        run_host_receiver(
+            host=args.host,
+            port=args.port,
+            host_identity=host_identity,
+            trusted_dir=args.trusted_dir,
+            action_runner=RemoteActionRunner(dry_run=not args.execute),
+        )
+        return
+
+    if command == "service":
+        _run_camcoms_service(args)
+        return
+
+    if command == "audit":
+        print(_pretty_json({"path": str(args.path), "events": AuditLog(args.path).read_recent(args.limit)}))
+        return
+
+    if command == "smoke-test":
+        esp32_sender = CamComsIdentity.generate("esp32")
+        host_receiver = CamComsIdentity.generate("host")
+        instruction_text = instruction_to_text(press_instruction(["alt", "s"]))
+        envelope = encrypt_message(
+            instruction_text,
+            sender=esp32_sender,
+            recipient=host_receiver.public_bundle,
+        )
+        print(decrypt_text(envelope, recipient=host_receiver, expected_sender=esp32_sender.public_bundle))
+        return
+
+    raise SystemExit(f"unknown CamComs command: {command}")
+
+
+def _run_camcoms_service(args: argparse.Namespace) -> None:
+    service_command = args.service_command
+    if service_command == "init":
+        if args.config.exists() and not args.force:
+            raise SystemExit(f"{args.config} already exists; pass --force to overwrite it")
+        path = save_host_service_config(default_host_service_config(), args.config)
+        print(f"Wrote host service config to {path}")
+        return
+
+    if service_command == "status":
+        service = HostService.load(args.config)
+        print(_pretty_json(service.status(check_port=args.check_port)))
+        return
+
+    if service_command == "run":
+        service = HostService.load(args.config, host_passphrase=args.passphrase)
+        print(f"Starting CamComs host service from {args.config}")
+        service.run()
+        return
+
+    if service_command == "install-service":
+        if args.print_only:
+            print(
+                render_host_service_unit(
+                    python_executable=args.python_executable,
+                    working_directory=args.working_directory,
+                    config_path=args.config,
+                )
+            )
+            return
+        path = install_host_service_unit(
+            service_name=args.name,
+            python_executable=args.python_executable,
+            working_directory=args.working_directory,
+            config_path=args.config,
+        )
+        print(f"Wrote user service to {path}")
+        print("Run: systemctl --user daemon-reload")
+        print(f"Run: systemctl --user enable --now {args.name}")
+        return
+
+    if service_command in {"enable", "disable", "restart", "stop"}:
+        result = run_user_service_command(service_command, service_name=args.name)
+        if result.stdout.strip():
+            print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip(), file=sys.stderr)
+        print(f"{service_command} completed for {args.name}")
+        return
+
+    if service_command == "logs":
+        result = read_host_service_logs(service_name=args.name, lines=args.lines, follow=args.follow)
+        if not args.follow:
+            print(result.stdout.rstrip())
+        return
+
+    raise SystemExit(f"unknown CamComs service command: {service_command}")
+
+
+def _run_agent(args: argparse.Namespace) -> None:
+    if args.agent_command == "commands":
+        registry = command_registry(args.config) if args.config else command_registry()
+        print(_pretty_json(registry))
+        return
+    client = LMStudioClient(
+        base_url=args.base_url,
+        model=args.model,
+        api_key=args.api_key,
+        timeout_seconds=args.timeout,
+    )
+    if args.agent_command == "status":
+        print(_pretty_json(client.health()))
+        return
+    if args.agent_command == "ask":
+        print(
+            client.ask(
+                " ".join(args.prompt),
+                system_prompt=args.system,
+                temperature=args.temperature,
+                max_tokens=args.max_tokens,
+            )
+        )
+        return
+    raise SystemExit(f"unknown agent command: {args.agent_command}")
+
+
+def _run_vsee(args: argparse.Namespace) -> None:
+    from Vsee.gui import launch_holography
+
+    launch_holography(points_path=args.points, edges_path=args.edges)
+
+
+def _run_phiconnect(_args: argparse.Namespace) -> None:
+    from PhiConnect.gui import launch_phiconnect
+
+    launch_phiconnect()
+
+
+def _run_seeondesk(args: argparse.Namespace) -> None:
+    if args.seeondesk_command == "active":
+        print(_pretty_json(active_window_info().to_dict()))
+        return
+    if args.seeondesk_command == "status":
+        print(_pretty_json(desktop_snapshot().to_dict()))
+        return
+    raise SystemExit(f"unknown SeeOnDesk command: {args.seeondesk_command}")
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path} must contain a JSON object")
+    return data
+
+
+def _instruction_text_from_args(args: argparse.Namespace) -> str:
+    if args.press:
+        return instruction_to_text(press_instruction(args.press))
+    return instruction_to_text(instruction_from_text(args.instruction_json))
+
+
+def _write_or_print(data: dict[str, Any], path: Path | None, *, label: str) -> None:
+    if path is None:
+        print(_pretty_json(data))
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_pretty_json(data) + "\n", encoding="utf-8")
+    print(f"Wrote {label} keys to {path}")
+
+
+def _pretty_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, indent=2, sort_keys=True)
+
+
+if __name__ == "__main__":
+    main()

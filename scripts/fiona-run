@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source "$HOME/Applications/miniconda3/etc/profile.d/conda.sh"
+conda activate quiktieper
+
+if ! test -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/.ydotool_socket"; then
+  pkexec ydotoold &
+  sleep 1
+fi
+
+cd "/home/Dhruv/Documents/Projects/Fiona"
+exec fiona run

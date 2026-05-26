@@ -1,0 +1,50 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build, packaging, and editable-install output
+*.egg-info/
+build/
+dist/
+*.build/
+*.dist-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+.conda/
+
+# Fiona local backups and generated project snapshots
+.backups/
+backup-*/
+
+# Local agent/editor metadata
+.codex
+.codex/
+.agents/
+**/.codex
+**/.codex/
+**/.agents/
+
+# Local runtime/debug output
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDE/editor settings
+.idea/
+.vscode/
