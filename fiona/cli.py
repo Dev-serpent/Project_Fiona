@@ -40,6 +40,7 @@ from CamComs import (
 )
 from Agent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
 from DataClient import convert_table, deep_research_topic, load_table, mine_topic
+from EyeControl import EyeTrackerConfig, dependency_status, run_eye_tracker
 from QuikTieper.remote import RemoteActionRunner
 from SeeOnDesk import active_window_info, desktop_snapshot
 
@@ -78,6 +79,10 @@ def main() -> None:
         _run_dataclient(args)
         return
 
+    if args.layer in {"eyecontrol", "eye"}:
+        _run_eyecontrol(args)
+        return
+
     if args.layer == "vsee":
         _run_vsee(args)
         return
@@ -104,6 +109,7 @@ def _build_parser() -> argparse.ArgumentParser:
   fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
   fiona agent ...        LM Studio bridge and agent-visible command registry
   fiona dataclient ...   Search, scrape, summarize, and export topic research
+  fiona eyecontrol ...   Optional camera-based eye-controlled mouse tracker
   fiona seeondesk ...    Desktop awareness and active-window identification
   fiona vsee             Standalone Vsee Holography app
   fiona phiconnect       Standalone encrypted PhiConnect chat app
@@ -169,6 +175,24 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     data_view.add_argument("input", type=Path)
     data_view.add_argument("--limit", type=int, default=10)
     dataclient_subparsers.add_parser("gui", help="Open the standalone DataClient GUI.")
+
+    eyecontrol = subparsers.add_parser(
+        "eyecontrol",
+        aliases=["eye"],
+        help="Run the optional camera-based eye-controlled mouse tracker.",
+    )
+    eyecontrol_subparsers = eyecontrol.add_subparsers(dest="eyecontrol_command", required=True)
+    eyecontrol_subparsers.add_parser("status", help="Show optional dependency and camera requirements.")
+    eye_run = eyecontrol_subparsers.add_parser("run", help="Run the eye-controlled mouse tracker.")
+    eye_source = eye_run.add_mutually_exclusive_group()
+    eye_source.add_argument("--url", default=None, help="IP camera snapshot URL, usually ending in /shot.jpg.")
+    eye_source.add_argument("--camera-index", type=int, default=None, help="Local OpenCV camera index.")
+    eye_run.add_argument("--window-width", type=int, default=800)
+    eye_run.add_argument("--window-height", type=int, default=600)
+    eye_run.add_argument("--click-threshold", type=float, default=0.015)
+    eye_run.add_argument("--click-sleep", type=float, default=0.5, dest="click_sleep_seconds")
+    eye_run.add_argument("--no-click", action="store_true", help="Move the pointer but do not trigger blink clicks.")
+    eye_run.add_argument("--timeout", type=float, default=5.0, dest="request_timeout_seconds")
 
     seeondesk = subparsers.add_parser(
         "seeondesk",
@@ -601,6 +625,26 @@ def _run_dataclient(args: argparse.Namespace) -> None:
         print(_pretty_json({"path": str(args.input), "rows": preview, "total_rows": len(rows)}))
         return
     raise SystemExit(f"unknown DataClient command: {args.dataclient_command}")
+
+
+def _run_eyecontrol(args: argparse.Namespace) -> None:
+    if args.eyecontrol_command == "status":
+        print(_pretty_json(dependency_status()))
+        return
+    if args.eyecontrol_command == "run":
+        config = EyeTrackerConfig(
+            url=args.url,
+            camera_index=args.camera_index,
+            window_width=args.window_width,
+            window_height=args.window_height,
+            click_threshold=args.click_threshold,
+            click_sleep_seconds=args.click_sleep_seconds,
+            enable_clicks=not args.no_click,
+            request_timeout_seconds=args.request_timeout_seconds,
+        )
+        run_eye_tracker(config)
+        return
+    raise SystemExit(f"unknown EyeControl command: {args.eyecontrol_command}")
 
 
 def _run_vsee(args: argparse.Namespace) -> None:

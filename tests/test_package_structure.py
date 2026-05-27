@@ -15,11 +15,13 @@ class PackageStructureTests(unittest.TestCase):
         self.assertIs(importlib.import_module("fiona.PhiConnect"), fiona.PhiConnect)
         self.assertIs(importlib.import_module("fiona.SeeOnDesk"), fiona.SeeOnDesk)
         self.assertIs(importlib.import_module("fiona.DataClient"), fiona.DataClient)
+        self.assertIs(importlib.import_module("fiona.EyeControl"), fiona.EyeControl)
 
     def test_subsystems_are_directly_importable(self) -> None:
         import Agent
         import CamComs
         import DataClient
+        import EyeControl
         import PhiConnect
         import QuikTieper
         import SeeOnDesk
@@ -32,6 +34,7 @@ class PackageStructureTests(unittest.TestCase):
         self.assertTrue(hasattr(Vsee, "HologramModel"))
         self.assertTrue(hasattr(Agent, "LMStudioClient"))
         self.assertTrue(hasattr(DataClient, "mine_topic"))
+        self.assertTrue(hasattr(EyeControl, "dependency_status"))
         self.assertTrue(hasattr(PhiConnect, "send_chat_message"))
         self.assertTrue(hasattr(SeeOnDesk, "desktop_snapshot"))
 

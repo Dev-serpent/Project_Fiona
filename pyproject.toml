@@ -12,6 +12,13 @@ dependencies = [
   "requests>=2.31.0",
 ]
 
+[project.optional-dependencies]
+eyecontrol = [
+  "mediapipe>=0.10.0",
+  "opencv-python>=4.9.0",
+  "pyautogui>=0.9.54",
+]
+
 [project.scripts]
 fiona = "fiona.cli:main"
 
@@ -20,7 +27,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient"]
+packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl"]
 
 [tool.setuptools.package-data]
 CamComs = ["esp32payload/*"]

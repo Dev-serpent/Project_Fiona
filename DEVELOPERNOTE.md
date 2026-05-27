@@ -4,7 +4,7 @@ This file records the current Fiona project structure, runtime setup, and latest
 
 ## Project Structure
 
-Fiona is the umbrella project. It exposes seven sibling subsystems:
+Fiona is the umbrella project. It exposes eight sibling subsystems:
 
 - `QuikTieper`: the local access layer for keyboard, mouse, app launch, clicks, and shortcuts
 - `CamComs`: the communication layer for encoded/encrypted host communication
@@ -13,6 +13,7 @@ Fiona is the umbrella project. It exposes seven sibling subsystems:
 - `PhiConnect`: the standalone encrypted computer-to-computer chat app
 - `SeeOnDesk`: the desktop-awareness layer for active app/window identification
 - `DataClient`: the standalone research/data collection app
+- `EyeControl`: optional camera-based eye-controlled mouse tracker
 
 Current file structure:
 
@@ -27,6 +28,7 @@ Fiona/
 ├── PhiConnect/             encrypted computer-to-computer chat app
 ├── SeeOnDesk/              desktop awareness and active-window identification
 ├── DataClient/             research/data collection app
+├── EyeControl/             optional eye-controlled mouse tracker integration
 ├── tests/                  Python tests
 ├── scripts/                local launch wrappers
 ├── .backups/               timestamped backup snapshots
@@ -60,6 +62,7 @@ Agent/                 local LM Studio bridge
 PhiConnect/            encrypted computer-to-computer chat implementation
 SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection implementation
+EyeControl/            optional camera-based eye-controlled mouse tracker
 tests/                 Python verification tests
 ```
 
@@ -109,6 +112,8 @@ fiona seeondesk status
 fiona dataclient
 fiona dataclient mine "topic" --out ./research.csv
 fiona dataclient deep "topic" --out ./deep.csv --depth 1 --page-limit 50
+fiona eyecontrol status
+fiona eyecontrol run --camera-index 0 --no-click
 ```
 
 ## Missing Issues
@@ -159,6 +164,9 @@ Recently fixed:
 - DataClient exports research CSV files with topic, URL, title, summary, depth, and parent URL fields.
 - DataClient now includes MiniExcel, a lightweight CSV/JSON/SQLite viewer/editor with selected-cell editing, row/column creation, row deletion, save/export support, and a safe formula bar for cell references/ranges and common functions.
 - DataClient GUI now has a Miner menu for quick mining, deep research, and clearing the miner log.
+- The imported tracker now lives at `EyeControl/Eye_Controlled_Mouse_Tracker.py` and is wrapped as the optional `EyeControl` package.
+- Fiona now exposes `fiona eyecontrol status` and `fiona eyecontrol run`.
+- EyeControl imports OpenCV, MediaPipe, PyAutoGUI, and camera resources only at runtime, so normal Fiona imports and tests do not require a camera.
 - Fiona now exposes `fiona host install-service` to print or write a user systemd service file for startup/background operation.
 - Launcher scripts point at `/home/Dhruv/Documents/Projects/Fiona`.
 - README matches the current Fiona / QuikTieper / CamComs structure.
@@ -432,7 +440,7 @@ python -m unittest discover -s tests -v
 Latest result, run on 2026-05-26:
 
 ```text
-Ran 79 tests in 0.406s
+Ran 83 tests in 0.430s
 
 OK
 ```
@@ -472,7 +480,7 @@ Latest output:
 Compile the main packages:
 
 ```bash
-python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk Vsee fiona
 ```
 
 Latest result, run on 2026-05-26:

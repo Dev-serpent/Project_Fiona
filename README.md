@@ -1,6 +1,6 @@
 # Fiona
 
-Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, a local LM Studio bridge, and a simple 3D hologram viewer.
+Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, optional eye-controlled pointer experiments, a local LM Studio bridge, and a simple 3D hologram viewer.
 
 After installation, the command is:
 
@@ -27,7 +27,7 @@ If `fiona` prints `command not found`, the package has not been installed into t
 
 ## Current Architecture
 
-Fiona is the umbrella package. It exposes seven sibling subsystems:
+Fiona is the umbrella package. It exposes eight sibling subsystems:
 
 - `QuikTieper`: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.
 - `CamComs`: communication layer for encoded/encrypted messages, currently focused on ESP32 sender to Fiona host receiver.
@@ -36,6 +36,7 @@ Fiona is the umbrella package. It exposes seven sibling subsystems:
 - `PhiConnect`: standalone encrypted computer-to-computer chat using CamComs crypto.
 - `SeeOnDesk`: desktop-awareness layer for identifying the current session and focused app/window.
 - `DataClient`: standalone research/data collection app for topic search, page scraping, summarization, deep research, and CSV export.
+- `EyeControl`: optional camera-based eye-controlled mouse tracker.
 
 Project layout:
 
@@ -49,6 +50,7 @@ Agent/                 local LM Studio client
 PhiConnect/            encrypted computer-to-computer chat app
 SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection app
+EyeControl/            optional eye-controlled mouse tracker integration
 scripts/               local launch wrappers
 tests/                 Python tests
 DEVELOPERNOTE.md       detailed project notes and latest verification log
@@ -86,6 +88,12 @@ Core Python dependencies are declared in `pyproject.toml`:
 - `requests`
 
 LM Studio is optional. Fiona talks to it over its local OpenAI-compatible server API when the agent bridge is used.
+
+EyeControl is optional. Install its camera/vision dependencies only on machines that will run the tracker:
+
+```bash
+pip install -e ".[eyecontrol]"
+```
 
 System/runtime tools used by local control:
 
@@ -175,6 +183,36 @@ Current output includes:
 - session type and current desktop in `status`
 
 This is the base for future screen capture, object/window recognition, and command context. If the command is run from a restricted sandbox or service without access to the desktop session bus, it may report `backend: unavailable`; running it as the active desktop user should return the focused app.
+
+## EyeControl
+
+EyeControl is Fiona's optional eye-controlled mouse tracker integration. The tracker now lives at `EyeControl/Eye_Controlled_Mouse_Tracker.py`, and the umbrella CLI imports it through the `EyeControl` package so opening Fiona help does not start the camera loop.
+
+Check dependency readiness:
+
+```bash
+python3 -m fiona.cli eyecontrol status
+```
+
+Run against an IP camera snapshot URL:
+
+```bash
+python3 -m fiona.cli eyecontrol run --url http://192.168.0.103:8080/shot.jpg
+```
+
+Run against a local OpenCV camera index:
+
+```bash
+python3 -m fiona.cli eyecontrol run --camera-index 0
+```
+
+Move the pointer without blink-clicking while testing:
+
+```bash
+python3 -m fiona.cli eyecontrol run --camera-index 0 --no-click
+```
+
+EyeControl requires camera access and optional packages such as OpenCV, MediaPipe, and PyAutoGUI, so it may be unoperational on machines without a camera or those packages.
 
 ## QuikTieper
 
@@ -662,6 +700,7 @@ Working today:
 - standalone `PhiConnect` encrypted chat GUI
 - standalone DataClient research GUI
 - SeeOnDesk desktop-awareness CLI
+- EyeControl optional camera tracker CLI
 - QuikTieper binding editor/listener/action runner
 - CamComs encryption/decryption/transport/receiver
 - trusted sender lifecycle and audit logging
@@ -698,12 +737,12 @@ python -m unittest discover -s tests -v
 Compile the main packages:
 
 ```bash
-python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk Vsee fiona
 ```
 
 Current latest known result:
 
 ```text
-66 tests OK
+83 tests OK
 compileall OK
 ```
