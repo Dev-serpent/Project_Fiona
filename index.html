@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Local host-control, encrypted communication, desktop awareness, and workstation tooling.">
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Fiona</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/fontawesome.min.css" rel="stylesheet">
+        <link href="css/brands.min.css" rel="stylesheet">
+        <link href="css/solid.min.css" rel="stylesheet">
+        <link href="css/v4-font-face.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="." class="nav-link active" aria-current="page">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="operations/cli/" class="dropdown-item">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="operations/gui/" class="dropdown-item">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="operations/workflows/" class="dropdown-item">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="modules/quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="modules/camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="modules/esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="modules/phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="modules/dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="modules/vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="modules/agent/" class="dropdown-item">Agent</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" class="nav-link disabled">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="getting-started/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="2"><a href="#what-fiona-provides" class="nav-link">What Fiona Provides</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="2"><a href="#main-commands" class="nav-link">Main Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-bs-level="2"><a href="#documentation-map" class="nav-link">Documentation Map</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<section class="fiona-hero">
+  <div class="fiona-logo-lockup">
+    <img src="assets/logo.svg" alt="Fiona logo">
+    <div>
+      <div class="fiona-eyebrow">Local host-control documentation</div>
+      <h1>Fiona</h1>
+    </div>
+  </div>
+  <p class="fiona-lede">
+    Fiona is a local host-control project inspired by JARVIS-style workstation control. It is the software base for local actions, encrypted communication, desktop awareness, data tools, LM Studio inference, and a simple 3D hologram viewer.
+  </p>
+  <div class="fiona-actions">
+    <a class="fiona-button primary" href="getting-started/">Get started</a>
+    <a class="fiona-button" href="operations/cli/">CLI mechanics</a>
+    <a class="fiona-button" href="operations/workflows/">System workflows</a>
+  </div>
+</section>
+
+<h2 id="what-fiona-provides">What Fiona Provides</h2>
+<div class="fiona-card-grid">
+  <a class="fiona-card" href="modules/quiktieper/">
+    <strong>QuikTieper</strong>
+    <span>App launching, keyboard shortcuts, pointer control, and remote action execution.</span>
+  </a>
+  <a class="fiona-card" href="modules/camcoms/">
+    <strong>CamComs</strong>
+    <span>Encrypted messages, trusted sender storage, host receiver, and audit logging.</span>
+  </a>
+  <a class="fiona-card" href="modules/phiconnect/">
+    <strong>PhiConnect</strong>
+    <span>Standalone encrypted computer-to-computer chat using CamComs primitives.</span>
+  </a>
+  <a class="fiona-card" href="modules/dataclient/">
+    <strong>DataClient</strong>
+    <span>Research mining, bounded deep research, MiniExcel, and table conversion tools.</span>
+  </a>
+  <a class="fiona-card" href="modules/seeondesk/">
+    <strong>SeeOnDesk</strong>
+    <span>Desktop awareness for active app, active window, and session metadata.</span>
+  </a>
+  <a class="fiona-card" href="modules/vsee/">
+    <strong>Vsee</strong>
+    <span>3D point and edge wireframe viewer for early holography experiments.</span>
+  </a>
+  <a class="fiona-card" href="modules/agent/">
+    <strong>Agent</strong>
+    <span>LM Studio bridge for local OpenAI-compatible inference.</span>
+  </a>
+</div>
+
+<h2 id="main-commands">Main Commands</h2>
+<pre><code class="language-bash">python3 -m fiona.cli edit
+python3 -m fiona.cli run
+python3 -m fiona.cli camcoms smoke-test
+python3 -m fiona.cli phiconnect
+python3 -m fiona.cli dataclient
+python3 -m fiona.cli vsee
+python3 -m fiona.cli seeondesk status
+</code></pre>
+<p>After editable installation, <code>fiona ...</code> can be used instead of <code>python3 -m fiona.cli ...</code>.</p>
+<h2 id="documentation-map">Documentation Map</h2>
+<ul>
+<li>Start with <a href="getting-started/">Getting Started</a>.</li>
+<li>Install from <a href="installation/">Installation</a>.</li>
+<li>Understand package layout in <a href="architecture/">Architecture</a>.</li>
+<li>Deep-dive into <a href="operations/cli/">CLI Mechanics</a>, <a href="operations/gui/">GUI Mechanics</a>, and <a href="operations/workflows/">System Workflows</a>.</li>
+<li>Read each subsystem under <a href="modules/quiktieper/">Modules</a>.</li>
+<li>Track implementation status in <a href="current-state/">Current State</a>, <a href="roadmap/">Roadmap</a>, and <a href="developer/test-suites/">Test Suites</a>.</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.6.1
+Build Date UTC : 2026-05-27 11:26:14.922808+00:00
+-->

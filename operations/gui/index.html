@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>GUI Mechanics - Fiona</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../cli/" class="dropdown-item">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../workflows/" class="dropdown-item">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../modules/quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/agent/" class="dropdown-item">Agent</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../cli/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../workflows/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#gui-mechanics" class="nav-link">GUI Mechanics</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#shared-fiona-gui" class="nav-link">Shared Fiona GUI</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#camcoms-tab" class="nav-link">CamComs Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#vsee-tab" class="nav-link">Vsee Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#bindings-tab" class="nav-link">Bindings Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#raw-json-tab" class="nav-link">Raw Json Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#debug-tab" class="nav-link">Debug Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#host-tab" class="nav-link">Host Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#standalone-vsee" class="nav-link">Standalone Vsee</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#standalone-phiconnect" class="nav-link">Standalone PhiConnect</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#standalone-dataclient" class="nav-link">Standalone DataClient</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="gui-mechanics">GUI Mechanics</h1>
+<p>Fiona currently has one shared configuration GUI plus three standalone application GUIs.</p>
+<h2 id="shared-fiona-gui">Shared Fiona GUI</h2>
+<p>Open it with:</p>
+<pre><code class="language-bash">fiona edit
+</code></pre>
+<p>or:</p>
+<pre><code class="language-bash">python3 -m fiona.cli edit
+</code></pre>
+<p>The shared GUI is implemented by <code>QuikTieper.gui.ConfigEditorApp</code>. It is a Tkinter <code>ttk.Notebook</code> application with this tab order:</p>
+<pre><code class="language-text">CamComs -&gt; Vsee -&gt; Bindings -&gt; Raw Json -&gt; Debug -&gt; Host
+</code></pre>
+<p>The footer contains:</p>
+<ul>
+<li>listener status</li>
+<li>current config/status message</li>
+<li><code>Start Listener</code> / stop listener control</li>
+<li><code>Save All</code></li>
+</ul>
+<h2 id="camcoms-tab">CamComs Tab</h2>
+<p>Purpose: operate the encryption layer without leaving the GUI.</p>
+<p>Operational areas:</p>
+<ul>
+<li>identity/key generation</li>
+<li>public key export</li>
+<li>plaintext/instruction input</li>
+<li>envelope encryption/decryption</li>
+<li>encoded send helpers</li>
+<li>smoke test output</li>
+</ul>
+<p>Data flow:</p>
+<pre><code class="language-text">GUI fields -&gt; CamComs identity/public bundle loaders -&gt; encrypt_message/decrypt_text -&gt; output text widget
+</code></pre>
+<p>The smoke-test handler creates in-memory sender/recipient identities, encrypts an <code>alt+s</code> press instruction, decrypts it, and writes the decoded JSON instruction to the output box. It does not require persistent key files.</p>
+<h2 id="vsee-tab">Vsee Tab</h2>
+<p>Purpose: edit and render 3D point/edge wireframes inside the shared GUI.</p>
+<p>The tab holds:</p>
+<ul>
+<li>point table text</li>
+<li>edge table text</li>
+<li>validation/render controls</li>
+<li>canvas projection area</li>
+<li>rotation and scale controls</li>
+</ul>
+<p>Data flow:</p>
+<pre><code class="language-text">points CSV + edges CSV -&gt; HologramModel.from_text -&gt; validation -&gt; projected canvas coordinates -&gt; Tk canvas render
+</code></pre>
+<p>Validation catches duplicate point ids and edges that reference missing points before rendering.</p>
+<h2 id="bindings-tab">Bindings Tab</h2>
+<p>Purpose: manage the QuikTieper binding model.</p>
+<p>Main elements:</p>
+<ul>
+<li>left tree of apps, launch bindings, and shortcuts</li>
+<li>app metadata fields</li>
+<li>binding fields for name, keys, command, instruction, Fiona commands, and cooldown</li>
+<li>add app, add shortcut, delete, save selected</li>
+<li>mouse-position capture helper</li>
+</ul>
+<p>Operational model:</p>
+<pre><code class="language-text">bindings.json -&gt; load_config -&gt; parse tree index -&gt; edit selected item -&gt; save_config
+</code></pre>
+<p>The listener uses the same config file, so saved GUI changes alter what <code>fiona run</code> will execute.</p>
+<h2 id="raw-json-tab">Raw Json Tab</h2>
+<p>Purpose: expose the underlying QuikTieper JSON config directly.</p>
+<p>Controls:</p>
+<ul>
+<li>reload from disk</li>
+<li>validate JSON</li>
+<li>save through <code>Save All</code></li>
+</ul>
+<p>Use this tab for structural edits that are faster in JSON than in the form editor. Invalid JSON is rejected before save.</p>
+<h2 id="debug-tab">Debug Tab</h2>
+<p>Purpose: project-restricted text/code editor for development.</p>
+<p>Allowed directories:</p>
+<pre><code class="language-text">tests/
+scripts/
+QuikTieper/
+CamComs/
+</code></pre>
+<p>Skipped directories:</p>
+<pre><code class="language-text">__pycache__/
+.pytest_cache/
+</code></pre>
+<p>Allowed file types include Python, Markdown, JSON, shell scripts, TOML, YAML, HTML, CSS, INI, CFG, TXT, and ESP32 <code>.ino</code> files.</p>
+<p>Security boundary:</p>
+<ul>
+<li>it does not expose the whole filesystem</li>
+<li>it does not expose every project directory</li>
+<li>it validates resolved paths before saving</li>
+<li>it rejects files outside the configured debug roots</li>
+</ul>
+<h2 id="host-tab">Host Tab</h2>
+<p>Purpose: inspect and operate host-service state from the GUI.</p>
+<p>Typical capabilities:</p>
+<ul>
+<li>initialize config</li>
+<li>show host status</li>
+<li>inspect key/trust paths</li>
+<li>list trusted sender keys</li>
+<li>remove trusted sender keys</li>
+<li>inspect audit log</li>
+<li>expose host receiver configuration</li>
+</ul>
+<p>Operational model:</p>
+<pre><code class="language-text">Host tab action -&gt; HostService/load config/AuditLog/trust helpers -&gt; rendered status/log text
+</code></pre>
+<h2 id="standalone-vsee">Standalone Vsee</h2>
+<p>Open:</p>
+<pre><code class="language-bash">fiona vsee
+</code></pre>
+<p>The standalone Vsee window focuses only on holography data and rendering. It accepts optional <code>--points</code> and <code>--edges</code> files from the CLI and does not include the QuikTieper/CamComs configuration surface.</p>
+<h2 id="standalone-phiconnect">Standalone PhiConnect</h2>
+<p>Open:</p>
+<pre><code class="language-bash">fiona phiconnect
+</code></pre>
+<p>PhiConnect is an encrypted chat application.</p>
+<p>GUI mechanics:</p>
+<ul>
+<li>ensures a local identity exists</li>
+<li>shows local public key for sharing</li>
+<li>accepts/trusts a peer public key</li>
+<li>starts a local receiver on host/port</li>
+<li>encrypts outgoing chat with the peer public key</li>
+<li>decrypts incoming chat with the local private key</li>
+<li>shows recent chat messages from a rolling 3-minute window</li>
+</ul>
+<p>Local test path:</p>
+<pre><code class="language-text">Use Local Public Key -&gt; Start Receiver -&gt; send to 127.0.0.1:5000
+</code></pre>
+<h2 id="standalone-dataclient">Standalone DataClient</h2>
+<p>Open:</p>
+<pre><code class="language-bash">fiona dataclient
+</code></pre>
+<p>GUI areas:</p>
+<ul>
+<li>Research tab for quick and deep mining</li>
+<li>MiniExcel tab for CSV/JSON/SQLite table viewing/editing</li>
+<li>Miner menu for quick access to mining actions</li>
+</ul>
+<p>Research flow:</p>
+<pre><code class="language-text">topic -&gt; search -&gt; scrape pages -&gt; summarize text -&gt; row model -&gt; CSV export
+</code></pre>
+<p>MiniExcel flow:</p>
+<pre><code class="language-text">table file -&gt; load_table -&gt; grid rows/columns -&gt; edit/formula/export -&gt; save converted table
+</code></pre>
+<p>The formula bar evaluates only a safe expression subset: cell references, ranges, arithmetic, and a controlled function list.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

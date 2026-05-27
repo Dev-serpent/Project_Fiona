@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>System Workflows - Fiona</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../cli/" class="dropdown-item">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../gui/" class="dropdown-item">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../modules/quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/agent/" class="dropdown-item">Agent</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../gui/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../modules/quiktieper/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#system-workflows" class="nav-link">System Workflows</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#local-launch-workflow" class="nav-link">Local Launch Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#installed-app-import-workflow" class="nav-link">Installed App Import Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#esp32-to-host-camcoms-workflow" class="nav-link">ESP32 To Host CamComs Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#host-service-workflow" class="nav-link">Host Service Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#phiconnect-chat-workflow" class="nav-link">PhiConnect Chat Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#dataclient-research-workflow" class="nav-link">DataClient Research Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#seeondesk-awareness-workflow" class="nav-link">SeeOnDesk Awareness Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-workflow" class="nav-link">Agent Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#debugging-workflow" class="nav-link">Debugging Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="system-workflows">System Workflows</h1>
+<p>This page describes how Fiona's subsystems cooperate during real operations.</p>
+<h2 id="local-launch-workflow">Local Launch Workflow</h2>
+<p>Goal: press a configured chord and launch or control a local app.</p>
+<pre><code class="language-text">user key event
+  -&gt; QuikTieper listener
+  -&gt; chord state matcher
+  -&gt; active-window gate for app shortcuts
+  -&gt; binding action
+  -&gt; command / instruction / pointer action
+</code></pre>
+<p>State involved:</p>
+<ul>
+<li><code>~/.config/fiona/bindings.json</code></li>
+<li>active window metadata from desktop tools</li>
+<li>listener runtime state and cooldowns</li>
+<li>configured command strings and Fiona command helpers</li>
+</ul>
+<p>Failure handling:</p>
+<ul>
+<li>malformed config fails at parse/load time</li>
+<li>missing app command fails at shell launch time</li>
+<li>unavailable desktop automation backend prevents pointer/keyboard execution</li>
+<li>active-window mismatch prevents app-specific shortcuts from firing</li>
+</ul>
+<h2 id="installed-app-import-workflow">Installed App Import Workflow</h2>
+<p>Goal: make system applications available as QuikTieper launch entries.</p>
+<pre><code class="language-text">desktop launcher directories
+  -&gt; .desktop parser
+  -&gt; low-value/K-app filters
+  -&gt; imported app entries without keys
+  -&gt; assign-keys
+  -&gt; normalize-app-cmds
+  -&gt; GUI/listener usable config
+</code></pre>
+<p>The importer scans common Linux launcher paths such as:</p>
+<pre><code class="language-text">~/.local/share/applications
+/usr/local/share/applications
+/usr/share/applications
+</code></pre>
+<p>Imported apps start unassigned so new applications cannot fire accidentally. <code>assign-keys</code> gives them generated launch chords, and <code>normalize-app-cmds</code> rewrites known commands to cleaner launch commands.</p>
+<h2 id="esp32-to-host-camcoms-workflow">ESP32 To Host CamComs Workflow</h2>
+<p>Goal: receive an encrypted instruction from a device and route it into Fiona safely.</p>
+<pre><code class="language-text">ESP32 instruction/event
+  -&gt; instruction JSON
+  -&gt; CamComs encrypted envelope
+  -&gt; base64url transport string
+  -&gt; HTTP POST to host receiver
+  -&gt; decode_envelope
+  -&gt; decrypt_text
+  -&gt; sender signature verification
+  -&gt; trust store lookup
+  -&gt; ReplayGuard
+  -&gt; strict instruction validation
+  -&gt; RemoteActionRunner
+  -&gt; audit log
+</code></pre>
+<p>Trust and identity files:</p>
+<pre><code class="language-text">~/.config/fiona/camcoms/host.private.json
+~/.config/fiona/camcoms/host.public.json
+~/.config/fiona/camcoms/esp32.public.json
+~/.config/fiona/camcoms/trusted/
+</code></pre>
+<p>Important safety behavior:</p>
+<ul>
+<li>untrusted senders are rejected</li>
+<li>tampered ciphertext is rejected</li>
+<li>wrong-recipient envelopes are rejected</li>
+<li>stale or duplicate messages are rejected</li>
+<li>receiver defaults to dry-run unless execution is explicitly enabled</li>
+</ul>
+<h2 id="host-service-workflow">Host Service Workflow</h2>
+<p>Goal: run Fiona's receiver and optional listener as a longer-lived host process.</p>
+<pre><code class="language-text">fiona host init
+  -&gt; config JSON
+  -&gt; fiona host status
+  -&gt; dependency/key/trust checks
+  -&gt; fiona host run
+  -&gt; HostService
+  -&gt; CamComs receiver ownership
+  -&gt; optional QuikTieper listener ownership
+</code></pre>
+<p>Systemd path:</p>
+<pre><code class="language-text">fiona host install-service
+  -&gt; ~/.config/systemd/user/fiona-host.service
+  -&gt; systemctl --user daemon-reload
+  -&gt; systemctl --user enable --now fiona-host.service
+  -&gt; journalctl --user -u fiona-host.service
+</code></pre>
+<p>The generated service is a user service, not a system service. It should run as the desktop user so it can access the correct config, session, and GUI/automation permissions.</p>
+<h2 id="phiconnect-chat-workflow">PhiConnect Chat Workflow</h2>
+<p>Goal: computer-to-computer encrypted chat.</p>
+<pre><code class="language-text">sender message body
+  -&gt; chat payload JSON
+  -&gt; encrypt_message(message_type=&quot;chat&quot;)
+  -&gt; CamComsHttpClient POST
+  -&gt; peer receiver
+  -&gt; decrypt_text
+  -&gt; trusted sender verification
+  -&gt; replay check
+  -&gt; chat.log event
+  -&gt; recent chat display
+</code></pre>
+<p>Local loopback uses the same path:</p>
+<pre><code class="language-text">local identity as peer key -&gt; receiver on 127.0.0.1:5000 -&gt; outbound send to 127.0.0.1:5000
+</code></pre>
+<h2 id="dataclient-research-workflow">DataClient Research Workflow</h2>
+<p>Goal: gather topic data into structured table formats.</p>
+<p>Quick mining:</p>
+<pre><code class="language-text">topic
+  -&gt; DuckDuckGo HTML search
+  -&gt; result URL normalization/deduplication
+  -&gt; page scrape
+  -&gt; paragraph extraction
+  -&gt; frequency summarizer
+  -&gt; CSV rows
+</code></pre>
+<p>Deep research:</p>
+<pre><code class="language-text">seed results
+  -&gt; scrape seed pages
+  -&gt; collect same-domain links
+  -&gt; bounded crawl by depth/page limit
+  -&gt; summarize each page
+  -&gt; CSV rows with depth and parent URL
+</code></pre>
+<p>MiniExcel:</p>
+<pre><code class="language-text">CSV/JSON/SQLite
+  -&gt; normalized row list
+  -&gt; grid editing
+  -&gt; safe formula evaluation
+  -&gt; save/export
+</code></pre>
+<h2 id="seeondesk-awareness-workflow">SeeOnDesk Awareness Workflow</h2>
+<p>Goal: identify the current desktop context.</p>
+<pre><code class="language-text">fiona seeondesk active/status
+  -&gt; kdotool getactivewindow on KDE/Wayland
+  -&gt; xdotool/xprop fallback on X11-compatible sessions
+  -&gt; process-name lookup
+  -&gt; serializable desktop snapshot
+</code></pre>
+<p>The current implementation is metadata-based. Screen recording and ML classification are future work.</p>
+<h2 id="agent-workflow">Agent Workflow</h2>
+<p>Goal: bridge Fiona to a local model server without making the model the authority.</p>
+<pre><code class="language-text">fiona agent commands
+  -&gt; command registry and app list
+
+fiona agent status
+  -&gt; LM Studio health request
+
+fiona agent ask
+  -&gt; OpenAI-compatible chat-completions request
+  -&gt; local model response
+</code></pre>
+<p>The current Agent layer performs inference only. It does not train models, fine-tune models, execute actions automatically, or decide command permissions.</p>
+<h2 id="debugging-workflow">Debugging Workflow</h2>
+<p>When a system operation fails, identify the failing layer before changing code:</p>
+<ol>
+<li>CLI parse/import failure: run <code>python3 -m fiona.cli --help</code>.</li>
+<li>Config failure: inspect the target JSON path and run list/status commands.</li>
+<li>Crypto failure: use <code>camcoms smoke-test</code>, then verify key paths and trust.</li>
+<li>Transport failure: verify receiver host/port, firewall, and connection-refused errors.</li>
+<li>Execution failure: keep receiver dry-run first, then inspect allowed actions.</li>
+<li>GUI failure: verify Tkinter/display availability and reproduce through CLI where possible.</li>
+<li>Service failure: inspect <code>fiona host status</code> and <code>fiona host logs</code>.</li>
+</ol></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

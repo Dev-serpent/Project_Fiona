@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>CLI Mechanics - Fiona</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../gui/" class="dropdown-item">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../workflows/" class="dropdown-item">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../modules/quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/agent/" class="dropdown-item">Agent</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../../architecture/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../gui/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#cli-mechanics" class="nav-link">CLI Mechanics</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#dispatch-model" class="nav-link">Dispatch Model</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#top-level-command-grid" class="nav-link">Top-Level Command Grid</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#quiktieper-delegated-commands" class="nav-link">QuikTieper Delegated Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#camcoms-commands" class="nav-link">CamComs Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#host-service-commands" class="nav-link">Host Service Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-commands" class="nav-link">Agent Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#dataclient-commands" class="nav-link">DataClient Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#seeondesk-commands" class="nav-link">SeeOnDesk Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#failure-modes" class="nav-link">Failure Modes</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="cli-mechanics">CLI Mechanics</h1>
+<p>Fiona's command line is the operational spine of the project. The installed command is <code>fiona</code>; from a source checkout the equivalent form is:</p>
+<pre><code class="language-bash">python3 -m fiona.cli &lt;command&gt;
+</code></pre>
+<p>The CLI is implemented in <code>fiona/cli.py</code> with <code>argparse</code>. It is an umbrella dispatcher: the top-level parser owns cross-subsystem command groups, while QuikTieper shortcuts are delegated into <code>QuikTieper.cli</code>.</p>
+<h2 id="dispatch-model">Dispatch Model</h2>
+<p>Startup flow:</p>
+<ol>
+<li><code>main()</code> receives <code>sys.argv[1:]</code>.</li>
+<li><code>_normalize_help_args()</code> converts <code>fiona help</code> and <code>fiona &lt;group&gt; help</code> into <code>--help</code>.</li>
+<li><code>_should_delegate_to_quiktieper()</code> sends legacy direct commands such as <code>edit</code>, <code>run</code>, <code>list</code>, <code>init</code>, <code>import-apps</code>, <code>assign-keys</code>, and <code>normalize-app-cmds</code> into QuikTieper.</li>
+<li>Explicit <code>fiona quiktieper ...</code> and <code>fiona qt ...</code> also delegate into QuikTieper.</li>
+<li>Other groups are parsed by Fiona's umbrella parser and routed by <code>args.layer</code>.</li>
+</ol>
+<p>This preserves backward compatibility with the original launcher commands while allowing newer subsystems to live under dedicated groups.</p>
+<h2 id="top-level-command-grid">Top-Level Command Grid</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Owner</th>
+<th>Purpose</th>
+<th>Runtime Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fiona edit</code></td>
+<td>QuikTieper GUI</td>
+<td>Opens the shared Fiona editor</td>
+<td>foreground GUI</td>
+</tr>
+<tr>
+<td><code>fiona run</code></td>
+<td>QuikTieper listener</td>
+<td>Starts global chord listener</td>
+<td>foreground service</td>
+</tr>
+<tr>
+<td><code>fiona list</code></td>
+<td>QuikTieper config</td>
+<td>Prints configured bindings</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona quiktieper ...</code> / <code>fiona qt ...</code></td>
+<td>QuikTieper</td>
+<td>Explicit launcher layer commands</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona camcoms ...</code> / <code>fiona cc ...</code></td>
+<td>CamComs</td>
+<td>Crypto, transport, receiver, trust, audit</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona host ...</code></td>
+<td>CamComs HostService</td>
+<td>Unified service config/lifecycle/logs</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona agent ...</code></td>
+<td>Agent</td>
+<td>LM Studio bridge and command registry</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona dataclient ...</code> / <code>fiona data ...</code></td>
+<td>DataClient</td>
+<td>Research mining, conversion, GUI</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona seeondesk ...</code> / <code>fiona sod ...</code></td>
+<td>SeeOnDesk</td>
+<td>Active desktop/window identification</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona vsee</code></td>
+<td>Vsee</td>
+<td>Standalone holography viewer</td>
+<td>foreground GUI</td>
+</tr>
+<tr>
+<td><code>fiona phiconnect</code></td>
+<td>PhiConnect</td>
+<td>Standalone encrypted chat</td>
+<td>foreground GUI</td>
+</tr>
+</tbody>
+</table>
+<h2 id="quiktieper-delegated-commands">QuikTieper Delegated Commands</h2>
+<p>These commands are parsed by <code>QuikTieper.cli</code> after Fiona rewrites <code>sys.argv</code>:</p>
+<pre><code class="language-bash">fiona init
+fiona list
+fiona import-apps --dry-run
+fiona import-apps
+fiona normalize-app-cmds --dry-run
+fiona normalize-app-cmds
+fiona assign-keys --dry-run
+fiona assign-keys
+fiona run
+fiona edit
+</code></pre>
+<p>Operational mechanics:</p>
+<ul>
+<li><code>init</code> creates the default bindings file if missing.</li>
+<li><code>list</code> loads the JSON config, parses apps and shortcuts, and prints the effective binding list.</li>
+<li><code>import-apps</code> scans Linux desktop launcher locations and adds discovered apps with no launch keys unless configured otherwise.</li>
+<li><code>normalize-app-cmds</code> rewrites known app commands to curated direct launch commands while keeping viable local fallbacks.</li>
+<li><code>assign-keys</code> fills missing app launch chords using <code>alt</code> plus generated safe letters, avoiding duplicate key sets.</li>
+<li><code>run</code> starts the chord listener and remains active until interrupted.</li>
+<li><code>edit</code> launches the shared Tkinter editor.</li>
+</ul>
+<p>Default bindings path:</p>
+<pre><code class="language-text">~/.config/fiona/bindings.json
+</code></pre>
+<h2 id="camcoms-commands">CamComs Commands</h2>
+<p>CamComs commands operate on identities, encrypted envelopes, HTTP transport, trust state, receiver processing, and audit logs.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Reads</th>
+<th>Writes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>camcoms keygen</code></td>
+<td>none</td>
+<td>private/public identity JSON</td>
+<td>defaults to <code>~/.config/fiona/camcoms/</code></td>
+</tr>
+<tr>
+<td><code>camcoms public</code></td>
+<td>private identity JSON</td>
+<td>public bundle JSON</td>
+<td>extracts shareable public keys</td>
+</tr>
+<tr>
+<td><code>camcoms paths</code></td>
+<td>constants</td>
+<td>stdout</td>
+<td>prints visible key/trust paths</td>
+</tr>
+<tr>
+<td><code>camcoms trust --public</code></td>
+<td>public bundle JSON</td>
+<td>trusted sender directory</td>
+<td>sender must be trusted before receiver accepts it</td>
+</tr>
+<tr>
+<td><code>camcoms trust --list</code></td>
+<td>trusted sender directory</td>
+<td>stdout</td>
+<td>lists trusted public bundles</td>
+</tr>
+<tr>
+<td><code>camcoms trust --remove</code></td>
+<td>trusted sender directory</td>
+<td>trusted sender directory</td>
+<td>removes by device id</td>
+</tr>
+<tr>
+<td><code>camcoms encrypt</code></td>
+<td>sender private, recipient public</td>
+<td>stdout</td>
+<td>prints encoded envelope or JSON envelope</td>
+</tr>
+<tr>
+<td><code>camcoms decrypt</code></td>
+<td>recipient private, optional sender public</td>
+<td>stdout</td>
+<td>verifies sender when supplied</td>
+</tr>
+<tr>
+<td><code>camcoms send</code></td>
+<td>encoded message or envelope JSON</td>
+<td>network POST</td>
+<td>sends compact encoded envelope</td>
+</tr>
+<tr>
+<td><code>camcoms compose-send</code></td>
+<td>keys and instruction args</td>
+<td>network POST</td>
+<td>encrypts and sends in one operation</td>
+</tr>
+<tr>
+<td><code>camcoms receive</code></td>
+<td>host private, trusted dir</td>
+<td>HTTP receiver</td>
+<td>foreground server</td>
+</tr>
+<tr>
+<td><code>camcoms audit</code></td>
+<td>audit log</td>
+<td>stdout</td>
+<td>prints recent receiver events</td>
+</tr>
+<tr>
+<td><code>camcoms smoke-test</code></td>
+<td>generated in-memory keys</td>
+<td>stdout</td>
+<td>no persistent files</td>
+</tr>
+</tbody>
+</table>
+<p>The envelope path is:</p>
+<pre><code class="language-text">instruction JSON -&gt; encrypted envelope dict -&gt; base64url JSON string -&gt; HTTP body
+</code></pre>
+<p>The decrypt path reverses that and optionally verifies the sender public key.</p>
+<h2 id="host-service-commands">Host Service Commands</h2>
+<p><code>fiona host ...</code> and <code>fiona camcoms service ...</code> call the same service implementation.</p>
+<pre><code class="language-bash">fiona host init
+fiona host status --check-port
+fiona host run
+fiona host install-service --print
+fiona host install-service
+fiona host enable
+fiona host restart
+fiona host logs --lines 120
+fiona host stop
+fiona host disable
+</code></pre>
+<p>Service config path:</p>
+<pre><code class="language-text">~/.config/fiona/config.json
+</code></pre>
+<p>Mechanics:</p>
+<ul>
+<li><code>init</code> writes a <code>HostServiceConfig</code> JSON file.</li>
+<li><code>status</code> loads the config and reports readiness checks for key files, trusted directory, audit/replay paths, listener imports, desktop tools, and optional port bindability.</li>
+<li><code>run</code> constructs <code>HostService</code>, loads host identity, starts receiver ownership, and can optionally own the QuikTieper listener.</li>
+<li><code>install-service</code> writes or prints a user systemd unit running <code>python -m fiona.cli host run</code>.</li>
+<li><code>enable</code>, <code>disable</code>, <code>restart</code>, and <code>stop</code> call <code>systemctl --user</code>.</li>
+<li><code>logs</code> calls <code>journalctl --user -u &lt;service&gt;</code>.</li>
+</ul>
+<h2 id="agent-commands">Agent Commands</h2>
+<p>Agent currently bridges to LM Studio's OpenAI-compatible local API.</p>
+<pre><code class="language-bash">fiona agent status
+fiona agent ask --model &lt;model-id&gt; &quot;Prompt text&quot;
+fiona agent commands
+</code></pre>
+<p>Mechanics:</p>
+<ul>
+<li><code>status</code> checks the configured base URL, defaulting to <code>http://localhost:1234/v1</code>.</li>
+<li><code>ask</code> constructs a chat-completions request with system prompt, temperature, max tokens, API key placeholder, and model id.</li>
+<li><code>commands</code> exposes an agent-readable registry of Fiona actions and available QuikTieper apps.</li>
+</ul>
+<h2 id="dataclient-commands">DataClient Commands</h2>
+<pre><code class="language-bash">fiona dataclient
+fiona dataclient gui
+fiona dataclient mine &quot;topic&quot; --out ./research.csv --max-links 30
+fiona dataclient deep &quot;topic&quot; --out ./deep.csv --seed-links 10 --depth 1 --page-limit 50
+fiona dataclient convert ./research.csv --out ./research.json
+fiona dataclient view ./research.csv --limit 5
+</code></pre>
+<p>Mechanics:</p>
+<ul>
+<li>no subcommand opens the GUI by default</li>
+<li><code>mine</code> searches, scrapes, summarizes, and exports rows</li>
+<li><code>deep</code> performs bounded same-domain crawling unless <code>--cross-domain</code> is set</li>
+<li><code>convert</code> normalizes table data between CSV, JSON, and SQLite</li>
+<li><code>view</code> loads the table and prints a JSON preview</li>
+</ul>
+<h2 id="seeondesk-commands">SeeOnDesk Commands</h2>
+<pre><code class="language-bash">fiona seeondesk active
+fiona seeondesk status
+</code></pre>
+<p>Mechanics:</p>
+<ul>
+<li><code>active</code> returns focused window/app metadata.</li>
+<li><code>status</code> wraps active-window data with session and desktop state.</li>
+<li>KDE/Wayland prefers <code>kdotool</code>; X11-compatible fallback uses <code>xdotool</code> and <code>xprop</code>.</li>
+</ul>
+<h2 id="failure-modes">Failure Modes</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely Layer</th>
+<th>First Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>No module named fiona</code></td>
+<td>install/import path</td>
+<td>run from repo root with <code>python3 -m fiona.cli --help</code> or install with <code>pip install -e .</code></td>
+</tr>
+<tr>
+<td><code>fiona: command not found</code></td>
+<td>shell PATH</td>
+<td>use module form or activate the environment where Fiona was installed</td>
+</tr>
+<tr>
+<td>GUI does not open</td>
+<td>Tk/display/session</td>
+<td>verify <code>tkinter</code> and active desktop session</td>
+</tr>
+<tr>
+<td>listener does not press/click</td>
+<td>QuikTieper runtime backend</td>
+<td>verify <code>pynput</code>, <code>ydotoold</code>, <code>kdotool</code>, and Wayland permissions</td>
+</tr>
+<tr>
+<td>receiver rejects message</td>
+<td>CamComs trust/crypto/replay</td>
+<td>inspect <code>camcoms audit</code>, sender trust, timestamps, and duplicate message id</td>
+</tr>
+<tr>
+<td>PhiConnect send fails</td>
+<td>peer setup or listener</td>
+<td>verify peer public key and receiver on host/port</td>
+</tr>
+<tr>
+<td>DataClient search fails</td>
+<td>network/search target</td>
+<td>verify network access and output path permissions</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
