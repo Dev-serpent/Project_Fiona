@@ -149,13 +149,16 @@ Recently fixed:
 - Fiona now exposes `fiona agent status` and `fiona agent ask` for LM Studio integration.
 - Fiona now exposes `fiona vsee` for a separate `Vsee Holography` window outside the main `fiona edit` GUI.
 - The project now includes `PhiConnect`, a standalone encrypted computer-to-computer chat app outside `fiona edit`.
-- PhiConnect creates local chat identities, trusts peer public keys, encrypts outbound chat with CamComs, decrypts inbound chat, and shows a rolling 3-minute chat window.
+- PhiConnect creates local chat identities, stores a peer public key for outbound encryption, trusts peer public keys for inbound verification, encrypts outbound chat with CamComs, decrypts inbound chat, and shows a rolling 3-minute chat window.
+- PhiConnect defaults to port `5000` for local communication. The GUI can now set listen host/port, set a peer public key, and use the local public key for Fiona loopback testing on `127.0.0.1:5000`.
 - The project now includes `SeeOnDesk`, a sibling package for desktop-awareness snapshots.
 - Fiona now exposes `fiona seeondesk active` and `fiona seeondesk status`.
 - SeeOnDesk currently identifies the active app/window through `kdotool` on KDE/Wayland and `xdotool`/`xprop` fallback paths when available.
 - The project now includes `DataClient`, a standalone research app outside `fiona edit`.
-- Fiona now exposes `fiona dataclient` for the GUI, `fiona dataclient mine` for quick topic mining, and `fiona dataclient deep` for bounded deep research.
-- DataClient exports CSV files with topic, URL, title, summary, depth, and parent URL fields.
+- Fiona now exposes `fiona dataclient` for the GUI, `fiona dataclient mine` for quick topic mining, `fiona dataclient deep` for bounded deep research, `fiona dataclient convert` for CSV/JSON/SQLite conversion, and `fiona dataclient view` for terminal previews.
+- DataClient exports research CSV files with topic, URL, title, summary, depth, and parent URL fields.
+- DataClient now includes MiniExcel, a lightweight CSV/JSON/SQLite viewer/editor with selected-cell editing, row/column creation, row deletion, save/export support, and a safe formula bar for cell references/ranges and common functions.
+- DataClient GUI now has a Miner menu for quick mining, deep research, and clearing the miner log.
 - Fiona now exposes `fiona host install-service` to print or write a user systemd service file for startup/background operation.
 - Launcher scripts point at `/home/Dhruv/Documents/Projects/Fiona`.
 - README matches the current Fiona / QuikTieper / CamComs structure.
@@ -429,7 +432,7 @@ python -m unittest discover -s tests -v
 Latest result, run on 2026-05-26:
 
 ```text
-Ran 66 tests in 0.403s
+Ran 79 tests in 0.406s
 
 OK
 ```

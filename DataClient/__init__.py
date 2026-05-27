@@ -15,6 +15,7 @@ from DataClient.miner import (
     summarize,
     web_search,
 )
+from DataClient.table import add_column, add_row, convert_table, load_table, save_table, table_columns
 
 __all__ = [
     "MinedPage",
@@ -28,4 +29,10 @@ __all__ = [
     "scrape_page",
     "summarize",
     "web_search",
+    "add_column",
+    "add_row",
+    "convert_table",
+    "load_table",
+    "save_table",
+    "table_columns",
 ]

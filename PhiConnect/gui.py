@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 import threading
 import tkinter as tk
+from dataclasses import replace
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -17,6 +19,10 @@ class PhiConnectApp(tk.Tk):
         self.config_model = config or PhiConnectConfig()
         self.receiver_thread: threading.Thread | None = None
         self.status_var = tk.StringVar(value="Receiver stopped")
+        self.listen_host = tk.StringVar(value=self.config_model.listen_host)
+        self.listen_port = tk.StringVar(value=str(self.config_model.listen_port))
+        self.peer_host = tk.StringVar(value=self.config_model.peer_host)
+        self.peer_port = tk.StringVar(value=str(self.config_model.peer_port))
         ensure_identity(self.config_model)
         self._build_ui()
         self._refresh_loop()
@@ -36,10 +42,14 @@ class PhiConnectApp(tk.Tk):
         top.pack(fill=tk.X)
         ttk.Button(top, text="Start Receiver", command=self._start_receiver).pack(side=tk.LEFT)
         ttk.Label(top, textvariable=self.status_var).pack(side=tk.LEFT, padx=10)
+        listen = ttk.Frame(parent)
+        listen.pack(fill=tk.X, pady=8)
+        ttk.Label(listen, text="Listen host").pack(side=tk.LEFT)
+        ttk.Entry(listen, textvariable=self.listen_host, width=18).pack(side=tk.LEFT, padx=6)
+        ttk.Label(listen, text="Port").pack(side=tk.LEFT)
+        ttk.Entry(listen, textvariable=self.listen_port, width=8).pack(side=tk.LEFT, padx=6)
         peer = ttk.Frame(parent)
         peer.pack(fill=tk.X, pady=8)
-        self.peer_host = tk.StringVar(value=self.config_model.peer_host)
-        self.peer_port = tk.StringVar(value=str(self.config_model.peer_port))
         ttk.Label(peer, text="Peer host").pack(side=tk.LEFT)
         ttk.Entry(peer, textvariable=self.peer_host, width=18).pack(side=tk.LEFT, padx=6)
         ttk.Label(peer, text="Port").pack(side=tk.LEFT)
@@ -61,6 +71,7 @@ class PhiConnectApp(tk.Tk):
             ("Private key", str(self.config_model.private_path)),
             ("Public key", str(self.config_model.public_path)),
             ("Trusted keys", str(self.config_model.trusted_dir)),
+            ("Peer public key", str(self.config_model.peer_public_path)),
             ("Chat log", str(self.config_model.chat_log_path)),
             ("Listen", f"{self.config_model.listen_host}:{self.config_model.listen_port}"),
         ]
@@ -69,7 +80,10 @@ class PhiConnectApp(tk.Tk):
             row.pack(fill=tk.X, pady=3)
             ttk.Label(row, text=label, width=14).pack(side=tk.LEFT)
             ttk.Label(row, text=value).pack(side=tk.LEFT)
-        ttk.Button(parent, text="Trust Peer Public Key", command=self._trust_peer_key).pack(anchor=tk.W, pady=10)
+        button_row = ttk.Frame(parent)
+        button_row.pack(anchor=tk.W, pady=10)
+        ttk.Button(button_row, text="Set Peer Public Key", command=self._set_peer_key).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(button_row, text="Use Local Public Key", command=self._use_local_public_key).pack(side=tk.LEFT)
         ttk.Label(parent, text="Local public key").pack(anchor=tk.W)
         text = tk.Text(parent, height=10, wrap=tk.NONE)
         text.insert("1.0", public_data)
@@ -78,6 +92,15 @@ class PhiConnectApp(tk.Tk):
 
     def _start_receiver(self) -> None:
         if self.receiver_thread and self.receiver_thread.is_alive():
+            return
+        try:
+            self.config_model = replace(
+                self.config_model,
+                listen_host=self.listen_host.get().strip() or "0.0.0.0",
+                listen_port=int(self.listen_port.get().strip()),
+            )
+        except ValueError as exc:
+            messagebox.showerror("Invalid receiver port", str(exc))
             return
         self.receiver_thread = threading.Thread(target=run_phiconnect_receiver, args=(self.config_model,), daemon=True)
         self.receiver_thread.start()
@@ -100,16 +123,32 @@ class PhiConnectApp(tk.Tk):
         self.message_var.set("")
         self._refresh_messages()
 
-    def _trust_peer_key(self) -> None:
+    def _set_peer_key(self) -> None:
         path = filedialog.askopenfilename(title="Select peer public key", filetypes=[("JSON", "*.json"), ("All files", "*")])
         if not path:
             return
         try:
-            trusted_path = trust_public_key(Path(path), self.config_model.trusted_dir)
+            self.config_model.peer_public_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, self.config_model.peer_public_path)
+            trusted_path = trust_public_key(self.config_model.peer_public_path, self.config_model.trusted_dir)
         except Exception as exc:
-            messagebox.showerror("Could not trust key", str(exc))
+            messagebox.showerror("Could not set peer key", str(exc))
             return
-        messagebox.showinfo("Trusted key", f"Saved trusted key to {trusted_path}")
+        messagebox.showinfo("Peer key ready", f"Peer key saved to {self.config_model.peer_public_path}\nTrusted key saved to {trusted_path}")
+
+    def _use_local_public_key(self) -> None:
+        try:
+            identity = ensure_identity(self.config_model)
+            self.config_model.peer_public_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(self.config_model.public_path, self.config_model.peer_public_path)
+            trusted_path = trust_public_key(self.config_model.public_path, self.config_model.trusted_dir)
+        except Exception as exc:
+            messagebox.showerror("Could not use local key", str(exc))
+            return
+        messagebox.showinfo(
+            "Local loopback ready",
+            f"{identity.device_id} can now send to this receiver on localhost.\nTrusted key saved to {trusted_path}",
+        )
 
     def _refresh_loop(self) -> None:
         self._refresh_messages()

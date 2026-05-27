@@ -39,7 +39,7 @@ from CamComs import (
     trusted_public_key_path,
 )
 from Agent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
-from DataClient import deep_research_topic, mine_topic
+from DataClient import convert_table, deep_research_topic, load_table, mine_topic
 from QuikTieper.remote import RemoteActionRunner
 from SeeOnDesk import active_window_info, desktop_snapshot
 
@@ -161,6 +161,13 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     data_deep.add_argument("--max-sentences", type=int, default=5)
     data_deep.add_argument("--sleep", type=float, default=0.5, dest="sleep_seconds")
     data_deep.add_argument("--cross-domain", action="store_true", help="Allow crawling links outside each seed page domain.")
+    data_convert = dataclient_subparsers.add_parser("convert", help="Convert table data between CSV, JSON, and SQLite.")
+    data_convert.add_argument("input", type=Path)
+    data_convert.add_argument("--out", type=Path, required=True)
+    data_convert.add_argument("--table", default="data", help="SQLite table name when writing DB output.")
+    data_view = dataclient_subparsers.add_parser("view", help="Print a compact preview of a CSV, JSON, or SQLite table.")
+    data_view.add_argument("input", type=Path)
+    data_view.add_argument("--limit", type=int, default=10)
     dataclient_subparsers.add_parser("gui", help="Open the standalone DataClient GUI.")
 
     seeondesk = subparsers.add_parser(
@@ -583,6 +590,15 @@ def _run_dataclient(args: argparse.Namespace) -> None:
             log=print,
         )
         print(f"Saved {len(pages)} pages into {args.out}")
+        return
+    if args.dataclient_command == "convert":
+        path = convert_table(args.input, args.out, table_name=args.table)
+        print(f"Converted {args.input} -> {path}")
+        return
+    if args.dataclient_command == "view":
+        rows = load_table(args.input)
+        preview = rows[: max(0, args.limit)]
+        print(_pretty_json({"path": str(args.input), "rows": preview, "total_rows": len(rows)}))
         return
     raise SystemExit(f"unknown DataClient command: {args.dataclient_command}")
 

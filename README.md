@@ -522,7 +522,7 @@ Current capabilities:
 - creates a local PhiConnect identity under `~/.config/fiona/phiconnect/`
 - shows your public key in the Settings tab
 - lets you trust another computer's public key
-- starts a local encrypted chat receiver on port `8090`
+- starts a local encrypted chat receiver on port `5000` by default
 - sends chat messages to a peer host/port
 - encrypts every sent message with the peer public key
 - decrypts received messages with the local private key
@@ -530,6 +530,8 @@ Current capabilities:
 - displays messages from the last 3 minutes, refreshing every 5 seconds
 
 Two computers can communicate by exchanging public key JSON files, trusting each other's keys, then pointing each PhiConnect instance at the other machine's IP and port.
+
+For local Fiona loopback testing, open PhiConnect, use `Use Local Public Key` in Settings, start the receiver, then send to `127.0.0.1` port `5000`. A send error saying the peer public key is missing means the outbound encryption key has not been set yet. A connection-refused error means no receiver is listening on the target host/port.
 
 ## DataClient
 
@@ -541,7 +543,14 @@ Open the DataClient GUI:
 python3 -m fiona.cli dataclient
 ```
 
-The GUI supports quick topic mining and deep research mode. Quick mode searches DuckDuckGo HTML results, scrapes the selected number of pages, summarizes page text, and saves a CSV. Deep mode starts from search results, follows same-domain links up to a controlled depth/page limit, and records each page's depth and parent URL.
+The GUI has two tabs:
+
+- `Research`: quick topic mining and bounded deep research.
+- `MiniExcel`: lightweight CSV/JSON/SQLite table viewer and editor.
+
+The app menu includes a `Miner` menu for starting quick mining, starting deep research, and clearing the miner log without digging through the tab controls.
+
+Quick mode searches DuckDuckGo HTML results, scrapes the selected number of pages, summarizes page text, and saves a CSV. Deep mode starts from search results, follows same-domain links up to a controlled depth/page limit, and records each page's depth and parent URL.
 
 CLI quick mining:
 
@@ -565,6 +574,21 @@ DataClient CSV columns:
 - `parent_url`
 
 Deep mode is intentionally bounded. By default it stays on the same domain as each seed page and only crawls one level deep. Use `--cross-domain` only when you intentionally want broader crawling.
+
+MiniExcel can open CSV, JSON, and SQLite files, show them as rows/columns, edit a selected cell, add rows, add columns, delete rows, and save/export the table. It also has a formula bar for selected cells. Formulas start with `=` and support cell references such as `A1`, ranges such as `B1:B5`, arithmetic, and safe functions including `SUM`, `AVG`, `MIN`, `MAX`, `COUNT`, `LEN`, `LOWER`, and `UPPER`.
+
+Convert between table formats:
+
+```bash
+python3 -m fiona.cli dataclient convert ./research.csv --out ./research.json
+python3 -m fiona.cli dataclient convert ./research.json --out ./research.db --table research
+```
+
+Preview a table from the terminal:
+
+```bash
+python3 -m fiona.cli dataclient view ./research.csv --limit 5
+```
 
 ## Agent And LM Studio
 

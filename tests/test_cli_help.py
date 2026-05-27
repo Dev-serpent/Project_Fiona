@@ -49,6 +49,8 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("usage: fiona dataclient", stdout)
         self.assertIn("mine", stdout)
         self.assertIn("deep", stdout)
+        self.assertIn("convert", stdout)
+        self.assertIn("view", stdout)
         self.assertIn("gui", stdout)
 
     def test_help_word_maps_to_top_level_help(self) -> None:

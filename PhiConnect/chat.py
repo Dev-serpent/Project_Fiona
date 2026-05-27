@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.error import URLError
 
 from CamComs.audit import AuditLog
 from CamComs.codec import decode_envelope, encode_envelope
@@ -18,6 +19,7 @@ from CamComs.trust import find_trusted_sender, save_trusted_sender
 DEFAULT_PHICONNECT_DIR = Path.home() / ".config" / "fiona" / "phiconnect"
 DEFAULT_CHAT_LOG_PATH = DEFAULT_PHICONNECT_DIR / "chat.log"
 DEFAULT_TRUSTED_DIR = DEFAULT_PHICONNECT_DIR / "trusted"
+DEFAULT_PHICONNECT_PORT = 5000
 
 
 @dataclass(frozen=True)
@@ -28,9 +30,9 @@ class PhiConnectConfig:
     trusted_dir: Path = DEFAULT_TRUSTED_DIR
     chat_log_path: Path = DEFAULT_CHAT_LOG_PATH
     listen_host: str = "0.0.0.0"
-    listen_port: int = 8090
+    listen_port: int = DEFAULT_PHICONNECT_PORT
     peer_host: str = "127.0.0.1"
-    peer_port: int = 8090
+    peer_port: int = DEFAULT_PHICONNECT_PORT
     peer_public_path: Path = DEFAULT_PHICONNECT_DIR / "peer.public.json"
 
 
@@ -65,6 +67,8 @@ def send_chat_message(
     port: int | None = None,
 ) -> dict[str, Any]:
     identity = ensure_identity(config)
+    if not config.peer_public_path.exists():
+        raise PhiConnectError(f"peer public key not found at {config.peer_public_path}; set a peer public key before sending")
     recipient = PublicKeyBundle.from_dict(json.loads(config.peer_public_path.read_text(encoding="utf-8")))
     plaintext = _chat_payload(body, sender=identity.device_id, recipient=recipient.device_id)
     envelope = encrypt_message(
@@ -76,7 +80,22 @@ def send_chat_message(
     encoded = encode_envelope(envelope)
     target_host = host or config.peer_host
     target_port = port or config.peer_port
-    response_text = CamComsHttpClient(host=target_host, port=target_port).send_encoded(encoded)
+    try:
+        response_text = CamComsHttpClient(host=target_host, port=target_port).send_encoded(encoded)
+    except (OSError, URLError) as exc:
+        AuditLog(config.chat_log_path).record(
+            {
+                "direction": "outbound",
+                "ok": False,
+                "sender": identity.device_id,
+                "recipient": recipient.device_id,
+                "message_id": envelope["message_id"],
+                "body": body,
+                "peer": f"{target_host}:{target_port}",
+                "error": str(exc),
+            }
+        )
+        raise PhiConnectError(f"could not send to {target_host}:{target_port}; is the PhiConnect receiver running there? {exc}") from exc
     event = {
         "direction": "outbound",
         "ok": True,
@@ -140,12 +159,12 @@ class PhiConnectMessageProcessor:
             raise
 
 
-def run_phiconnect_receiver(config: PhiConnectConfig) -> None:
+def build_phiconnect_server(config: PhiConnectConfig) -> ThreadingHTTPServer:
     identity = ensure_identity(config)
     processor = PhiConnectMessageProcessor(
         identity=identity,
         trusted_dir=config.trusted_dir,
-        replay_guard=ReplayGuard(DEFAULT_PHICONNECT_DIR / "seen_messages.json"),
+        replay_guard=ReplayGuard(config.chat_log_path.parent / "seen_messages.json"),
         chat_log=AuditLog(config.chat_log_path),
     )
 
@@ -167,7 +186,11 @@ def run_phiconnect_receiver(config: PhiConnectConfig) -> None:
         def log_message(self, _format: str, *_args: object) -> None:
             return
 
-    ThreadingHTTPServer((config.listen_host, config.listen_port), Handler).serve_forever()
+    return ThreadingHTTPServer((config.listen_host, config.listen_port), Handler)
+
+
+def run_phiconnect_receiver(config: PhiConnectConfig) -> None:
+    build_phiconnect_server(config).serve_forever()
 
 
 def _chat_payload(body: str, *, sender: str, recipient: str) -> dict[str, Any]:
