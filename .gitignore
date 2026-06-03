@@ -16,6 +16,7 @@ dist/
 *.build/
 *.dist-info/
 pip-wheel-metadata/
+node_modules/
 
 # Virtual environments
 .venv/
@@ -49,4 +50,3 @@ Thumbs.db
 .idea/
 .vscode/
 AGENTS.md
-

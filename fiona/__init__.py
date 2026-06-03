@@ -10,6 +10,7 @@ Fiona is split into sibling subsystems:
 - SeeOnDesk: desktop-awareness snapshots
 - DataClient: topic search, scraping, summarization, and CSV export
 - EyeControl: optional camera-based eye-controlled mouse tracker
+- TerminalAssist: btop-style terminal dashboard and Zellij workspace
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import EyeControl as EyeControl
 import PhiConnect as PhiConnect
 import QuikTieper as QuikTieper
 import SeeOnDesk as SeeOnDesk
+import TerminalAssist as TerminalAssist
 import Vsee as Vsee
 from CamComs import (
     CamComsCryptoError,
@@ -46,6 +48,7 @@ sys.modules.setdefault(__name__ + ".EyeControl", EyeControl)
 sys.modules.setdefault(__name__ + ".PhiConnect", PhiConnect)
 sys.modules.setdefault(__name__ + ".QuikTieper", QuikTieper)
 sys.modules.setdefault(__name__ + ".SeeOnDesk", SeeOnDesk)
+sys.modules.setdefault(__name__ + ".TerminalAssist", TerminalAssist)
 sys.modules.setdefault(__name__ + ".Vsee", Vsee)
 
 
@@ -68,6 +71,7 @@ __all__ = [
     "EyeControl",
     "PhiConnect",
     "SeeOnDesk",
+    "TerminalAssist",
     "ChordListener",
     "PublicKeyBundle",
     "QuikTieper",

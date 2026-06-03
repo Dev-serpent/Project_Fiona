@@ -16,6 +16,7 @@ class PackageStructureTests(unittest.TestCase):
         self.assertIs(importlib.import_module("fiona.SeeOnDesk"), fiona.SeeOnDesk)
         self.assertIs(importlib.import_module("fiona.DataClient"), fiona.DataClient)
         self.assertIs(importlib.import_module("fiona.EyeControl"), fiona.EyeControl)
+        self.assertIs(importlib.import_module("fiona.TerminalAssist"), fiona.TerminalAssist)
 
     def test_subsystems_are_directly_importable(self) -> None:
         import Agent
@@ -25,6 +26,7 @@ class PackageStructureTests(unittest.TestCase):
         import PhiConnect
         import QuikTieper
         import SeeOnDesk
+        import TerminalAssist
         import Vsee
 
         self.assertTrue(hasattr(CamComs, "encrypt_message"))
@@ -37,6 +39,7 @@ class PackageStructureTests(unittest.TestCase):
         self.assertTrue(hasattr(EyeControl, "dependency_status"))
         self.assertTrue(hasattr(PhiConnect, "send_chat_message"))
         self.assertTrue(hasattr(SeeOnDesk, "desktop_snapshot"))
+        self.assertTrue(hasattr(TerminalAssist, "build_dashboard"))
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ This file records the current Fiona project structure, runtime setup, and latest
 
 ## Project Structure
 
-Fiona is the umbrella project. It exposes eight sibling subsystems:
+Fiona is the umbrella project. It exposes nine sibling subsystems:
 
 - `QuikTieper`: the local access layer for keyboard, mouse, app launch, clicks, and shortcuts
 - `CamComs`: the communication layer for encoded/encrypted host communication
@@ -14,6 +14,7 @@ Fiona is the umbrella project. It exposes eight sibling subsystems:
 - `SeeOnDesk`: the desktop-awareness layer for active app/window identification
 - `DataClient`: the standalone research/data collection app
 - `EyeControl`: optional camera-based eye-controlled mouse tracker
+- `TerminalAssist`: Fiona Terminal Assistance (`fAT`) terminal dashboard and Zellij workspace helper
 
 Current file structure:
 
@@ -29,6 +30,7 @@ Fiona/
 ├── SeeOnDesk/              desktop awareness and active-window identification
 ├── DataClient/             research/data collection app
 ├── EyeControl/             optional eye-controlled mouse tracker integration
+├── TerminalAssist/         fAT terminal dashboard and Zellij layout generation
 ├── tests/                  Python tests
 ├── scripts/                local launch wrappers
 ├── .backups/               timestamped backup snapshots
@@ -63,6 +65,7 @@ PhiConnect/            encrypted computer-to-computer chat implementation
 SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection implementation
 EyeControl/            optional camera-based eye-controlled mouse tracker
+TerminalAssist/        Fiona Terminal Assistance terminal UI helpers
 tests/                 Python verification tests
 ```
 
@@ -114,6 +117,12 @@ fiona dataclient mine "topic" --out ./research.csv
 fiona dataclient deep "topic" --out ./deep.csv --depth 1 --page-limit 50
 fiona eyecontrol status
 fiona eyecontrol run --camera-index 0 --no-click
+fiona cli
+fiona cli --preview
+fiona fat status
+fiona fat tui
+fiona fat layout --print
+fiona fat run
 ```
 
 ## Missing Issues
@@ -167,6 +176,11 @@ Recently fixed:
 - The imported tracker now lives at `EyeControl/Eye_Controlled_Mouse_Tracker.py` and is wrapped as the optional `EyeControl` package.
 - Fiona now exposes `fiona eyecontrol status` and `fiona eyecontrol run`.
 - EyeControl imports OpenCV, MediaPipe, PyAutoGUI, and camera resources only at runtime, so normal Fiona imports and tests do not require a camera.
+- The project now includes `TerminalAssist`, a btop-inspired terminal dashboard and Zellij layout helper exposed through `fiona fat`.
+- Fiona now exposes `fiona fat`, `fiona fat status`, `fiona fat json`, `fiona fat layout`, and `fiona fat run`.
+- Fiona now exposes `fiona cli`, a sliding curses-based command center for common Fiona workflows.
+- `fiona fat tui` opens the same command center through the fAT namespace.
+- The fAT command center now captures one-shot command output inside an in-app output panel. Interactive or long-running actions are marked external and still run through the real terminal/session.
 - Fiona now exposes `fiona host install-service` to print or write a user systemd service file for startup/background operation.
 - Launcher scripts point at `/home/Dhruv/Documents/Projects/Fiona`.
 - README matches the current Fiona / QuikTieper / CamComs structure.
@@ -440,7 +454,7 @@ python -m unittest discover -s tests -v
 Latest result, run on 2026-05-26:
 
 ```text
-Ran 83 tests in 0.430s
+Ran 99 tests in 0.481s
 
 OK
 ```
@@ -480,7 +494,7 @@ Latest output:
 Compile the main packages:
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
 ```
 
 Latest result, run on 2026-05-26:

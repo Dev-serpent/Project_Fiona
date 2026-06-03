@@ -27,7 +27,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl"]
+packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl", "TerminalAssist"]
 
 [tool.setuptools.package-data]
 CamComs = ["esp32payload/*"]

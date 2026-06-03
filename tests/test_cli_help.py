@@ -31,6 +31,8 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("seeondesk", stdout)
         self.assertIn("dataclient", stdout)
         self.assertIn("eyecontrol", stdout)
+        self.assertIn("fat", stdout)
+        self.assertIn("cli", stdout)
         self.assertIn("phiconnect", stdout)
 
     def test_seeondesk_help_shows_awareness_commands(self) -> None:
@@ -62,6 +64,24 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("usage: fiona eyecontrol", stdout)
         self.assertIn("status", stdout)
         self.assertIn("run", stdout)
+
+    def test_fat_help_shows_terminal_assistance_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("fat", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona fat", stdout)
+        self.assertIn("status", stdout)
+        self.assertIn("layout", stdout)
+        self.assertIn("run", stdout)
+
+    def test_cli_help_shows_terminal_command_center(self) -> None:
+        code, stdout, stderr = self._run_cli("cli", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona cli", stdout)
+        self.assertIn("--preview", stdout)
 
     def test_help_word_maps_to_top_level_help(self) -> None:
         code, stdout, _stderr = self._run_cli("help")

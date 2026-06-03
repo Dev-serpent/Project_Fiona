@@ -1,6 +1,6 @@
 # Fiona
 
-Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, optional eye-controlled pointer experiments, a local LM Studio bridge, and a simple 3D hologram viewer.
+Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, optional eye-controlled pointer experiments, terminal assistance, a local LM Studio bridge, and a simple 3D hologram viewer.
 
 After installation, the command is:
 
@@ -21,13 +21,14 @@ Examples:
 python3 -m fiona.cli edit
 python3 -m fiona.cli list
 python3 -m fiona.cli camcoms smoke-test
+python3 -m fiona.cli cli
 ```
 
 If `fiona` prints `command not found`, the package has not been installed into the active environment yet, or that environment's script directory is not on `PATH`. Use `python3 -m fiona.cli ...` from the repository root, or run `pip install -e .` inside the environment you want to use.
 
 ## Current Architecture
 
-Fiona is the umbrella package. It exposes eight sibling subsystems:
+Fiona is the umbrella package. It exposes nine sibling subsystems:
 
 - `QuikTieper`: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.
 - `CamComs`: communication layer for encoded/encrypted messages, currently focused on ESP32 sender to Fiona host receiver.
@@ -37,6 +38,7 @@ Fiona is the umbrella package. It exposes eight sibling subsystems:
 - `SeeOnDesk`: desktop-awareness layer for identifying the current session and focused app/window.
 - `DataClient`: standalone research/data collection app for topic search, page scraping, summarization, deep research, and CSV export.
 - `EyeControl`: optional camera-based eye-controlled mouse tracker.
+- `TerminalAssist`: Fiona Terminal Assistance (`fAT`) btop-style terminal dashboard and Zellij workspace helper.
 
 Project layout:
 
@@ -51,6 +53,7 @@ PhiConnect/            encrypted computer-to-computer chat app
 SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection app
 EyeControl/            optional eye-controlled mouse tracker integration
+TerminalAssist/        Fiona Terminal Assistance and Zellij layout generation
 scripts/               local launch wrappers
 tests/                 Python tests
 DEVELOPERNOTE.md       detailed project notes and latest verification log
@@ -192,6 +195,8 @@ Check dependency readiness:
 
 ```bash
 python3 -m fiona.cli eyecontrol status
+python3 -m fiona.cli cli --preview
+python3 -m fiona.cli fat status
 ```
 
 Run against an IP camera snapshot URL:
@@ -213,6 +218,73 @@ python3 -m fiona.cli eyecontrol run --camera-index 0 --no-click
 ```
 
 EyeControl requires camera access and optional packages such as OpenCV, MediaPipe, and PyAutoGUI, so it may be unoperational on machines without a camera or those packages.
+
+## Fiona Terminal Assistance
+
+Fiona Terminal Assistance (`fAT`) is a btop-inspired terminal control surface. It now also provides Fiona's sliding terminal command center through `fiona cli`. Direct commands still exist for scripts, but `fiona cli` is the intended terminal-first surface when you do not want to remember the whole command grid.
+
+Open the sliding command center:
+
+```bash
+python3 -m fiona.cli cli
+```
+
+Print the command-center preview without entering curses mode:
+
+```bash
+python3 -m fiona.cli cli --preview
+```
+
+Inside a real terminal, controls are:
+
+```text
+left/right or h/l: slide pages
+up/down or k/j: select action
+enter: run selected Fiona command
+q or Esc: quit
+```
+
+One-shot commands now load their output inside the fAT output panel instead of dumping into the parent terminal. Use up/down or page up/down to scroll output, then Enter, Backspace, `q`, or Esc to return.
+
+Interactive or long-running actions are marked with `↗` and still open through the real terminal/session because GUI apps, listeners, receivers, and services need to own their process.
+
+The current pages are Overview, QuikTieper, CamComs, Host, and Apps.
+
+It does not require Zellij for the basic dashboard or sliding CLI, but it can generate and launch a Zellij workspace when Zellij is installed.
+
+Show the terminal dashboard:
+
+```bash
+python3 -m fiona.cli fat
+python3 -m fiona.cli fat status
+python3 -m fiona.cli fat tui
+```
+
+Print machine-readable readiness:
+
+```bash
+python3 -m fiona.cli fat json
+```
+
+Print the Zellij layout:
+
+```bash
+python3 -m fiona.cli fat layout --print
+```
+
+Write the Zellij layout:
+
+```bash
+python3 -m fiona.cli fat layout --out /tmp/fiona-fat.kdl
+```
+
+Launch the Zellij workspace:
+
+```bash
+python3 -m fiona.cli fat run
+```
+
+The generated workspace opens panes for fAT status, host status, CamComs paths, and SeeOnDesk status.
 
 ## QuikTieper
 
@@ -701,6 +773,7 @@ Working today:
 - standalone DataClient research GUI
 - SeeOnDesk desktop-awareness CLI
 - EyeControl optional camera tracker CLI
+- fAT terminal dashboard and Zellij layout helper
 - QuikTieper binding editor/listener/action runner
 - CamComs encryption/decryption/transport/receiver
 - trusted sender lifecycle and audit logging
@@ -737,12 +810,12 @@ python -m unittest discover -s tests -v
 Compile the main packages:
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
 ```
 
 Current latest known result:
 
 ```text
-83 tests OK
+99 tests OK
 compileall OK
 ```

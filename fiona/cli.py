@@ -43,6 +43,15 @@ from DataClient import convert_table, deep_research_topic, load_table, mine_topi
 from EyeControl import EyeTrackerConfig, dependency_status, run_eye_tracker
 from QuikTieper.remote import RemoteActionRunner
 from SeeOnDesk import active_window_info, desktop_snapshot
+from TerminalAssist import (
+    build_cli_preview,
+    build_dashboard,
+    build_zellij_layout,
+    run_terminal_cli,
+    terminal_assist_status,
+    write_zellij_layout,
+)
+from TerminalAssist.dashboard import run_zellij
 
 
 QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-keys", "normalize-app-cmds"}
@@ -83,6 +92,14 @@ def main() -> None:
         _run_eyecontrol(args)
         return
 
+    if args.layer in {"fat", "terminal-assist"}:
+        _run_fat(args)
+        return
+
+    if args.layer == "cli":
+        _run_cli_center(args)
+        return
+
     if args.layer == "vsee":
         _run_vsee(args)
         return
@@ -110,6 +127,8 @@ def _build_parser() -> argparse.ArgumentParser:
   fiona agent ...        LM Studio bridge and agent-visible command registry
   fiona dataclient ...   Search, scrape, summarize, and export topic research
   fiona eyecontrol ...   Optional camera-based eye-controlled mouse tracker
+  fiona fat ...          Fiona Terminal Assistance dashboard and Zellij layout
+  fiona cli              Sliding Fiona terminal command center
   fiona seeondesk ...    Desktop awareness and active-window identification
   fiona vsee             Standalone Vsee Holography app
   fiona phiconnect       Standalone encrypted PhiConnect chat app
@@ -193,6 +212,28 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     eye_run.add_argument("--click-sleep", type=float, default=0.5, dest="click_sleep_seconds")
     eye_run.add_argument("--no-click", action="store_true", help="Move the pointer but do not trigger blink clicks.")
     eye_run.add_argument("--timeout", type=float, default=5.0, dest="request_timeout_seconds")
+
+    fat = subparsers.add_parser(
+        "fat",
+        aliases=["terminal-assist"],
+        help="Run Fiona Terminal Assistance dashboard and Zellij helpers.",
+    )
+    fat_subparsers = fat.add_subparsers(dest="fat_command")
+    fat_status = fat_subparsers.add_parser("status", help="Show the btop-style fAT terminal dashboard.")
+    fat_status.add_argument("--no-color", action="store_true")
+    fat_status.add_argument("--width", type=int, default=96)
+    fat_subparsers.add_parser("tui", help="Open the sliding Fiona terminal command center.")
+    fat_subparsers.add_parser("json", help="Print fAT readiness as JSON.")
+    fat_layout = fat_subparsers.add_parser("layout", help="Print or write the fAT Zellij layout.")
+    fat_layout.add_argument("--out", type=Path, default=None)
+    fat_layout.add_argument("--print", action="store_true", dest="print_layout")
+    fat_layout.add_argument("--working-directory", type=Path, default=Path.cwd())
+    fat_run = fat_subparsers.add_parser("run", help="Launch the fAT Zellij workspace.")
+    fat_run.add_argument("--layout", type=Path, default=Path("/tmp/fiona-fat.kdl"))
+    fat_run.add_argument("--working-directory", type=Path, default=Path.cwd())
+
+    cli_center = subparsers.add_parser("cli", help="Open the sliding Fiona terminal command center.")
+    cli_center.add_argument("--preview", action="store_true", help="Print the non-interactive command-center preview.")
 
     seeondesk = subparsers.add_parser(
         "seeondesk",
@@ -645,6 +686,42 @@ def _run_eyecontrol(args: argparse.Namespace) -> None:
         run_eye_tracker(config)
         return
     raise SystemExit(f"unknown EyeControl command: {args.eyecontrol_command}")
+
+
+def _run_fat(args: argparse.Namespace) -> None:
+    command = args.fat_command or "status"
+    if command == "tui":
+        code = run_terminal_cli()
+        if code:
+            raise SystemExit(code)
+        return
+    if command == "status":
+        print(build_dashboard(color=not getattr(args, "no_color", False), width=getattr(args, "width", 96)))
+        return
+    if command == "json":
+        print(_pretty_json(terminal_assist_status()))
+        return
+    if command == "layout":
+        layout = build_zellij_layout(working_directory=args.working_directory)
+        if args.out:
+            path = write_zellij_layout(args.out, working_directory=args.working_directory)
+            print(f"Wrote fAT Zellij layout to {path}")
+        if args.print_layout or not args.out:
+            print(layout)
+        return
+    if command == "run":
+        layout_path = write_zellij_layout(args.layout, working_directory=args.working_directory)
+        raise SystemExit(run_zellij(layout_path))
+    raise SystemExit(f"unknown fAT command: {command}")
+
+
+def _run_cli_center(args: argparse.Namespace) -> None:
+    if args.preview:
+        print(build_cli_preview())
+        return
+    code = run_terminal_cli()
+    if code:
+        raise SystemExit(code)
 
 
 def _run_vsee(args: argparse.Namespace) -> None:
