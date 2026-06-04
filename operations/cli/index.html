@@ -349,6 +349,12 @@
 <td>foreground TUI</td>
 </tr>
 <tr>
+<td><code>fiona api</code></td>
+<td>TerminalAssist</td>
+<td>Short for 'fiona fat api'</td>
+<td>one-shot JSON</td>
+</tr>
+<tr>
 <td><code>fiona recall ...</code></td>
 <td>RecallVault</td>
 <td>Small persistent remembrance store</td>
@@ -358,6 +364,12 @@
 <td><code>fiona action ...</code></td>
 <td>CmdTrace</td>
 <td>Action trace logging and observability</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona run-shell ...</code></td>
+<td>fiona</td>
+<td>Internal helper to run shell commands</td>
 <td>one-shot</td>
 </tr>
 <tr>
@@ -583,14 +595,14 @@ fiona eyecontrol run --camera-index 0 --no-click
 <pre><code class="language-bash">fiona cli
 fiona cli --preview
 fiona fat status
-fiona fat status --json
-fiona fat json
+fiona api
+fiona fat api
 fiona fat run
 </code></pre>
 <p>Mechanics:
-- <code>fiona cli</code> opens the sliding curses command center with a 1-second auto-refresh and live search.
-- <code>status</code> prints a btop-inspired terminal dashboard with live CPU, memory, disk, and uptime.
-- <code>--json</code> or the <code>json</code> command prints machine-readable system status for API consumption.
+- <code>fiona cli</code> opens the sliding curses command center with a non-blocking 1-second auto-refresh and live search.
+- <code>status</code> prints a high-density terminal dashboard with live CPU, memory, disk, network, power, and security metrics.
+- <code>fiona api</code> (or <code>fat api</code>) prints the comprehensive machine-readable system status.
 - <code>run</code> writes the Zellij layout and launches the workspace.</p>
 <h2 id="recallvault-commands">RecallVault Commands</h2>
 <pre><code class="language-bash">fiona recall remember &lt;key&gt; &lt;value&gt; --category &lt;cat&gt;

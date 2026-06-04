@@ -207,6 +207,10 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#real-time-command-center" class="nav-link">Real-Time Command Center</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#quick-actions-page" class="nav-link">Quick Actions Page</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="3"><a href="#search-and-navigation" class="nav-link">Search and Navigation</a>
               <ul class="nav flex-column">
               </ul>
@@ -255,20 +259,23 @@ fiona fat tui
 <pre><code class="language-bash">fiona fat status
 </code></pre>
 <p>Print machine-readable system status (JSON API):</p>
-<pre><code class="language-bash">fiona fat status --json
+<pre><code class="language-bash">fiona api
 # or shortcut
-fiona fat json
+fiona fat api
 </code></pre>
 <h2 id="dashboard">Dashboard</h2>
 <p>The dashboard is a high-density system monitor inspired by <code>btop</code>. It features live resource tracking and project environment checks.</p>
 <p>Live metrics include:
-- <strong>CPU Load</strong>: 1, 5, and 15 minute averages from <code>/proc/loadavg</code>.
-- <strong>Memory</strong>: Used vs Total memory with percentage.
-- <strong>Disk</strong>: Root partition usage.
-- <strong>Uptime</strong>: System uptime since last boot.</p>
-<p>Environmental info includes OS distribution, architecture, user info, and Fiona component readiness (config, keys, trust store).</p>
+- <strong>System</strong>: Hostname, Kernel, Uptime, User, OS, Architecture.
+- <strong>CPU</strong>: Model, Usage %, Per-core usage, Speed, and Temperature.
+- <strong>Memory</strong>: RAM (Used/Total) and Swap usage.
+- <strong>Disk</strong>: Root partition usage and I/O activity (Read/Write).
+- <strong>Network</strong>: IP address, Interface, Traffic (RX/TX), and Signal strength (if Wi-Fi).
+- <strong>GPU</strong>: Utilization and Temperature (NVIDIA/Intel/AMD).
+- <strong>Power</strong>: Battery percentage and charging state (for laptops).
+- <strong>Security</strong>: Firewall status and available system updates.</p>
 <h2 id="real-time-command-center">Real-Time Command Center</h2>
-<p>The command center is a fullscreen curses UI with a 1-second auto-refresh engine.</p>
+<p>The command center is a fullscreen curses UI with a non-blocking 1-second auto-refresh engine.</p>
 <p>Controls:</p>
 <pre><code class="language-text">left/right or h/l: slide pages
 up/down or k/j:    select action
@@ -276,6 +283,13 @@ up/down or k/j:    select action
 enter:            run selected action
 q or Esc:         quit (or clear search)
 </code></pre>
+<h3 id="quick-actions-page">Quick Actions Page</h3>
+<p>The TUI includes a <strong>Quick Actions</strong> page that detects your current Desktop Environment (KDE, GNOME, XFCE) and provides session controls:
+- <strong>Lock Screen</strong>
+- <strong>Logout</strong>
+- <strong>Suspend</strong>
+- <strong>Reboot</strong>
+- <strong>Shutdown</strong></p>
 <h3 id="search-and-navigation">Search and Navigation</h3>
 <p>Press <code>/</code> to enter search mode. As you type, the TUI filters all available actions across all pages in real-time.</p>
 <h3 id="dynamic-pages">Dynamic Pages</h3>
