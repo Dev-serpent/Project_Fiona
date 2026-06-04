@@ -203,15 +203,24 @@ def run_terminal_cli(*, runner: Callable[[tuple[str, ...]], CommandResult] | Non
 def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], CommandResult]) -> int:
     curses.curs_set(0)
     curses.use_default_colors()
-    screen.timeout(1000)  # Refresh every second
+    screen.timeout(100)  # fast poll for input
     _init_colors()
-    pages = command_pages()
+    
     page_index = 0
     selected = 0
     query = ""
     message = "left/right: slide  up/down: select  /: search  enter: run  q: quit"
+    last_refresh = 0.0
 
     while True:
+        now = time.time()
+        # Refresh if a second passed OR user pressed a key
+        force_refresh = False
+        
+        if now - last_refresh >= 1.0:
+            force_refresh = True
+            last_refresh = now
+            
         pages = command_pages()
         if query:
             all_actions = []
@@ -221,16 +230,22 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
                         all_actions.append(a)
             display_page = CliPage("Search Results", f"Found {len(all_actions)} actions matching '{query}'", tuple(all_actions))
             selected = max(0, min(selected, len(display_page.actions) - 1))
-            _draw(screen, pages=pages, page_index=-1, selected=selected, message=message, search_page=display_page, query=query)
+            if force_refresh:
+                _draw(screen, pages=pages, page_index=-1, selected=selected, message=message, search_page=display_page, query=query)
             page = display_page
         else:
             page = pages[page_index]
             selected = max(0, min(selected, len(page.actions) - 1))
-            _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message)
+            if force_refresh:
+                _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message)
 
         key = screen.getch()
-        if key == -1:  # Timeout, just loop to re-draw
+        if key == -1:
             continue
+            
+        # Key was pressed, force re-draw next loop
+        last_refresh = 0 
+        
         if key in (ord("q"), ord("Q"), 27):
             if query:
                 query = ""
@@ -421,11 +436,24 @@ def _draw(
         dashboard_text = build_dashboard(color=False, width=width - 2, height=height - 3)
         lines = dashboard_text.splitlines()
         for i, line in enumerate(lines):
-            attr = curses.color_pair(2) if i == 1 or i == 3 or i == len(lines)-1 else curses.color_pair(6)
-            if i == 0:
+            # Default color
+            attr = curses.color_pair(6)
+            
+            # Border/Structure
+            if i == 1 or i == 3 or i == 5 or i == len(lines)-1:
+                attr = curses.color_pair(2)
+            elif i == 0:
                 attr = curses.color_pair(1) | curses.A_BOLD
-            if "CPU:" in line or "MEM:" in line:
-                attr = curses.color_pair(3) | curses.A_BOLD
+            elif "──" in line:
+                attr = curses.color_pair(6) | curses.A_BOLD
+            
+            # Gauge & Metric coloring (heuristic based on symbols)
+            if "█" in line or "░" in line:
+                # We split the line to find the gauge parts
+                # This is a bit complex to do perfectly with addstr
+                # For now, let's just color the whole line if it contains a gauge
+                attr = curses.color_pair(3)
+                
             _safe_addstr(screen, 1 + i, 1, line, attr)
     else:
         page = pages[page_index]
