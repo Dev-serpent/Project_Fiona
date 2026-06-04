@@ -71,7 +71,10 @@ QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-key
 def _run_shell(args: argparse.Namespace) -> None:
     full_cmd = " ".join(args.cmd)
     try:
-        subprocess.run(full_cmd, shell=True, check=True)
+        # Use os.system for direct shell execution as requested
+        code = os.system(full_cmd)
+        if code != 0:
+            raise SystemExit(code)
     except Exception as e:
         raise SystemExit(f"shell command failed: {e}")
 

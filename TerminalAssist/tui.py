@@ -12,17 +12,9 @@ from typing import Callable
 
 from CmdTrace import read_trace
 from RecallVault import search_recall
-from .dashboard import build_dashboard, terminal_assist_status
+from .dashboard import build_dashboard, get_mouse_info, terminal_assist_status
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-
-
-@dataclass(frozen=True)
-class CliAction:
-    label: str
-    command: tuple[str, ...]
-    description: str
-    external: bool = False
 
 
 @dataclass(frozen=True)
@@ -31,6 +23,14 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+@dataclass(frozen=True)
+class CliAction:
+    label: str
+    command: tuple[str, ...]
+    description: str
+    external: bool = False
 
 
 @dataclass(frozen=True)
@@ -55,16 +55,15 @@ def get_quick_actions() -> tuple[CliAction, ...]:
     de = detect_de()
     actions = []
     if de == "KDE":
-        actions.append(CliAction("Lock Screen", ("run-shell", "loginctl lock-session"), "Lock the current KDE session."))
-        actions.append(CliAction("Logout", ("run-shell", "qdbus-qt5 org.kde.ksmserver /KSMServer logout 1 0 1"), "Logout of KDE."))
+        actions.append(CliAction("Lock Screen", ("run-shell", "loginctl lock-session"), "Lock the current KDE session.", external=True))
+        actions.append(CliAction("Logout", ("run-shell", "qdbus-qt5 org.kde.ksmserver /KSMServer logout 1 0 1"), "Logout of KDE.", external=True))
     elif de == "GNOME":
-        actions.append(CliAction("Lock Screen", ("run-shell", "gnome-screensaver-command -l"), "Lock the GNOME session."))
-        actions.append(CliAction("Logout", ("run-shell", "gnome-session-quit --logout --no-prompt"), "Logout of GNOME."))
+        actions.append(CliAction("Lock Screen", ("run-shell", "gnome-screensaver-command -l"), "Lock the GNOME session.", external=True))
+        actions.append(CliAction("Logout", ("run-shell", "gnome-session-quit --logout --no-prompt"), "Logout of GNOME.", external=True))
     
-    # Generic actions
-    actions.append(CliAction("Suspend", ("run-shell", "systemctl suspend"), "Suspend the system to RAM."))
-    actions.append(CliAction("Reboot", ("run-shell", "systemctl reboot"), "Reboot the system immediately."))
-    actions.append(CliAction("Shutdown", ("run-shell", "systemctl poweroff"), "Power off the system immediately."))
+    actions.append(CliAction("Suspend", ("run-shell", "systemctl suspend"), "Suspend the system to RAM.", external=True))
+    actions.append(CliAction("Reboot", ("run-shell", "systemctl reboot"), "Reboot the system immediately.", external=True))
+    actions.append(CliAction("Shutdown", ("run-shell", "systemctl poweroff"), "Power off the system immediately.", external=True))
     
     return tuple(actions)
 
@@ -97,9 +96,9 @@ def command_pages() -> tuple[CliPage, ...]:
             (
                 CliAction("Open editor", ("edit",), "Open the shared Fiona GUI editor.", external=True),
                 CliAction("List bindings", ("list",), "Print configured app launchers and shortcuts."),
-                CliAction("Import apps dry-run", ("import-apps", "--dry-run"), "Preview Linux desktop app import."),
-                CliAction("Assign keys dry-run", ("assign-keys", "--dry-run"), "Preview generated launch chords."),
-                CliAction("Run listener", ("run",), "Start the foreground global chord listener.", external=True),
+                CliAction("Normalize commands", ("normalize-app-cmds",), "Standardize .desktop file launch strings."),
+                CliAction("Assign keys", ("assign-keys",), "Auto-assign simultaneous chords to apps."),
+                CliAction("Run listener", ("run",), "Start global keyboard listener in foreground.", external=True),
             ),
         ),
         CliPage(
@@ -177,24 +176,18 @@ def command_pages() -> tuple[CliPage, ...]:
 
 def build_cli_preview(width: int = 96) -> str:
     pages = command_pages()
-    status = terminal_assist_status()
-    lines = [
-        "fAT / Fiona CLI",
-        "=" * min(width, 96),
-        f"Zellij: {status['zellij_path'] or 'not found'}",
-        f"Ready: {'yes' if status['ready'] else 'partial'}",
-        "",
-    ]
-    for page in pages:
-        lines.append(f"[{page.title}] {page.subtitle}")
-        for index, action in enumerate(page.actions, 1):
-            lines.append(f"  {index}. {action.label}: fiona {' '.join(action.command)}")
-        lines.append("")
-    return "\n".join(lines).rstrip()
+    rendered = [f"fAT / Fiona CLI │ {len(pages)} sliding pages │ width={width}", ""]
+    for i, page in enumerate(pages):
+        rendered.append(f"[{page.title}] - {page.subtitle}")
+        for action in page.actions:
+            ext = " ↗" if action.external else ""
+            rendered.append(f"  • fiona {' '.join(action.command)}{ext}")
+        rendered.append("")
+    return "\n".join(rendered)
 
 
-def run_terminal_cli(*, runner: Callable[[tuple[str, ...]], CommandResult] | None = None) -> int:
-    if not sys.stdin.isatty() or not sys.stdout.isatty():
+def run_terminal_cli(runner: Callable[[tuple[str, ...]], CommandResult] | None = None) -> int:
+    if not sys.stdout.isatty():
         print(build_cli_preview())
         return 0
     return curses.wrapper(lambda screen: _run_curses(screen, runner=runner or _run_command))
@@ -203,7 +196,7 @@ def run_terminal_cli(*, runner: Callable[[tuple[str, ...]], CommandResult] | Non
 def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], CommandResult]) -> int:
     curses.curs_set(0)
     curses.use_default_colors()
-    screen.timeout(100)  # fast poll for input
+    screen.timeout(100)
     _init_colors()
     
     page_index = 0
@@ -211,15 +204,17 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
     query = ""
     message = "left/right: slide  up/down: select  /: search  enter: run  q: quit"
     last_refresh = 0.0
+    status = terminal_assist_status()
 
     while True:
         now = time.time()
-        # Refresh if a second passed OR user pressed a key
-        force_refresh = False
-        
         if now - last_refresh >= 1.0:
-            force_refresh = True
+            status = terminal_assist_status()
             last_refresh = now
+        
+        mouse = get_mouse_info()
+        status["mouse_x"] = mouse["x"]
+        status["mouse_y"] = mouse["y"]
             
         pages = command_pages()
         if query:
@@ -230,21 +225,15 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
                         all_actions.append(a)
             display_page = CliPage("Search Results", f"Found {len(all_actions)} actions matching '{query}'", tuple(all_actions))
             selected = max(0, min(selected, len(display_page.actions) - 1))
-            if force_refresh:
-                _draw(screen, pages=pages, page_index=-1, selected=selected, message=message, search_page=display_page, query=query)
+            _draw(screen, pages=pages, page_index=-1, selected=selected, message=message, status=status, search_page=display_page, query=query)
             page = display_page
         else:
             page = pages[page_index]
             selected = max(0, min(selected, len(page.actions) - 1))
-            if force_refresh:
-                _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message)
+            _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message, status=status)
 
         key = screen.getch()
-        if key == -1:
-            continue
-            
-        # Key was pressed, force re-draw next loop
-        last_refresh = 0 
+        if key == -1: continue
         
         if key in (ord("q"), ord("Q"), 27):
             if query:
@@ -257,9 +246,9 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
             query = ""
             selected = 0
             message = "Type to search actions... (Esc to cancel)"
-            _draw(screen, pages=pages, page_index=-1, selected=0, message=message, query=query)
+            _draw(screen, pages=pages, page_index=-1, selected=0, message=message, status=status, query=query)
             curses.curs_set(1)
-            query = _get_search_query(screen, height=screen.getmaxyx()[0] - 1, pages=pages, page_index=page_index, selected=selected)
+            query = _get_search_query(screen, height=screen.getmaxyx()[0] - 1, pages=pages, page_index=page_index, selected=selected, status=status)
             curses.curs_set(0)
             message = f"Search results for '{query}'" if query else "left/right: slide  up/down: select  /: search  enter: run  q: quit"
             continue
@@ -289,16 +278,15 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
                 message = f"Loaded: fiona {' '.join(action.command)}"
 
 
-def _get_search_query(screen: curses.window, height: int, *, pages: tuple[CliPage, ...], page_index: int, selected: int) -> str:
+def _get_search_query(screen: curses.window, height: int, *, pages: tuple[CliPage, ...], page_index: int, selected: int, status: dict[str, Any]) -> str:
     query = ""
-    screen.timeout(100)  # Faster response during typing
+    screen.timeout(100)
     last_refresh = time.time()
     
     while True:
         now = time.time()
         if now - last_refresh >= 1.0:
-            # Re-draw background dashboard/page
-            _draw(screen, pages=pages, page_index=-1, selected=0, message="Type to search... (Esc to cancel)", query=query)
+            _draw(screen, pages=pages, page_index=-1, selected=0, message="Type to search... (Esc to cancel)", query=query, status=status)
             last_refresh = now
             
         _safe_addstr(screen, height, 2, f"Search: {query}".ljust(screen.getmaxyx()[1] - 4), curses.color_pair(4) | curses.A_BOLD)
@@ -306,108 +294,18 @@ def _get_search_query(screen: curses.window, height: int, *, pages: tuple[CliPag
         
         key = screen.getch()
         if key == -1:
+            mouse = get_mouse_info()
+            status["mouse_x"] = mouse["x"]
+            status["mouse_y"] = mouse["y"]
             continue
         if key in (10, 13, curses.KEY_ENTER):
             return query
-        if key in (27,):  # Esc
+        if key in (27,):
             return ""
         if key in (curses.KEY_BACKSPACE, 127, 8):
             query = query[:-1]
         elif 32 <= key <= 126:
             query += chr(key)
-
-
-def _run_action(screen: curses.window, action: CliAction, runner: Callable[[tuple[str, ...]], CommandResult]) -> None:
-    if not action.external:
-        result = runner(action.command)
-        _show_command_output(screen, action, result)
-        return
-
-    curses.def_prog_mode()
-    curses.endwin()
-    try:
-        print(f"\n$ fiona {' '.join(action.command)}\n")
-        code = _run_command_external(action.command)
-        print(f"\n[exit {code}] Press Enter to return to fAT.", end="", flush=True)
-        input()
-    finally:
-        curses.reset_prog_mode()
-        curses.curs_set(0)
-        screen.clear()
-
-
-def _run_command(command: tuple[str, ...]) -> CommandResult:
-    completed = subprocess.run(
-        [sys.executable, "-m", "fiona.cli", *command],
-        check=False,
-        text=True,
-        capture_output=True,
-    )
-    return CommandResult(
-        command=command,
-        returncode=completed.returncode,
-        stdout=completed.stdout,
-        stderr=completed.stderr,
-    )
-
-
-def _run_command_external(command: tuple[str, ...]) -> int:
-    return subprocess.call([sys.executable, "-m", "fiona.cli", *command])
-
-
-def format_command_output(result: CommandResult) -> tuple[str, ...]:
-    lines = [f"$ fiona {' '.join(result.command)}", f"[exit {result.returncode}]", ""]
-    if result.stdout.strip():
-        lines.extend(strip_ansi(result.stdout.rstrip()).splitlines())
-    if result.stderr.strip():
-        if result.stdout.strip():
-            lines.append("")
-        lines.append("[stderr]")
-        lines.extend(strip_ansi(result.stderr.rstrip()).splitlines())
-    if len(lines) == 3:
-        lines.append("(no output)")
-    return tuple(lines)
-
-
-def strip_ansi(text: str) -> str:
-    return ANSI_RE.sub("", text)
-
-
-def _show_command_output(screen: curses.window, action: CliAction, result: CommandResult) -> None:
-    lines = format_command_output(result)
-    scroll = 0
-    message = "up/down: scroll  page up/down: jump  q/esc/backspace/enter: return"
-    screen.timeout(1000)
-    
-    while True:
-        _draw_output(screen, action=action, lines=lines, scroll=scroll, message=message)
-        key = screen.getch()
-        if key == -1: # Just refresh
-            continue
-        if key in (ord("q"), ord("Q"), 27, 10, 13, curses.KEY_ENTER, curses.KEY_BACKSPACE, 127, 8):
-            screen.clear()
-            return
-        height, _width = screen.getmaxyx()
-        page_size = max(1, height - 8)
-        max_scroll = max(0, len(lines) - page_size)
-        if key in (curses.KEY_DOWN, ord("j"), ord("J")):
-            scroll = min(max_scroll, scroll + 1)
-        elif key in (curses.KEY_UP, ord("k"), ord("K")):
-            scroll = max(0, scroll - 1)
-        elif key in (curses.KEY_NPAGE, ord(" ")):
-            scroll = min(max_scroll, scroll + page_size)
-        elif key == curses.KEY_PPAGE:
-            scroll = max(0, scroll - page_size)
-
-
-def _init_colors() -> None:
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_CYAN, -1)
-    curses.init_pair(2, curses.COLOR_BLUE, -1)
-    curses.init_pair(3, curses.COLOR_GREEN, -1)
-    curses.init_pair(4, curses.COLOR_YELLOW, -1)
-    curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_CYAN)
-    curses.init_pair(6, curses.COLOR_WHITE, -1)
 
 
 def _draw(
@@ -417,6 +315,7 @@ def _draw(
     page_index: int,
     selected: int,
     message: str,
+    status: dict[str, Any],
     search_page: CliPage | None = None,
     query: str = "",
 ) -> None:
@@ -432,29 +331,32 @@ def _draw(
     if search_page:
         _draw_panel(screen, 3, 1, height - 6, width - 2, search_page, selected=selected, active=True)
     elif page_index == 0:
-        # Live btop-style dashboard in fullscreen
-        dashboard_text = build_dashboard(color=False, width=width - 2, height=height - 3)
+        dashboard_text = build_dashboard(color=False, width=width - 2, height=height - 3, status=status)
         lines = dashboard_text.splitlines()
         for i, line in enumerate(lines):
-            # Default color
             attr = curses.color_pair(6)
-            
-            # Border/Structure
-            if i == 1 or i == 3 or i == 5 or i == len(lines)-1:
-                attr = curses.color_pair(2)
-            elif i == 0:
-                attr = curses.color_pair(1) | curses.A_BOLD
-            elif "──" in line:
-                attr = curses.color_pair(6) | curses.A_BOLD
-            
-            # Gauge & Metric coloring (heuristic based on symbols)
-            if "█" in line or "░" in line:
-                # We split the line to find the gauge parts
-                # This is a bit complex to do perfectly with addstr
-                # For now, let's just color the whole line if it contains a gauge
-                attr = curses.color_pair(3)
-                
+            if i == 1 or i == 3 or i == 5 or i == len(lines)-1: attr = curses.color_pair(2)
+            elif i == 0: attr = curses.color_pair(1) | curses.A_BOLD
+            elif "──" in line: attr = curses.color_pair(6) | curses.A_BOLD
+            if "█" in line or "░" in line: attr = curses.color_pair(3)
             _safe_addstr(screen, 1 + i, 1, line, attr)
+
+        if height >= 42 and width >= 44:
+            mm_w, mm_h = 40, 22
+            mm_x = (width - mm_w) // 2
+            mm_y = height - mm_h - 2
+            mx, my = int(status.get("mouse_x", 0)), int(status.get("mouse_y", 0))
+            
+            # Map 1280x720 -> 40x22
+            rel_x = int((mx / 1280) * (mm_w - 2))
+            rel_y = int((my / 720) * (mm_h - 2))
+            rel_x, rel_y = max(0, min(mm_w - 3, rel_x)), max(0, min(mm_h - 3, rel_y))
+            
+            _box(screen, mm_y, mm_x, mm_h, mm_w, curses.color_pair(2))
+            _safe_addstr(screen, mm_y, mm_x + 2, " SPATIAL MINIMAP ", curses.color_pair(1) | curses.A_BOLD)
+            _safe_addstr(screen, mm_y + 1 + rel_y, mm_x + 1 + rel_x, "+", curses.color_pair(4) | curses.A_BOLD)
+            coords = f" {mx}, {my} "
+            _safe_addstr(screen, mm_y + mm_h - 1, mm_x + mm_w - len(coords) - 2, coords, curses.color_pair(6))
     else:
         page = pages[page_index]
         next_page = pages[(page_index + 1) % len(pages)]
@@ -477,28 +379,78 @@ def _draw_output(
 ) -> None:
     screen.erase()
     height, width = screen.getmaxyx()
-    if height < 12 or width < 58:
-        _safe_addstr(screen, 0, 0, "fAT output needs a larger terminal.", curses.color_pair(4) | curses.A_BOLD)
-        screen.refresh()
-        return
-
-    title = f" fAT output / {action.label} "
-    _safe_addstr(screen, 0, 0, "━" * width, curses.color_pair(2))
-    _safe_addstr(screen, 0, max(0, (width - len(title)) // 2), title, curses.color_pair(1) | curses.A_BOLD)
-    panel_y = 2
-    panel_x = 1
-    panel_h = height - 5
-    panel_w = width - 2
-    _box(screen, panel_y, panel_x, panel_h, panel_w, curses.color_pair(1))
-    visible_h = max(1, panel_h - 2)
-    visible_lines = lines[scroll : scroll + visible_h]
-    for index, line in enumerate(visible_lines):
-        attr = curses.color_pair(3) if index + scroll < 2 else curses.color_pair(6)
-        _safe_addstr(screen, panel_y + 1 + index, panel_x + 2, line[: panel_w - 4], attr)
-    position = f"{min(len(lines), scroll + visible_h)}/{len(lines)}"
-    _safe_addstr(screen, height - 2, 0, "━" * width, curses.color_pair(2))
-    _safe_addstr(screen, height - 1, 2, f"{message}  {position}"[: width - 4], curses.color_pair(1))
+    _draw_header(screen, width, page_index=-1, pages=())
+    
+    out_h = height - 6
+    _box(screen, 3, 1, out_h, width - 2, curses.color_pair(2))
+    title = f" Output: fiona {' '.join(action.command)} "
+    _safe_addstr(screen, 3, 3, title, curses.color_pair(1) | curses.A_BOLD)
+    
+    visible_lines = lines[scroll : scroll + out_h - 2]
+    for i, line in enumerate(visible_lines):
+        _safe_addstr(screen, 4 + i, 3, line, curses.color_pair(6))
+        
+    _draw_footer(screen, height, width, message)
     screen.refresh()
+
+
+def _run_action(screen: curses.window, action: CliAction, runner: Callable[[tuple[str, ...]], CommandResult]) -> None:
+    if not action.external:
+        result = runner(action.command)
+        _show_command_output(screen, action, result)
+        return
+    
+    curses.def_shell_mode()
+    screen.clear()
+    screen.refresh()
+    _run_command_external(action.command)
+    screen.clear()
+    curses.reset_shell_mode()
+    screen.refresh()
+
+
+def _run_command(command: tuple[str, ...]) -> CommandResult:
+    completed = subprocess.run(
+        [sys.executable, "-m", "fiona.cli", *command],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    return CommandResult(
+        command=command,
+        returncode=completed.returncode,
+        stdout=completed.stdout,
+        stderr=completed.stderr,
+    )
+
+
+def _run_command_external(command: tuple[str, ...]) -> int:
+    cmd_str = f"'{sys.executable}' -m fiona.cli {' '.join(command)}"
+    return os.system(cmd_str)
+
+
+def format_command_output(result: CommandResult) -> tuple[str, ...]:
+    lines = [f"$ fiona {' '.join(result.command)}", f"[exit {result.returncode}]", ""]
+    if result.stdout.strip():
+        lines.extend(result.stdout.splitlines())
+    if result.stderr.strip():
+        lines.append("")
+        lines.append("[stderr]")
+        lines.extend(result.stderr.splitlines())
+    return tuple(lines)
+
+
+def strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
+
+
+def _init_colors() -> None:
+    curses.init_pair(1, curses.COLOR_CYAN, -1)
+    curses.init_pair(2, curses.COLOR_BLUE, -1)
+    curses.init_pair(3, curses.COLOR_GREEN, -1)
+    curses.init_pair(4, curses.COLOR_YELLOW, -1)
+    curses.init_pair(5, curses.COLOR_RED, -1)
+    curses.init_pair(6, curses.COLOR_WHITE, -1)
 
 
 def _draw_header(screen: curses.window, width: int, *, page_index: int, pages: tuple[CliPage, ...], query: str = "") -> None:
@@ -507,7 +459,7 @@ def _draw_header(screen: curses.window, width: int, *, page_index: int, pages: t
         title = f" fAT Search: {query} "
     _safe_addstr(screen, 0, 0, "━" * width, curses.color_pair(2))
     _safe_addstr(screen, 0, max(0, (width - len(title)) // 2), title, curses.color_pair(1) | curses.A_BOLD)
-    if not query:
+    if not query and pages:
         tabs = "  ".join(f"{'●' if i == page_index else '○'} {page.title}" for i, page in enumerate(pages))
         _safe_addstr(screen, 1, 2, tabs[: width - 4], curses.color_pair(6))
 
@@ -523,29 +475,58 @@ def _draw_panel(
     selected: int,
     active: bool,
 ) -> None:
-    border_color = curses.color_pair(1 if active else 2)
-    _box(screen, y, x, height, width, border_color)
-    title_attr = curses.color_pair(3 if active else 2) | curses.A_BOLD
-    _safe_addstr(screen, y, x + 2, f" {page.title} ", title_attr)
-    for offset, line in enumerate(textwrap.wrap(page.subtitle, max(10, width - 4))[:2]):
-        _safe_addstr(screen, y + 2 + offset, x + 2, line, curses.color_pair(6 if active else 2))
-    start_y = y + 5
-    for index, action in enumerate(page.actions[: max(0, height - 7)]):
-        row_y = start_y + index
-        prefix = "▶" if index == selected else " "
-        mode = " ↗" if action.external else ""
-        label = f"{prefix} {index + 1}. {action.label}{mode}"
-        attr = curses.color_pair(5) | curses.A_BOLD if index == selected else curses.color_pair(6 if active else 2)
-        _safe_addstr(screen, row_y, x + 2, label[: width - 4].ljust(width - 4), attr)
-    detail_y = y + height - 3
-    if active and 0 <= selected < len(page.actions):
-        detail = page.actions[selected].description
-        _safe_addstr(screen, detail_y, x + 2, detail[: width - 4], curses.color_pair(4))
+    attr = curses.color_pair(2) if active else curses.color_pair(2) | curses.A_DIM
+    _box(screen, y, x, height, width, attr)
+    
+    title = f" {page.title} "
+    _safe_addstr(screen, y, x + 2, title, curses.color_pair(1) | (curses.A_BOLD if active else curses.A_DIM))
+    
+    _safe_addstr(screen, y + 1, x + 2, page.subtitle[: width - 4], curses.color_pair(6) | curses.A_DIM)
+    
+    for i, action in enumerate(page.actions):
+        row_y = y + 3 + i
+        if row_y >= y + height - 1:
+            break
+        
+        prefix = " > " if i == selected and active else "   "
+        row_attr = curses.color_pair(3) if i == selected and active else curses.color_pair(6)
+        if not active:
+            row_attr |= curses.A_DIM
+            
+        ext = " ↗" if action.external else ""
+        label = f"{prefix}{action.label}{ext}"
+        _safe_addstr(screen, row_y, x + 1, label[: width - 2], row_attr | (curses.A_BOLD if i == selected and active else 0))
 
 
 def _draw_footer(screen: curses.window, height: int, width: int, message: str) -> None:
     _safe_addstr(screen, height - 2, 0, "━" * width, curses.color_pair(2))
-    _safe_addstr(screen, height - 1, 2, message[: width - 4], curses.color_pair(1))
+    _safe_addstr(screen, height - 1, 2, message[: width - 4], curses.color_pair(4))
+
+
+def _show_command_output(screen: curses.window, action: CliAction, result: CommandResult) -> None:
+    lines = format_command_output(result)
+    scroll = 0
+    message = "up/down: scroll  page up/down: jump  q/esc/backspace/enter: return"
+    screen.timeout(1000)
+    
+    while True:
+        _draw_output(screen, action=action, lines=lines, scroll=scroll, message=message)
+        key = screen.getch()
+        if key == -1: continue
+        if key in (ord("q"), ord("Q"), 27, 10, 13, curses.KEY_ENTER, curses.KEY_BACKSPACE, 127, 8):
+            screen.clear()
+            return
+        h, _ = screen.getmaxyx()
+        page_size = max(1, h - 8)
+        max_scroll = max(0, len(lines) - page_size)
+        if key in (curses.KEY_DOWN, ord("j"), ord("J")):
+            scroll = min(max_scroll, scroll + 1)
+        elif key in (curses.KEY_UP, ord("k"), ord("K")):
+            scroll = max(0, scroll - 1)
+        elif key in (curses.KEY_NPAGE, ord(" ")):
+            scroll = min(max_scroll, scroll + page_size)
+        elif key == curses.KEY_PPAGE:
+            scroll = max(0, scroll - page_size)
 
 
 def _box(screen: curses.window, y: int, x: int, height: int, width: int, attr: int) -> None:
