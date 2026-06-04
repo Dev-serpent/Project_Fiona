@@ -27,9 +27,9 @@ fiona fat status
 Print machine-readable system status (JSON API):
 
 ```bash
-fiona fat status --json
+fiona api
 # or shortcut
-fiona fat json
+fiona fat api
 ```
 
 ## Dashboard
@@ -37,16 +37,18 @@ fiona fat json
 The dashboard is a high-density system monitor inspired by `btop`. It features live resource tracking and project environment checks.
 
 Live metrics include:
-- **CPU Load**: 1, 5, and 15 minute averages from `/proc/loadavg`.
-- **Memory**: Used vs Total memory with percentage.
-- **Disk**: Root partition usage.
-- **Uptime**: System uptime since last boot.
-
-Environmental info includes OS distribution, architecture, user info, and Fiona component readiness (config, keys, trust store).
+- **System**: Hostname, Kernel, Uptime, User, OS, Architecture.
+- **CPU**: Model, Usage %, Per-core usage, Speed, and Temperature.
+- **Memory**: RAM (Used/Total) and Swap usage.
+- **Disk**: Root partition usage and I/O activity (Read/Write).
+- **Network**: IP address, Interface, Traffic (RX/TX), and Signal strength (if Wi-Fi).
+- **GPU**: Utilization and Temperature (NVIDIA/Intel/AMD).
+- **Power**: Battery percentage and charging state (for laptops).
+- **Security**: Firewall status and available system updates.
 
 ## Real-Time Command Center
 
-The command center is a fullscreen curses UI with a 1-second auto-refresh engine.
+The command center is a fullscreen curses UI with a non-blocking 1-second auto-refresh engine.
 
 Controls:
 
@@ -57,6 +59,14 @@ up/down or k/j:    select action
 enter:            run selected action
 q or Esc:         quit (or clear search)
 ```
+
+### Quick Actions Page
+The TUI includes a **Quick Actions** page that detects your current Desktop Environment (KDE, GNOME, XFCE) and provides session controls:
+- **Lock Screen**
+- **Logout**
+- **Suspend**
+- **Reboot**
+- **Shutdown**
 
 ### Search and Navigation
 Press `/` to enter search mode. As you type, the TUI filters all available actions across all pages in real-time.

@@ -35,8 +35,10 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona eyecontrol ...` / `fiona eye ...` | EyeControl | Optional camera-based eye-controlled mouse tracker | mixed |
 | `fiona fat ...` / `fiona terminal-assist ...` | TerminalAssist | btop-style dashboard and Zellij layout helper | mixed |
 | `fiona cli` | TerminalAssist | sliding terminal command center | foreground TUI |
+| `fiona api` | TerminalAssist | Short for 'fiona fat api' | one-shot JSON |
 | `fiona recall ...` | RecallVault | Small persistent remembrance store | one-shot |
 | `fiona action ...` | CmdTrace | Action trace logging and observability | one-shot |
+| `fiona run-shell ...` | fiona | Internal helper to run shell commands | one-shot |
 | `fiona seeondesk ...` / `fiona sod ...` | SeeOnDesk | Active desktop/window identification | one-shot |
 | `fiona vsee` | Vsee | Standalone holography viewer | foreground GUI |
 | `fiona phiconnect` | PhiConnect | Standalone encrypted chat | foreground GUI |
@@ -205,15 +207,15 @@ Mechanics:
 fiona cli
 fiona cli --preview
 fiona fat status
-fiona fat status --json
-fiona fat json
+fiona api
+fiona fat api
 fiona fat run
 ```
 
 Mechanics:
-- `fiona cli` opens the sliding curses command center with a 1-second auto-refresh and live search.
-- `status` prints a btop-inspired terminal dashboard with live CPU, memory, disk, and uptime.
-- `--json` or the `json` command prints machine-readable system status for API consumption.
+- `fiona cli` opens the sliding curses command center with a non-blocking 1-second auto-refresh and live search.
+- `status` prints a high-density terminal dashboard with live CPU, memory, disk, network, power, and security metrics.
+- `fiona api` (or `fat api`) prints the comprehensive machine-readable system status.
 - `run` writes the Zellij layout and launches the workspace.
 
 ## RecallVault Commands

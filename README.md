@@ -257,9 +257,9 @@ fiona fat status
 Print machine-readable system status (JSON API):
 
 ```bash
-fiona fat status --json
-# or shortcut
-fiona fat json
+fiona api
+# or
+fiona fat api
 ```
 
 Launch external management tools from the TUI:
@@ -267,7 +267,8 @@ Launch external management tools from the TUI:
 - Select **System Monitor (btop)** to launch btop directly.
 
 The current TUI pages include:
-- **Dashboard**: Fullscreen live system metrics and project environment.
+- **Dashboard**: Fullscreen live system metrics (CPU usage/temp, Mem/Swap, Disk I/O, Network traffic, Power).
+- **Quick Actions**: DE-aware session controls (Lock, Logout, Suspend, Reboot).
 - **Management**: External tools and host service checks.
 - **QuikTieper**: Local access/action layer management.
 - **CamComs**: Secure communication paths and audit logs.

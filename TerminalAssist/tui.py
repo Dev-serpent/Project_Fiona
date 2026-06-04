@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import curses
+import os
 import re
 import subprocess
 import sys
 import textwrap
+import time
 from dataclasses import dataclass
 from typing import Callable
 
@@ -38,6 +40,35 @@ class CliPage:
     actions: tuple[CliAction, ...]
 
 
+def detect_de() -> str:
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+    if "KDE" in desktop:
+        return "KDE"
+    if "GNOME" in desktop:
+        return "GNOME"
+    if "XFCE" in desktop:
+        return "XFCE"
+    return "UNKNOWN"
+
+
+def get_quick_actions() -> tuple[CliAction, ...]:
+    de = detect_de()
+    actions = []
+    if de == "KDE":
+        actions.append(CliAction("Lock Screen", ("run-shell", "loginctl lock-session"), "Lock the current KDE session."))
+        actions.append(CliAction("Logout", ("run-shell", "qdbus-qt5 org.kde.ksmserver /KSMServer logout 1 0 1"), "Logout of KDE."))
+    elif de == "GNOME":
+        actions.append(CliAction("Lock Screen", ("run-shell", "gnome-screensaver-command -l"), "Lock the GNOME session."))
+        actions.append(CliAction("Logout", ("run-shell", "gnome-session-quit --logout --no-prompt"), "Logout of GNOME."))
+    
+    # Generic actions
+    actions.append(CliAction("Suspend", ("run-shell", "systemctl suspend"), "Suspend the system to RAM."))
+    actions.append(CliAction("Reboot", ("run-shell", "systemctl reboot"), "Reboot the system immediately."))
+    actions.append(CliAction("Shutdown", ("run-shell", "systemctl poweroff"), "Power off the system immediately."))
+    
+    return tuple(actions)
+
+
 def command_pages() -> tuple[CliPage, ...]:
     return (
         CliPage(
@@ -54,6 +85,11 @@ def command_pages() -> tuple[CliPage, ...]:
                 CliAction("Open editor", ("edit",), "Open the shared Fiona GUI editor.", external=True),
                 CliAction("Host status", ("host", "status"), "Inspect host service config, keys, and checks."),
             ),
+        ),
+        CliPage(
+            "Quick Actions",
+            f"Session controls for {detect_de()}.",
+            get_quick_actions(),
         ),
         CliPage(
             "QuikTieper",
@@ -208,7 +244,7 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
             message = "Type to search actions... (Esc to cancel)"
             _draw(screen, pages=pages, page_index=-1, selected=0, message=message, query=query)
             curses.curs_set(1)
-            query = _get_search_query(screen, height=screen.getmaxyx()[0] - 1)
+            query = _get_search_query(screen, height=screen.getmaxyx()[0] - 1, pages=pages, page_index=page_index, selected=selected)
             curses.curs_set(0)
             message = f"Search results for '{query}'" if query else "left/right: slide  up/down: select  /: search  enter: run  q: quit"
             continue
@@ -238,12 +274,24 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
                 message = f"Loaded: fiona {' '.join(action.command)}"
 
 
-def _get_search_query(screen: curses.window, height: int) -> str:
+def _get_search_query(screen: curses.window, height: int, *, pages: tuple[CliPage, ...], page_index: int, selected: int) -> str:
     query = ""
+    screen.timeout(100)  # Faster response during typing
+    last_refresh = time.time()
+    
     while True:
+        now = time.time()
+        if now - last_refresh >= 1.0:
+            # Re-draw background dashboard/page
+            _draw(screen, pages=pages, page_index=-1, selected=0, message="Type to search... (Esc to cancel)", query=query)
+            last_refresh = now
+            
         _safe_addstr(screen, height, 2, f"Search: {query}".ljust(screen.getmaxyx()[1] - 4), curses.color_pair(4) | curses.A_BOLD)
         screen.refresh()
+        
         key = screen.getch()
+        if key == -1:
+            continue
         if key in (10, 13, curses.KEY_ENTER):
             return query
         if key in (27,):  # Esc
@@ -314,9 +362,13 @@ def _show_command_output(screen: curses.window, action: CliAction, result: Comma
     lines = format_command_output(result)
     scroll = 0
     message = "up/down: scroll  page up/down: jump  q/esc/backspace/enter: return"
+    screen.timeout(1000)
+    
     while True:
         _draw_output(screen, action=action, lines=lines, scroll=scroll, message=message)
         key = screen.getch()
+        if key == -1: # Just refresh
+            continue
         if key in (ord("q"), ord("Q"), 27, 10, 13, curses.KEY_ENTER, curses.KEY_BACKSPACE, 127, 8):
             screen.clear()
             return

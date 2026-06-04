@@ -31,12 +31,15 @@ class TerminalAssistTests(unittest.TestCase):
         self.assertIn("checks", status)
 
     def test_dashboard_renders_without_color(self) -> None:
-        dashboard = build_dashboard(color=False, width=72, height=22)
+        dashboard = build_dashboard(color=False, width=72, height=40)
 
         self.assertIn("fAT Dashboard", dashboard)
-        self.assertIn("FIONA ENVIRONMENT", dashboard)
+        self.assertIn("SYSTEM & HARDWARE", dashboard)
+        self.assertIn("MEMORY & STORAGE", dashboard)
+        self.assertIn("NETWORK & POWER", dashboard)
+        self.assertIn("PROCESSES & SECURITY", dashboard)
         self.assertIn("CORE COMPONENTS", dashboard)
-        self.assertEqual(len(dashboard.splitlines()), 22)
+        self.assertEqual(len(dashboard.splitlines()), 40)
 
     def test_command_pages_include_core_surfaces(self) -> None:
         pages = command_pages()

@@ -11,9 +11,10 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - standalone DataClient research GUI
 - SeeOnDesk desktop-awareness CLI
 - EyeControl optional camera tracker CLI
-- fAT terminal dashboard with live CPU, Memory, Disk, and Uptime metrics
-- Real-time sliding TUI command center with live search and auto-refresh
-- System status JSON API for external tool consumption
+- fAT high-density terminal dashboard with live CPU, GPU, Memory, Disk, Network, Power, and Security metrics
+- Real-time sliding TUI command center with live search and non-blocking auto-refresh
+- DE-aware Quick Actions (Lock, Logout, Suspend) for KDE, GNOME, and XFCE
+- System status JSON API via `fiona api`
 - RecallVault persistent remembrance store for categorized memory
 - CmdTrace high-performance observability log with action filtering
 - QuikTieper binding editor/listener/action runner

@@ -68,6 +68,14 @@ from TerminalAssist.dashboard import run_zellij
 QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-keys", "normalize-app-cmds"}
 
 
+def _run_shell(args: argparse.Namespace) -> None:
+    full_cmd = " ".join(args.cmd)
+    try:
+        subprocess.run(full_cmd, shell=True, check=True)
+    except Exception as e:
+        raise SystemExit(f"shell command failed: {e}")
+
+
 def main() -> None:
     argv = _normalize_help_args(sys.argv[1:])
     if not argv:
@@ -125,6 +133,15 @@ def main() -> None:
 
     if args.layer == "cli":
         _run_cli_center(args)
+        return
+
+    if args.layer == "api":
+        args.fat_command = "api"
+        _run_fat(args)
+        return
+
+    if args.layer == "run-shell":
+        _run_shell(args)
         return
 
     if args.layer == "vsee":
@@ -316,7 +333,7 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     fat_status.add_argument("--json", action="store_true", help="Output status as JSON.")
     fat_status.add_argument("--width", type=int, default=96)
     fat_subparsers.add_parser("tui", help="Open the sliding Fiona terminal command center.")
-    fat_subparsers.add_parser("json", help="Print fAT readiness as JSON.")
+    fat_subparsers.add_parser("api", help="Print fAT system status as JSON.")
     fat_layout = fat_subparsers.add_parser("layout", help="Print or write the fAT Zellij layout.")
     fat_layout.add_argument("--out", type=Path, default=None)
     fat_layout.add_argument("--print", action="store_true", dest="print_layout")
@@ -327,6 +344,9 @@ Use "fiona <group> --help" for a group-specific command grid.""",
 
     cli_center = subparsers.add_parser("cli", help="Open the sliding Fiona terminal command center.")
     cli_center.add_argument("--preview", action="store_true", help="Print the non-interactive command-center preview.")
+    subparsers.add_parser("api", help="Short for 'fiona fat api'.")
+    run_shell = subparsers.add_parser("run-shell", help="Run a shell command (internal helper).")
+    run_shell.add_argument("cmd", nargs="+")
 
     seeondesk = subparsers.add_parser(
         "seeondesk",
@@ -891,6 +911,9 @@ def _run_fat(args: argparse.Namespace) -> None:
             print(_pretty_json(terminal_assist_status()))
         else:
             print(build_dashboard(color=not getattr(args, "no_color", False), width=getattr(args, "width", 96)))
+        return
+    if command == "api":
+        print(_pretty_json(terminal_assist_status()))
         return
     if command == "json":
         print(_pretty_json(terminal_assist_status()))

@@ -191,12 +191,11 @@ Recently fixed:
 - Fiona now exposes `fiona eyecontrol status` and `fiona eyecontrol run`.
 - EyeControl imports OpenCV, MediaPipe, PyAutoGUI, and camera resources only at runtime, so normal Fiona imports and tests do not require a camera.
 - The project now includes `TerminalAssist`, a high-fidelity terminal dashboard and sliding command center exposed through `fiona fat`.
-- fAT Dashboard was redesigned with a btop-inspired high-density layout featuring live **CPU Load**, **Memory Usage**, **Disk Usage**, and **Uptime**.
-- fAT TUI was upgraded to a **fullscreen-style layout** with a 1-second auto-refresh engine for real-time monitoring.
-- fAT TUI now includes **live search** (via `/` key) across all available actions and dynamic **History** and **Recall** pages.
-- Added a **Management** page to fAT TUI for launching external tools like `btop`.
-- Fiona now exposes a **system status JSON API** through `fiona fat status --json` or `fiona fat json`.
-- Fiona now exposes `fiona fat`, `fiona fat status`, `fiona fat json`, `fiona fat layout`, and `fiona fat run`.
+- fAT Dashboard now includes comprehensive system metrics: **Hostname**, **Kernel**, **CPU (Model/Usage/Temp/Speed)**, **Memory/Swap**, **Disk (Usage/IO)**, **Network (IP/Traffic/Signal)**, **GPU**, **Power (Battery/AC)**, and **Security (Firewall/Updates)**.
+- fAT TUI was upgraded to a **fullscreen-style layout** with a guaranteed 1-second non-blocking auto-refresh engine.
+- fAT TUI now includes **Quick Actions** for session control (Lock/Logout/Suspend) with automatic Desktop Environment detection (KDE/GNOME/XFCE).
+- Fiona now exposes a **system status JSON API** through the top-level `fiona api` shortcut.
+- Fiona now exposes `fiona fat`, `fiona fat status`, `fiona fat api`, `fiona fat layout`, and `fiona fat run`.
 - Fiona now exposes `fiona cli`, a sliding curses-based command center for common Fiona workflows.
 - `fiona fat tui` opens the same command center through the fAT namespace.
 - The fAT command center now captures one-shot command output inside an in-app output panel. Interactive or long-running actions are marked external and still run through the real terminal/session.
