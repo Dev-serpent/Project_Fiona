@@ -104,6 +104,22 @@
 </li>
                                     
 <li>
+    <a href="../../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
@@ -206,6 +222,14 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#seeondesk-awareness-workflow" class="nav-link">SeeOnDesk Awareness Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#eyecontrol-tracker-workflow" class="nav-link">EyeControl Tracker Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#fat-terminal-workflow" class="nav-link">fAT Terminal Workflow</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -365,6 +389,42 @@
   -&gt; serializable desktop snapshot
 </code></pre>
 <p>The current implementation is metadata-based. Screen recording and ML classification are future work.</p>
+<h2 id="eyecontrol-tracker-workflow">EyeControl Tracker Workflow</h2>
+<p>Goal: move the mouse pointer from eye/iris position when a camera feed is available.</p>
+<pre><code class="language-text">fiona eyecontrol run
+  -&gt; runtime dependency import
+  -&gt; IP camera URL or OpenCV camera index
+  -&gt; frame decode
+  -&gt; MediaPipe face mesh
+  -&gt; iris landmark extraction
+  -&gt; screen coordinate scaling
+  -&gt; PyAutoGUI pointer movement
+  -&gt; optional blink-click
+  -&gt; OpenCV preview
+</code></pre>
+<p>The subsystem is intentionally optional. <code>fiona eyecontrol status</code> can run without camera access and is the first diagnostic command.</p>
+<h2 id="fat-terminal-workflow">fAT Terminal Workflow</h2>
+<p>Goal: provide a terminal-first Fiona control surface.</p>
+<pre><code class="language-text">fiona cli
+  -&gt; curses command center
+  -&gt; sliding pages by workflow
+  -&gt; selected one-shot action executes underlying Fiona command
+  -&gt; captured stdout/stderr renders inside output panel
+  -&gt; external action launches in real terminal/session
+
+fiona fat
+  -&gt; collect readiness checks
+  -&gt; render btop-style panels
+
+fiona fat layout
+  -&gt; generate Zellij KDL
+  -&gt; include fAT, Host, CamComs, and SeeOnDesk panes
+
+fiona fat run
+  -&gt; write layout file
+  -&gt; launch zellij --layout &lt;path&gt;
+</code></pre>
+<p>This is currently a sliding command center, terminal dashboard, and workspace helper. It still relies on the existing direct Fiona commands as the execution layer.</p>
 <h2 id="agent-workflow">Agent Workflow</h2>
 <p>Goal: bridge Fiona to a local model server without making the model the authority.</p>
 <pre><code class="language-text">fiona agent commands

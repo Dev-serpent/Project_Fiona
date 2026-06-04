@@ -104,6 +104,22 @@
 </li>
                                     
 <li>
+    <a href="../../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
@@ -213,6 +229,22 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#eyecontrol-commands" class="nav-link">EyeControl Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#fat-commands" class="nav-link">fAT Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#recallvault-commands" class="nav-link">RecallVault Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#cmdtrace-commands" class="nav-link">CmdTrace Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#failure-modes" class="nav-link">Failure Modes</a>
               <ul class="nav flex-column">
               </ul>
@@ -297,6 +329,36 @@
 <td>DataClient</td>
 <td>Research mining, conversion, GUI</td>
 <td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona eyecontrol ...</code> / <code>fiona eye ...</code></td>
+<td>EyeControl</td>
+<td>Optional camera-based eye-controlled mouse tracker</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona fat ...</code> / <code>fiona terminal-assist ...</code></td>
+<td>TerminalAssist</td>
+<td>btop-style dashboard and Zellij layout helper</td>
+<td>mixed</td>
+</tr>
+<tr>
+<td><code>fiona cli</code></td>
+<td>TerminalAssist</td>
+<td>sliding terminal command center</td>
+<td>foreground TUI</td>
+</tr>
+<tr>
+<td><code>fiona recall ...</code></td>
+<td>RecallVault</td>
+<td>Small persistent remembrance store</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona action ...</code></td>
+<td>CmdTrace</td>
+<td>Action trace logging and observability</td>
+<td>one-shot</td>
 </tr>
 <tr>
 <td><code>fiona seeondesk ...</code> / <code>fiona sod ...</code></td>
@@ -503,6 +565,55 @@ fiona seeondesk status
 <li><code>status</code> wraps active-window data with session and desktop state.</li>
 <li>KDE/Wayland prefers <code>kdotool</code>; X11-compatible fallback uses <code>xdotool</code> and <code>xprop</code>.</li>
 </ul>
+<h2 id="eyecontrol-commands">EyeControl Commands</h2>
+<pre><code class="language-bash">fiona eyecontrol status
+fiona eyecontrol run --url http://192.168.0.103:8080/shot.jpg
+fiona eyecontrol run --camera-index 0
+fiona eyecontrol run --camera-index 0 --no-click
+</code></pre>
+<p>Mechanics:</p>
+<ul>
+<li><code>status</code> checks optional dependency availability without opening a camera.</li>
+<li><code>run</code> imports OpenCV, MediaPipe, PyAutoGUI, NumPy, and Requests only at runtime.</li>
+<li><code>--url</code> reads frames from an IP camera snapshot endpoint.</li>
+<li><code>--camera-index</code> reads frames from a local OpenCV camera.</li>
+<li><code>--no-click</code> disables blink-clicking for safer pointer-only testing.</li>
+</ul>
+<h2 id="fat-commands">fAT Commands</h2>
+<pre><code class="language-bash">fiona cli
+fiona cli --preview
+fiona fat status
+fiona fat status --json
+fiona fat json
+fiona fat run
+</code></pre>
+<p>Mechanics:
+- <code>fiona cli</code> opens the sliding curses command center with a 1-second auto-refresh and live search.
+- <code>status</code> prints a btop-inspired terminal dashboard with live CPU, memory, disk, and uptime.
+- <code>--json</code> or the <code>json</code> command prints machine-readable system status for API consumption.
+- <code>run</code> writes the Zellij layout and launches the workspace.</p>
+<h2 id="recallvault-commands">RecallVault Commands</h2>
+<pre><code class="language-bash">fiona recall remember &lt;key&gt; &lt;value&gt; --category &lt;cat&gt;
+fiona recall search &lt;query&gt;
+fiona recall forget &lt;key&gt;
+fiona recall categories
+fiona recall clear
+</code></pre>
+<p>Mechanics:
+- <code>remember</code> saves or replaces a key-value snippet.
+- <code>search</code> filters stored entries by key, value, or category.
+- <code>forget</code> removes a single entry by key.
+- <code>categories</code> lists all unique categories in the vault.
+- <code>clear</code> deletes the entire remembrance store.</p>
+<h2 id="cmdtrace-commands">CmdTrace Commands</h2>
+<pre><code class="language-bash">fiona action history --limit 50
+fiona action history --name host.status
+fiona action clear
+</code></pre>
+<p>Mechanics:
+- <code>history</code> reads the append-only JSONL log of routed actions.
+- <code>--name</code> filters the history to show only events for a specific action.
+- <code>clear</code> deletes the command trace log file.</p>
 <h2 id="failure-modes">Failure Modes</h2>
 <table>
 <thead>
@@ -547,6 +658,16 @@ fiona seeondesk status
 <td>DataClient search fails</td>
 <td>network/search target</td>
 <td>verify network access and output path permissions</td>
+</tr>
+<tr>
+<td>EyeControl cannot start</td>
+<td>optional dependency/camera feed</td>
+<td>run <code>fiona eyecontrol status</code>, then verify camera URL or local camera index</td>
+</tr>
+<tr>
+<td>fAT cannot launch Zellij</td>
+<td>missing terminal multiplexer</td>
+<td>run <code>fiona fat json</code> and verify <code>zellij_path</code></td>
 </tr>
 </tbody>
 </table></div>

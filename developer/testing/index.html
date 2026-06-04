@@ -104,6 +104,22 @@
 </li>
                                     
 <li>
+    <a href="../../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
@@ -212,7 +228,7 @@
 </code></pre>
 <p>Important: <code>python -m unittest discover -v</code> from the repository root currently discovers 0 tests in this layout. Use <code>-s tests</code>.</p>
 <h2 id="compile-check">Compile Check</h2>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
 </code></pre>
 <h2 id="camcoms-focused-tests">CamComs Focused Tests</h2>
 <pre><code class="language-bash">python3 -m unittest tests.test_camcoms_encryption tests.test_camcoms_transport

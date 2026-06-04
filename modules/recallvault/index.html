@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Build Order - Fiona</title>
+        <title>RecallVault - Fiona</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -72,55 +72,55 @@
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="../../modules/quiktieper/" class="dropdown-item">QuikTieper</a>
+    <a href="../quiktieper/" class="dropdown-item">QuikTieper</a>
 </li>
                                     
 <li>
-    <a href="../../modules/camcoms/" class="dropdown-item">CamComs</a>
+    <a href="../camcoms/" class="dropdown-item">CamComs</a>
 </li>
                                     
 <li>
-    <a href="../../modules/esp32payload/" class="dropdown-item">ESP32 Payload</a>
+    <a href="../esp32payload/" class="dropdown-item">ESP32 Payload</a>
 </li>
                                     
 <li>
-    <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
+    <a href="../phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
 <li>
-    <a href="../../modules/dataclient/" class="dropdown-item">DataClient</a>
+    <a href="../dataclient/" class="dropdown-item">DataClient</a>
 </li>
                                     
 <li>
-    <a href="../../modules/vsee/" class="dropdown-item">Vsee</a>
+    <a href="../vsee/" class="dropdown-item">Vsee</a>
 </li>
                                     
 <li>
-    <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+    <a href="../seeondesk/" class="dropdown-item">SeeOnDesk</a>
 </li>
                                     
 <li>
-    <a href="../../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+    <a href="../eyecontrol/" class="dropdown-item">EyeControl</a>
 </li>
                                     
 <li>
-    <a href="../../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+    <a href="../terminalassist/" class="dropdown-item">TerminalAssist</a>
 </li>
                                     
 <li>
-    <a href="../../modules/recallvault/" class="dropdown-item">RecallVault</a>
+    <a href="./" class="dropdown-item active" aria-current="page">RecallVault</a>
 </li>
                                     
 <li>
-    <a href="../../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+    <a href="../cmdtrace/" class="dropdown-item">CmdTrace</a>
 </li>
                                     
 <li>
-    <a href="../../modules/agent/" class="dropdown-item">Agent</a>
+    <a href="../agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
                             </li>
@@ -131,31 +131,31 @@
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="./" class="dropdown-item active" aria-current="page">Build Order</a>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
 </li>
                                     
 <li>
-    <a href="../security/" class="dropdown-item">Security</a>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
 </li>
                                     
 <li>
-    <a href="../testing/" class="dropdown-item">Testing</a>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
 </li>
                                     
 <li>
-    <a href="../test-suites/" class="dropdown-item">Test Suites</a>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
 </li>
                                     
 <li>
-    <a href="../validation/" class="dropdown-item">Validation</a>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
 </li>
                                     
 <li>
-    <a href="../developernote/" class="dropdown-item">Developer Note</a>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
 </li>
                                 </ul>
                             </li>
@@ -168,12 +168,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../../roadmap/" class="nav-link">
+                                <a rel="prev" href="../terminalassist/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../security/" class="nav-link">
+                                <a rel="next" href="../cmdtrace/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -195,8 +195,44 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#build-order" class="nav-link">Build Order</a>
+            <li class="nav-item" data-bs-level="1"><a href="#recallvault" class="nav-link">RecallVault</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#purpose" class="nav-link">Purpose</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#commands" class="nav-link">Commands</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#save-a-remembrance" class="nav-link">Save a remembrance</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#search-remembrances" class="nav-link">Search remembrances</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#forget-an-entry" class="nav-link">Forget an entry</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#list-categories" class="nav-link">List categories</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#clear-the-vault" class="nav-link">Clear the vault</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#tui-integration" class="nav-link">TUI Integration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#storage" class="nav-link">Storage</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -204,27 +240,35 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="build-order">Build Order</h1>
-<p>This is the current implementation order from the developer notes.</p>
-<ol>
-<li>Done: unified Fiona config at <code>~/.config/fiona/config.json</code> for QuikTieper path, CamComs key paths, trusted directory, receiver host/port, dry-run mode, allowed actions, replay path, and audit log.</li>
-<li>Done: host service skeleton through <code>fiona host init/status/run</code>.</li>
-<li>Done: service health checks verify config, key files, trusted dir, <code>ydotool</code>, <code>kdotool</code>, listener import, audit/replay dirs, and receiver port binding when requested.</li>
-<li>Done: CamComs receiver integration is owned by <code>HostService.run</code>.</li>
-<li>Done: QuikTieper listener can be owned by the host service through <code>start_quiktieper_listener</code>.</li>
-<li>Done: remote action router connects decrypted CamComs instructions to configured QuikTieper actions with <code>execute_remote_actions</code> and <code>allowed_remote_actions</code>.</li>
-<li>Done: standalone encrypted computer-to-computer chat exists through PhiConnect.</li>
-<li>Partial: GUI Host tab shows config, health status, trusted keys, logs, and paths; live receiver process controls still need expansion.</li>
-<li>Done: command history and audit log record accepted/rejected host message processing and are visible through CLI/GUI.</li>
-<li>Done: trusted device manager can list, add, remove, and inspect stored sender public key JSON.</li>
-<li>Partial: configurable macro layer supports structured multi-step remote actions; waits, conditions, window targeting, named macros, and per-step failure handling remain.</li>
-<li>Partial: local structured success/failure result objects exist; response messages to sender and local notifications still remain.</li>
-<li>Not started: desktop tray and background status.</li>
-<li>Blocked by ESP32 work: real crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url decode in firmware.</li>
-<li>Not started: ESP32 pairing flow.</li>
-<li>Not started: voice and speech interface.</li>
-<li>Partial: desktop awareness through SeeOnDesk active-window snapshots; screen recording and ML recognition remain.</li>
-</ol></div>
+<h1 id="recallvault">RecallVault</h1>
+<p>RecallVault is Fiona's persistent "remembrance" store. It allows the system (and future agents) to save, search, and manage small snippets of information categorized for different contexts.</p>
+<h2 id="purpose">Purpose</h2>
+<ul>
+<li><strong>Long-term Memory</strong>: Store facts, configuration snippets, or notes that persist across sessions.</li>
+<li><strong>Categorization</strong>: Group information into categories such as <code>general</code>, <code>project</code>, <code>network</code>, etc.</li>
+<li><strong>Agent Integration</strong>: Provides the primary memory interface for future AI reasoning tasks.</li>
+</ul>
+<h2 id="commands">Commands</h2>
+<h3 id="save-a-remembrance">Save a remembrance</h3>
+<pre><code class="language-bash">fiona recall remember &quot;phi-host&quot; &quot;192.168.1.10&quot; --category network
+</code></pre>
+<h3 id="search-remembrances">Search remembrances</h3>
+<pre><code class="language-bash">fiona recall search &quot;phi&quot;
+</code></pre>
+<h3 id="forget-an-entry">Forget an entry</h3>
+<pre><code class="language-bash">fiona recall forget &quot;phi-host&quot;
+</code></pre>
+<h3 id="list-categories">List categories</h3>
+<pre><code class="language-bash">fiona recall categories
+</code></pre>
+<h3 id="clear-the-vault">Clear the vault</h3>
+<pre><code class="language-bash">fiona recall clear
+</code></pre>
+<h2 id="tui-integration">TUI Integration</h2>
+<p>The <strong>Recall</strong> page in the <code>fiona cli</code> TUI displays the 10 most recent snippets from the vault and updates in real-time.</p>
+<h2 id="storage">Storage</h2>
+<p>Data is stored as a JSON array of objects in:
+<code>~/.config/fiona/recallvault.json</code></p></div>
             </div>
         </div>
 

@@ -104,6 +104,22 @@
 </li>
                                     
 <li>
+    <a href="../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../modules/recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
     <a href="../modules/agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
@@ -205,7 +221,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="architecture">Architecture</h1>
-<p>Fiona is the umbrella package. It exposes seven sibling subsystems.</p>
+<p>Fiona is the umbrella package. It exposes nine sibling subsystems.</p>
 <h2 id="subsystems">Subsystems</h2>
 <ul>
 <li><code>QuikTieper</code>: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.</li>
@@ -215,6 +231,8 @@
 <li><code>PhiConnect</code>: standalone encrypted computer-to-computer chat using CamComs crypto.</li>
 <li><code>SeeOnDesk</code>: desktop-awareness layer for identifying the current session and focused app/window.</li>
 <li><code>DataClient</code>: standalone research/data collection app, MiniExcel, conversion tools, and CSV export.</li>
+<li><code>EyeControl</code>: optional camera-based eye-controlled mouse tracker.</li>
+<li><code>TerminalAssist</code>: btop-style terminal dashboard and Zellij workspace helper.</li>
 </ul>
 <h2 id="project-layout">Project Layout</h2>
 <pre><code class="language-text">fiona/                 umbrella package and CLI entrypoint
@@ -226,6 +244,8 @@ Agent/                 local LM Studio client
 PhiConnect/            encrypted computer-to-computer chat app
 SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection app
+EyeControl/            optional eye-controlled mouse tracker
+TerminalAssist/        terminal dashboard and Zellij layout helper
 scripts/               local launch wrappers
 tests/                 Python tests
 DEVELOPERNOTE.md       detailed project notes and verification log
@@ -245,6 +265,8 @@ fiona camcoms ...
 fiona agent ...
 fiona seeondesk ...
 fiona dataclient ...
+fiona eyecontrol ...
+fiona fat ...
 fiona vsee
 fiona phiconnect
 </code></pre>

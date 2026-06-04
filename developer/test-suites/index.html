@@ -104,6 +104,22 @@
 </li>
                                     
 <li>
+    <a href="../../modules/eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
                                 </ul>
@@ -319,6 +335,16 @@
 <td>desktop-awareness logic</td>
 </tr>
 <tr>
+<td><code>test_eyecontrol.py</code></td>
+<td>Verifies EyeControl dependency status and CLI config construction without starting the camera loop</td>
+<td>optional camera integration</td>
+</tr>
+<tr>
+<td><code>test_terminal_assist.py</code></td>
+<td>Verifies fAT dashboard rendering, readiness state, CLI defaults, and Zellij layout generation</td>
+<td>terminal assistance</td>
+</tr>
+<tr>
 <td><code>test_agent_lmstudio.py</code></td>
 <td>Verifies LM Studio chat-completions payload and response parsing</td>
 <td>local model bridge</td>
@@ -366,7 +392,7 @@
 <pre><code class="language-bash">python -m unittest discover -s tests -v
 </code></pre>
 <p>Compile check:</p>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient PhiConnect QuikTieper SeeOnDesk Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
 </code></pre>
 <p>Docs build:</p>
 <pre><code class="language-bash">cd fionaDocsPage
