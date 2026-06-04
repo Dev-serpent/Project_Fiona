@@ -8,7 +8,9 @@ import textwrap
 from dataclasses import dataclass
 from typing import Callable
 
-from .dashboard import terminal_assist_status
+from CmdTrace import read_trace
+from RecallVault import search_recall
+from .dashboard import build_dashboard, terminal_assist_status
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
@@ -39,17 +41,18 @@ class CliPage:
 def command_pages() -> tuple[CliPage, ...]:
     return (
         CliPage(
-            "Overview",
-            "Fiona command center. Use left/right to slide pages, enter to run.",
+            "Dashboard",
+            "Fiona system summary. Use left/right to slide pages.",
+            (),
+        ),
+        CliPage(
+            "Management",
+            "System and project management tools.",
             (
-                CliAction(
-                    "Status dashboard",
-                    ("fat", "status", "--no-color"),
-                    "Show the btop-style fAT status surface.",
-                ),
+                CliAction("System Monitor (btop)", ("btop",), "Launch the btop system monitor.", external=True),
+                CliAction("Status dashboard", ("fat", "status", "--no-color"), "Show the text fAT status surface."),
+                CliAction("Open editor", ("edit",), "Open the shared Fiona GUI editor.", external=True),
                 CliAction("Host status", ("host", "status"), "Inspect host service config, keys, and checks."),
-                CliAction("CamComs paths", ("camcoms", "paths"), "Show encryption key/trust locations."),
-                CliAction("SeeOnDesk status", ("seeondesk", "status"), "Show current desktop-awareness snapshot."),
             ),
         ),
         CliPage(
@@ -82,7 +85,20 @@ def command_pages() -> tuple[CliPage, ...]:
                 CliAction("Status", ("host", "status", "--check-port"), "Run host readiness checks."),
                 CliAction("Print service", ("host", "install-service", "--print"), "Preview user systemd unit."),
                 CliAction("Logs", ("host", "logs", "--lines", "80"), "Show user service logs."),
+                CliAction("Clear action trace", ("action", "clear"), "Delete the routed command history log."),
                 CliAction("Run service", ("host", "run"), "Run host service in foreground.", external=True),
+            ),
+        ),
+        CliPage(
+            "Core",
+            "Action routing, tracing, voice, macros, and RecallVault.",
+            (
+                CliAction("Action list", ("action", "list"), "List Fiona actions available through the router."),
+                CliAction("Trace history", ("action", "history", "--limit", "20"), "Show recent routed command traces."),
+                CliAction("Macro list", ("macro", "list"), "List saved Fiona action macros."),
+                CliAction("Recall list", ("recall", "list"), "List saved RecallVault remembrance entries."),
+                CliAction("Recall categories", ("recall", "categories"), "List unique categories in the vault."),
+                CliAction("Clear RecallVault", ("recall", "clear"), "Delete all RecallVault remembrance entries."),
             ),
         ),
         CliPage(
@@ -94,6 +110,30 @@ def command_pages() -> tuple[CliPage, ...]:
                 CliAction("Vsee", ("vsee",), "Open holography wireframe viewer.", external=True),
                 CliAction("EyeControl status", ("eyecontrol", "status"), "Check optional camera tracker readiness."),
                 CliAction("Agent status", ("agent", "status"), "Check LM Studio bridge status."),
+            ),
+        ),
+        CliPage(
+            "History",
+            "Latest actions from the command trace.",
+            tuple(
+                CliAction(
+                    f"{event.get('action', 'unknown')} ({event.get('source', 'local')})",
+                    ("action", "history", "--limit", "1", "--name", str(event.get("action", ""))),
+                    f"Result: {event.get('ok', False)} | Time: {event.get('elapsed_ms', 0)}ms",
+                )
+                for event in read_trace(limit=10)
+            ),
+        ),
+        CliPage(
+            "Recall",
+            "Latest snippets from RecallVault.",
+            tuple(
+                CliAction(
+                    entry.key,
+                    ("recall", "search", entry.key),
+                    f"[{entry.category}] {entry.value}",
+                )
+                for entry in search_recall()[-10:]
             ),
         ),
     )
@@ -127,39 +167,91 @@ def run_terminal_cli(*, runner: Callable[[tuple[str, ...]], CommandResult] | Non
 def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], CommandResult]) -> int:
     curses.curs_set(0)
     curses.use_default_colors()
+    screen.timeout(1000)  # Refresh every second
     _init_colors()
     pages = command_pages()
     page_index = 0
     selected = 0
-    message = "left/right: slide  up/down: select  enter: run  q: quit"
+    query = ""
+    message = "left/right: slide  up/down: select  /: search  enter: run  q: quit"
 
     while True:
-        page = pages[page_index]
-        selected = max(0, min(selected, len(page.actions) - 1))
-        _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message)
+        pages = command_pages()
+        if query:
+            all_actions = []
+            for p in pages:
+                for a in p.actions:
+                    if query.lower() in a.label.lower() or query.lower() in a.description.lower():
+                        all_actions.append(a)
+            display_page = CliPage("Search Results", f"Found {len(all_actions)} actions matching '{query}'", tuple(all_actions))
+            selected = max(0, min(selected, len(display_page.actions) - 1))
+            _draw(screen, pages=pages, page_index=-1, selected=selected, message=message, search_page=display_page, query=query)
+            page = display_page
+        else:
+            page = pages[page_index]
+            selected = max(0, min(selected, len(page.actions) - 1))
+            _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message)
+
         key = screen.getch()
+        if key == -1:  # Timeout, just loop to re-draw
+            continue
         if key in (ord("q"), ord("Q"), 27):
+            if query:
+                query = ""
+                selected = 0
+                message = "Search cleared."
+                continue
             return 0
-        if key in (curses.KEY_RIGHT, ord("l"), ord("L"), ord("\t")):
-            page_index = (page_index + 1) % len(pages)
+        if key == ord("/"):
+            query = ""
             selected = 0
-            message = f"Slid to {pages[page_index].title}"
+            message = "Type to search actions... (Esc to cancel)"
+            _draw(screen, pages=pages, page_index=-1, selected=0, message=message, query=query)
+            curses.curs_set(1)
+            query = _get_search_query(screen, height=screen.getmaxyx()[0] - 1)
+            curses.curs_set(0)
+            message = f"Search results for '{query}'" if query else "left/right: slide  up/down: select  /: search  enter: run  q: quit"
             continue
-        if key in (curses.KEY_LEFT, ord("h"), ord("H")):
-            page_index = (page_index - 1) % len(pages)
-            selected = 0
-            message = f"Slid to {pages[page_index].title}"
-            continue
+        if not query:
+            if key in (curses.KEY_RIGHT, ord("l"), ord("L"), ord("\t")):
+                page_index = (page_index + 1) % len(pages)
+                selected = 0
+                message = f"Slid to {pages[page_index].title}"
+                continue
+            if key in (curses.KEY_LEFT, ord("h"), ord("H")):
+                page_index = (page_index - 1) % len(pages)
+                selected = 0
+                message = f"Slid to {pages[page_index].title}"
+                continue
         if key in (curses.KEY_DOWN, ord("j"), ord("J")):
-            selected = (selected + 1) % len(page.actions)
+            if page.actions:
+                selected = (selected + 1) % len(page.actions)
             continue
         if key in (curses.KEY_UP, ord("k"), ord("K")):
-            selected = (selected - 1) % len(page.actions)
+            if page.actions:
+                selected = (selected - 1) % len(page.actions)
             continue
         if key in (10, 13, curses.KEY_ENTER):
-            action = page.actions[selected]
-            _run_action(screen, action, runner)
-            message = f"Loaded: fiona {' '.join(action.command)}"
+            if page.actions:
+                action = page.actions[selected]
+                _run_action(screen, action, runner)
+                message = f"Loaded: fiona {' '.join(action.command)}"
+
+
+def _get_search_query(screen: curses.window, height: int) -> str:
+    query = ""
+    while True:
+        _safe_addstr(screen, height, 2, f"Search: {query}".ljust(screen.getmaxyx()[1] - 4), curses.color_pair(4) | curses.A_BOLD)
+        screen.refresh()
+        key = screen.getch()
+        if key in (10, 13, curses.KEY_ENTER):
+            return query
+        if key in (27,):  # Esc
+            return ""
+        if key in (curses.KEY_BACKSPACE, 127, 8):
+            query = query[:-1]
+        elif 32 <= key <= 126:
+            query += chr(key)
 
 
 def _run_action(screen: curses.window, action: CliAction, runner: Callable[[tuple[str, ...]], CommandResult]) -> None:
@@ -258,6 +350,8 @@ def _draw(
     page_index: int,
     selected: int,
     message: str,
+    search_page: CliPage | None = None,
+    query: str = "",
 ) -> None:
     screen.erase()
     height, width = screen.getmaxyx()
@@ -266,13 +360,29 @@ def _draw(
         screen.refresh()
         return
 
-    _draw_header(screen, width, page_index=page_index, pages=pages)
-    page = pages[page_index]
-    next_page = pages[(page_index + 1) % len(pages)]
-    main_width = max(36, int(width * 0.66))
-    side_width = width - main_width - 3
-    _draw_panel(screen, 3, 1, height - 6, main_width, page, selected=selected, active=True)
-    _draw_panel(screen, 3, main_width + 2, height - 6, side_width, next_page, selected=-1, active=False)
+    _draw_header(screen, width, page_index=page_index, pages=pages, query=query)
+    
+    if search_page:
+        _draw_panel(screen, 3, 1, height - 6, width - 2, search_page, selected=selected, active=True)
+    elif page_index == 0:
+        # Live btop-style dashboard in fullscreen
+        dashboard_text = build_dashboard(color=False, width=width - 2, height=height - 3)
+        lines = dashboard_text.splitlines()
+        for i, line in enumerate(lines):
+            attr = curses.color_pair(2) if i == 1 or i == 3 or i == len(lines)-1 else curses.color_pair(6)
+            if i == 0:
+                attr = curses.color_pair(1) | curses.A_BOLD
+            if "CPU:" in line or "MEM:" in line:
+                attr = curses.color_pair(3) | curses.A_BOLD
+            _safe_addstr(screen, 1 + i, 1, line, attr)
+    else:
+        page = pages[page_index]
+        next_page = pages[(page_index + 1) % len(pages)]
+        main_width = max(36, int(width * 0.66))
+        side_width = width - main_width - 3
+        _draw_panel(screen, 3, 1, height - 6, main_width, page, selected=selected, active=True)
+        _draw_panel(screen, 3, main_width + 2, height - 6, side_width, next_page, selected=-1, active=False)
+    
     _draw_footer(screen, height, width, message)
     screen.refresh()
 
@@ -311,12 +421,15 @@ def _draw_output(
     screen.refresh()
 
 
-def _draw_header(screen: curses.window, width: int, *, page_index: int, pages: tuple[CliPage, ...]) -> None:
+def _draw_header(screen: curses.window, width: int, *, page_index: int, pages: tuple[CliPage, ...], query: str = "") -> None:
     title = " fAT / Fiona CLI "
+    if query:
+        title = f" fAT Search: {query} "
     _safe_addstr(screen, 0, 0, "━" * width, curses.color_pair(2))
     _safe_addstr(screen, 0, max(0, (width - len(title)) // 2), title, curses.color_pair(1) | curses.A_BOLD)
-    tabs = "  ".join(f"{'●' if i == page_index else '○'} {page.title}" for i, page in enumerate(pages))
-    _safe_addstr(screen, 1, 2, tabs[: width - 4], curses.color_pair(6))
+    if not query:
+        tabs = "  ".join(f"{'●' if i == page_index else '○'} {page.title}" for i, page in enumerate(pages))
+        _safe_addstr(screen, 1, 2, tabs[: width - 4], curses.color_pair(6))
 
 
 def _draw_panel(

@@ -39,6 +39,8 @@ Fiona is the umbrella package. It exposes nine sibling subsystems:
 - `DataClient`: standalone research/data collection app for topic search, page scraping, summarization, deep research, and CSV export.
 - `EyeControl`: optional camera-based eye-controlled mouse tracker.
 - `TerminalAssist`: Fiona Terminal Assistance (`fAT`) btop-style terminal dashboard and Zellij workspace helper.
+- `RecallVault`: small persistent remembrance store for key-value snippets and categories.
+- `CmdTrace`: high-performance JSONL-based observability log for all routed actions.
 
 Project layout:
 
@@ -54,6 +56,9 @@ SeeOnDesk/             desktop awareness and active-window identification
 DataClient/            research/data collection app
 EyeControl/            optional eye-controlled mouse tracker integration
 TerminalAssist/        Fiona Terminal Assistance and Zellij layout generation
+FionaCore/             shared action, macro, voice, and permission primitives
+RecallVault/           persistent remembrance storage
+CmdTrace/              action trace logging
 scripts/               local launch wrappers
 tests/                 Python tests
 DEVELOPERNOTE.md       detailed project notes and latest verification log
@@ -221,70 +226,61 @@ EyeControl requires camera access and optional packages such as OpenCV, MediaPip
 
 ## Fiona Terminal Assistance
 
-Fiona Terminal Assistance (`fAT`) is a btop-inspired terminal control surface. It now also provides Fiona's sliding terminal command center through `fiona cli`. Direct commands still exist for scripts, but `fiona cli` is the intended terminal-first surface when you do not want to remember the whole command grid.
+Fiona Terminal Assistance (`fAT`) is a high-fidelity, btop-inspired terminal command center. It provides real-time system monitoring, an interactive sliding TUI, and a JSON API for system status.
 
 Open the sliding command center:
 
 ```bash
-python3 -m fiona.cli cli
+fiona cli
 ```
 
-Print the command-center preview without entering curses mode:
-
-```bash
-python3 -m fiona.cli cli --preview
-```
-
-Inside a real terminal, controls are:
+Inside the TUI, controls are:
 
 ```text
-left/right or h/l: slide pages
-up/down or k/j: select action
-enter: run selected Fiona command
-q or Esc: quit
+left/right or h/l: slide pages (Dashboard, Management, QuikTieper, etc.)
+up/down or k/j:    select action
+/:                live search across all available actions
+enter:            run selected Fiona command or external tool
+q or Esc:         quit (or clear search)
 ```
 
-One-shot commands now load their output inside the fAT output panel instead of dumping into the parent terminal. Use up/down or page up/down to scroll output, then Enter, Backspace, `q`, or Esc to return.
+The TUI automatically refreshes every second, providing live metrics for CPU load, memory usage, disk usage, and system uptime on the **Dashboard** page.
 
-Interactive or long-running actions are marked with `↗` and still open through the real terminal/session because GUI apps, listeners, receivers, and services need to own their process.
+One-shot commands load their output inside the fAT output panel. Interactive actions (marked with `↗`) such as `btop` launch in the foreground.
 
-The current pages are Overview, QuikTieper, CamComs, Host, and Apps.
-
-It does not require Zellij for the basic dashboard or sliding CLI, but it can generate and launch a Zellij workspace when Zellij is installed.
-
-Show the terminal dashboard:
+Show the redesigned terminal dashboard:
 
 ```bash
-python3 -m fiona.cli fat
-python3 -m fiona.cli fat status
-python3 -m fiona.cli fat tui
+fiona fat status
 ```
 
-Print machine-readable readiness:
+Print machine-readable system status (JSON API):
 
 ```bash
-python3 -m fiona.cli fat json
+fiona fat status --json
+# or shortcut
+fiona fat json
 ```
 
-Print the Zellij layout:
+Launch external management tools from the TUI:
+- Navigate to the **Management** page.
+- Select **System Monitor (btop)** to launch btop directly.
+
+The current TUI pages include:
+- **Dashboard**: Fullscreen live system metrics and project environment.
+- **Management**: External tools and host service checks.
+- **QuikTieper**: Local access/action layer management.
+- **CamComs**: Secure communication paths and audit logs.
+- **Core**: Macro lists and RecallVault management.
+- **Apps**: Standalone Fiona application launchers.
+- **History**: Real-time sliding list of the latest routed actions.
+- **Recall**: Quick snippets from the RecallVault.
+
+fAT can also generate and launch a Zellij workspace:
 
 ```bash
-python3 -m fiona.cli fat layout --print
+fiona fat run
 ```
-
-Write the Zellij layout:
-
-```bash
-python3 -m fiona.cli fat layout --out /tmp/fiona-fat.kdl
-```
-
-Launch the Zellij workspace:
-
-```bash
-python3 -m fiona.cli fat run
-```
-
-The generated workspace opens panes for fAT status, host status, CamComs paths, and SeeOnDesk status.
 
 ## QuikTieper
 
@@ -389,6 +385,36 @@ Example default bindings:
 - `alt + b + r + v` opens Brave
 - `alt + v + s + c` opens VS Code
 - `alt + t + e + r` opens terminal
+
+## RecallVault (Remembrance)
+
+RecallVault is a lightweight, persistent remembrance store for key-value snippets, categorized for different contexts.
+
+Manage remembrances:
+
+```bash
+fiona recall remember <key> <value> --category <cat>
+fiona recall search <query>
+fiona recall forget <key>
+fiona recall categories
+fiona recall clear
+```
+
+The RecallVault provides the "long-term memory" for Fiona actions and future agent reasoning.
+
+## CmdTrace (Observability)
+
+CmdTrace is a high-performance, append-only JSONL log of every action routed through Fiona.
+
+Audit actions:
+
+```bash
+fiona action history --limit 50
+fiona action history --name host.status
+fiona action clear
+```
+
+The trace log ensures a perfect audit trail of system activity, which is also visible in real-time through the fAT TUI.
 
 ## CamComs
 

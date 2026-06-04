@@ -31,26 +31,31 @@ class TerminalAssistTests(unittest.TestCase):
         self.assertIn("checks", status)
 
     def test_dashboard_renders_without_color(self) -> None:
-        dashboard = build_dashboard(color=False, width=72)
+        dashboard = build_dashboard(color=False, width=72, height=22)
 
-        self.assertIn("fAT / Fiona Terminal Assistance", dashboard)
-        self.assertIn("SYSTEM", dashboard)
-        self.assertIn("COMMANDS", dashboard)
+        self.assertIn("fAT Dashboard", dashboard)
+        self.assertIn("FIONA ENVIRONMENT", dashboard)
+        self.assertIn("CORE COMPONENTS", dashboard)
+        self.assertEqual(len(dashboard.splitlines()), 22)
 
     def test_command_pages_include_core_surfaces(self) -> None:
         pages = command_pages()
         titles = {page.title for page in pages}
 
-        self.assertIn("Overview", titles)
+        self.assertIn("Dashboard", titles)
+        self.assertIn("Management", titles)
         self.assertIn("QuikTieper", titles)
         self.assertIn("CamComs", titles)
         self.assertIn("Host", titles)
+        self.assertIn("Core", titles)
         self.assertIn("Apps", titles)
+        self.assertIn("History", titles)
+        self.assertIn("Recall", titles)
 
     def test_command_pages_mark_interactive_actions_external(self) -> None:
         actions = {action.label: action for page in command_pages() for action in page.actions}
 
-        self.assertFalse(actions["Status dashboard"].external)
+        self.assertTrue(actions["System Monitor (btop)"].external)
         self.assertFalse(actions["Host status"].external)
         self.assertTrue(actions["Open editor"].external)
         self.assertTrue(actions["Run listener"].external)
@@ -60,6 +65,8 @@ class TerminalAssistTests(unittest.TestCase):
         preview = build_cli_preview(width=72)
 
         self.assertIn("fAT / Fiona CLI", preview)
+        self.assertIn("[Dashboard]", preview)
+        self.assertIn("[Management]", preview)
         self.assertIn("[QuikTieper]", preview)
         self.assertIn("fiona camcoms smoke-test", preview)
 
@@ -83,8 +90,8 @@ class TerminalAssistTests(unittest.TestCase):
         self.assertEqual(strip_ansi("\033[38;5;51mhello\033[0m"), "hello")
 
     def test_status_dashboard_action_uses_no_color_inside_tui(self) -> None:
-        overview = command_pages()[0]
-        status_action = overview.actions[0]
+        management = command_pages()[1]
+        status_action = [a for a in management.actions if a.label == "Status dashboard"][0]
 
         self.assertEqual(status_action.label, "Status dashboard")
         self.assertEqual(status_action.command, ("fat", "status", "--no-color"))
@@ -110,7 +117,7 @@ class TerminalAssistTests(unittest.TestCase):
         with patch.object(sys, "argv", ["fiona", "fat"]), contextlib.redirect_stdout(stdout):
             main()
 
-        self.assertIn("Fiona Terminal Assistance", stdout.getvalue())
+        self.assertIn("fAT Dashboard", stdout.getvalue())
 
     def test_cli_fat_layout_can_print(self) -> None:
         stdout = io.StringIO()

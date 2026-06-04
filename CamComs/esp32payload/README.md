@@ -41,8 +41,21 @@ Copy these values into `esp32payload.ino`:
 
 The host should use `esp32.public.json` as the expected sender when decrypting.
 
+## Implementation
+
+The `esp32payload.ino` file includes a real hardware-verified crypto adapter using:
+- **libsodium**: for X25519 (Key Exchange) and Ed25519 (Signing).
+- **mbedtls**: for HKDF-SHA256 (Key Derivation) and AES-GCM (Authenticated Encryption).
+
+## Requirements
+
+To compile the payload, you need:
+1. **ESP32 Arduino Core** (includes `mbedtls` and `libsodium`).
+2. **ArduinoJson** library (6.x or 7.x).
+
 ## Notes
 
-`esp32payload.ino` is intentionally a firmware template. The Wi-Fi/HTTP and envelope construction are concrete, while the tiny crypto adapter section is isolated because the exact ESP32 crypto library choice may change.
+The ESP32 sender uses `esp_random()` for entropy. 
+The JSON canonicalization in the payload matches Python's `sort_keys=True` to ensure signature compatibility. Specifically, the `ciphertext` key is placed at the beginning of the JSON object when signing the envelope.
 
 For the current one-way direction, the ESP32 only needs the host encryption public key and its own signing private key. The ESP32 static encryption private key is not needed until the host also needs to encrypt responses back to the ESP32.

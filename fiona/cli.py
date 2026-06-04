@@ -39,9 +39,20 @@ from CamComs import (
     trusted_public_key_path,
 )
 from Agent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
+from CmdTrace import clear_trace, read_trace
 from DataClient import convert_table, deep_research_topic, load_table, mine_topic
 from EyeControl import EyeTrackerConfig, dependency_status, run_eye_tracker
+from FionaCore import (
+    ActionRouter,
+    MacroStep,
+    load_macros,
+    notify_result,
+    parse_voice_command,
+    run_macro,
+    save_macro,
+)
 from QuikTieper.remote import RemoteActionRunner
+from RecallVault import clear_recall, forget, list_categories, remember, search_recall
 from SeeOnDesk import active_window_info, desktop_snapshot
 from TerminalAssist import (
     build_cli_preview,
@@ -92,6 +103,22 @@ def main() -> None:
         _run_eyecontrol(args)
         return
 
+    if args.layer == "action":
+        _run_action_router(args)
+        return
+
+    if args.layer == "voice":
+        _run_voice(args)
+        return
+
+    if args.layer == "macro":
+        _run_macro(args)
+        return
+
+    if args.layer == "recall":
+        _run_recall(args)
+        return
+
     if args.layer in {"fat", "terminal-assist"}:
         _run_fat(args)
         return
@@ -127,6 +154,10 @@ def _build_parser() -> argparse.ArgumentParser:
   fiona agent ...        LM Studio bridge and agent-visible command registry
   fiona dataclient ...   Search, scrape, summarize, and export topic research
   fiona eyecontrol ...   Optional camera-based eye-controlled mouse tracker
+  fiona action ...       Shared action router, command tracing, permissions, and notifications
+  fiona voice ...        Deterministic typed/voice phrase to action translation
+  fiona macro ...        Named reusable action macros
+  fiona recall ...       RecallVault structured remembrance storage
   fiona fat ...          Fiona Terminal Assistance dashboard and Zellij layout
   fiona cli              Sliding Fiona terminal command center
   fiona seeondesk ...    Desktop awareness and active-window identification
@@ -213,6 +244,67 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     eye_run.add_argument("--no-click", action="store_true", help="Move the pointer but do not trigger blink clicks.")
     eye_run.add_argument("--timeout", type=float, default=5.0, dest="request_timeout_seconds")
 
+    action = subparsers.add_parser("action", help="Use Fiona's shared action router.")
+    action_subparsers = action.add_subparsers(dest="action_command", required=True)
+    action_subparsers.add_parser("list", help="List registered Fiona actions.")
+    action_run = action_subparsers.add_parser("run", help="Run a registered Fiona action.")
+    action_run.add_argument("name")
+    action_run.add_argument("--source", default="local")
+    action_run.add_argument("--profile", default="local", dest="permission_profile")
+    action_run.add_argument("--dry-run", action="store_true")
+    action_run.add_argument("--timeout", type=float, default=30.0)
+    action_run.add_argument("--notify", choices=["silent", "stdout", "desktop"], default="silent")
+    action_run.add_argument("--trace-path", type=Path, default=None)
+    action_history = action_subparsers.add_parser("history", help="Show recent action history.")
+    action_history.add_argument("--limit", type=int, default=20)
+    action_history.add_argument("--name", help="Filter history by action name.")
+    action_history.add_argument("--trace-path", type=Path, default=None)
+    action_clear = action_subparsers.add_parser("clear", help="Clear the routed command trace log.")
+    action_clear.add_argument("--trace-path", type=Path, default=None, dest="path")
+
+    voice = subparsers.add_parser("voice", help="Translate typed speech text into Fiona actions.")
+    voice_subparsers = voice.add_subparsers(dest="voice_command", required=True)
+    voice_parse = voice_subparsers.add_parser("parse", help="Parse a phrase into an action.")
+    voice_parse.add_argument("phrase", nargs="+")
+    voice_run = voice_subparsers.add_parser("run", help="Parse and run a phrase through the action router.")
+    voice_run.add_argument("phrase", nargs="+")
+    voice_run.add_argument("--dry-run", action="store_true")
+    voice_run.add_argument("--profile", default="local", dest="permission_profile")
+
+    macro = subparsers.add_parser("macro", help="Save and run named Fiona action macros.")
+    macro_subparsers = macro.add_subparsers(dest="macro_command", required=True)
+    macro_list = macro_subparsers.add_parser("list", help="List saved macros.")
+    macro_list.add_argument("--path", type=Path, default=None)
+    macro_save = macro_subparsers.add_parser("save", help="Save a macro from action names.")
+    macro_save.add_argument("name")
+    macro_save.add_argument("actions", nargs="+")
+    macro_save.add_argument("--path", type=Path, default=None)
+    macro_run = macro_subparsers.add_parser("run", help="Run a saved macro.")
+    macro_run.add_argument("name")
+    macro_run.add_argument("--dry-run", action="store_true")
+    macro_run.add_argument("--path", type=Path, default=None)
+    macro_run.add_argument("--trace-path", type=Path, default=None)
+
+    recall = subparsers.add_parser("recall", help="Use RecallVault remembrance storage.")
+    recall_subparsers = recall.add_subparsers(dest="recall_command", required=True)
+    recall_list = recall_subparsers.add_parser("list", help="List saved remembrance entries.")
+    recall_list.add_argument("--path", type=Path, default=None)
+    recall_search = recall_subparsers.add_parser("search", help="Search saved remembrance entries.")
+    recall_search.add_argument("query", nargs="?", default="")
+    recall_search.add_argument("--path", type=Path, default=None)
+    recall_categories = recall_subparsers.add_parser("categories", help="List unique RecallVault categories.")
+    recall_categories.add_argument("--path", type=Path, default=None)
+    recall_remember = recall_subparsers.add_parser("remember", help="Save or replace a remembrance entry.")
+    recall_remember.add_argument("key")
+    recall_remember.add_argument("value")
+    recall_remember.add_argument("--category", default="general")
+    recall_remember.add_argument("--path", type=Path, default=None)
+    recall_forget = recall_subparsers.add_parser("forget", help="Remove a remembrance entry by key.")
+    recall_forget.add_argument("key")
+    recall_forget.add_argument("--path", type=Path, default=None)
+    recall_clear = recall_subparsers.add_parser("clear", help="Clear the entire RecallVault.")
+    recall_clear.add_argument("--path", type=Path, default=None)
+
     fat = subparsers.add_parser(
         "fat",
         aliases=["terminal-assist"],
@@ -221,6 +313,7 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     fat_subparsers = fat.add_subparsers(dest="fat_command")
     fat_status = fat_subparsers.add_parser("status", help="Show the btop-style fAT terminal dashboard.")
     fat_status.add_argument("--no-color", action="store_true")
+    fat_status.add_argument("--json", action="store_true", help="Output status as JSON.")
     fat_status.add_argument("--width", type=int, default=96)
     fat_subparsers.add_parser("tui", help="Open the sliding Fiona terminal command center.")
     fat_subparsers.add_parser("json", help="Print fAT readiness as JSON.")
@@ -688,6 +781,104 @@ def _run_eyecontrol(args: argparse.Namespace) -> None:
     raise SystemExit(f"unknown EyeControl command: {args.eyecontrol_command}")
 
 
+def _run_action_router(args: argparse.Namespace) -> None:
+    router = ActionRouter(**({"trace_path": args.trace_path} if getattr(args, "trace_path", None) else {}))
+    if args.action_command == "list":
+        print(_pretty_json({"actions": router.list_actions()}))
+        return
+    if args.action_command == "run":
+        result = router.run(
+            args.name,
+            source=args.source,
+            permission_profile=args.permission_profile,
+            dry_run=args.dry_run,
+            timeout_seconds=args.timeout,
+        )
+        if args.notify != "silent":
+            notify_result(result, mode=args.notify)
+        print(_pretty_json(result.to_dict()))
+        return
+    if args.action_command == "history":
+        kwargs = {"path": args.trace_path} if args.trace_path else {}
+        print(_pretty_json({"events": read_trace(limit=args.limit, action_name=args.name, **kwargs)}))
+        return
+    if args.action_command == "clear":
+        path = args.path or DEFAULT_TRACE_PATH
+        cleared = clear_trace(path)
+        print(f"{'Cleared' if cleared else 'No trace file found at'} {path}")
+        return
+    raise SystemExit(f"unknown action command: {args.action_command}")
+
+
+def _run_voice(args: argparse.Namespace) -> None:
+    phrase = " ".join(args.phrase)
+    parsed = parse_voice_command(phrase)
+    if parsed is None:
+        raise SystemExit(f"could not map phrase to Fiona action: {phrase}")
+    if args.voice_command == "parse":
+        print(_pretty_json(parsed.to_dict()))
+        return
+    if args.voice_command == "run":
+        result = ActionRouter().run(
+            parsed.action,
+            source="voice",
+            permission_profile=args.permission_profile,
+            dry_run=args.dry_run,
+        )
+        print(_pretty_json({"voice": parsed.to_dict(), "result": result.to_dict()}))
+        return
+    raise SystemExit(f"unknown voice command: {args.voice_command}")
+
+
+def _run_macro(args: argparse.Namespace) -> None:
+    if args.macro_command == "list":
+        macros = {
+            name: [step.to_dict() for step in steps]
+            for name, steps in sorted(load_macros(**({"path": args.path} if args.path else {})).items())
+        }
+        print(_pretty_json({"macros": macros}))
+        return
+    if args.macro_command == "save":
+        path = save_macro(args.name, [MacroStep(action) for action in args.actions], **({"path": args.path} if args.path else {}))
+        print(f"Saved macro {args.name} to {path}")
+        return
+    if args.macro_command == "run":
+        router = ActionRouter(**({"trace_path": args.trace_path} if args.trace_path else {}))
+        results = run_macro(args.name, router=router, dry_run=args.dry_run, **({"path": args.path} if args.path else {}))
+        print(_pretty_json({"macro": args.name, "results": [result.to_dict() for result in results]}))
+        return
+    raise SystemExit(f"unknown macro command: {args.macro_command}")
+
+
+def _run_recall(args: argparse.Namespace) -> None:
+    kwargs = {"path": args.path} if args.path else {}
+    if args.recall_command == "list":
+        entries = search_recall("", **kwargs)
+        print(_pretty_json({"entries": [entry.to_dict() for entry in entries]}))
+        return
+    if args.recall_command == "search":
+        entries = search_recall(args.query, **kwargs)
+        print(_pretty_json({"entries": [entry.to_dict() for entry in entries]}))
+        return
+    if args.recall_command == "categories":
+        print(_pretty_json({"categories": list_categories(**kwargs)}))
+        return
+    if args.recall_command == "remember":
+        path = remember(args.key, args.value, category=args.category, **kwargs)
+        print(f"Saved remembrance {args.key} to {path}")
+        return
+    if args.recall_command == "forget":
+        forgot = forget(args.key, **kwargs)
+        print(f"{'Forgot' if forgot else 'No remembrance found for'} {args.key}")
+        return
+    if args.recall_command == "clear":
+        path = args.path or DEFAULT_RECALL_PATH
+        cleared = clear_recall(path)
+        print(f"{'Cleared' if cleared else 'No RecallVault file found at'} {path}")
+        return
+    raise SystemExit(f"unknown recall command: {args.recall_command}")
+
+
 def _run_fat(args: argparse.Namespace) -> None:
     command = args.fat_command or "status"
     if command == "tui":
@@ -696,7 +887,10 @@ def _run_fat(args: argparse.Namespace) -> None:
             raise SystemExit(code)
         return
     if command == "status":
-        print(build_dashboard(color=not getattr(args, "no_color", False), width=getattr(args, "width", 96)))
+        if getattr(args, "json", False):
+            print(_pretty_json(terminal_assist_status()))
+        else:
+            print(build_dashboard(color=not getattr(args, "no_color", False), width=getattr(args, "width", 96)))
         return
     if command == "json":
         print(_pretty_json(terminal_assist_status()))

@@ -11,7 +11,11 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - standalone DataClient research GUI
 - SeeOnDesk desktop-awareness CLI
 - EyeControl optional camera tracker CLI
-- fAT terminal dashboard and Zellij layout helper
+- fAT terminal dashboard with live CPU, Memory, Disk, and Uptime metrics
+- Real-time sliding TUI command center with live search and auto-refresh
+- System status JSON API for external tool consumption
+- RecallVault persistent remembrance store for categorized memory
+- CmdTrace high-performance observability log with action filtering
 - QuikTieper binding editor/listener/action runner
 - CamComs encryption/decryption/transport/receiver
 - trusted sender lifecycle and audit logging
@@ -42,7 +46,7 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 The latest recorded project validation is:
 
 ```text
-Ran 99 tests in 0.481s
+Ran 125 tests in 4.779s
 OK
 compileall OK
 ```

@@ -31,6 +31,10 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("seeondesk", stdout)
         self.assertIn("dataclient", stdout)
         self.assertIn("eyecontrol", stdout)
+        self.assertIn("action", stdout)
+        self.assertIn("voice", stdout)
+        self.assertIn("macro", stdout)
+        self.assertIn("recall", stdout)
         self.assertIn("fat", stdout)
         self.assertIn("cli", stdout)
         self.assertIn("phiconnect", stdout)
@@ -74,6 +78,45 @@ class FionaCliHelpTests(unittest.TestCase):
         self.assertIn("status", stdout)
         self.assertIn("layout", stdout)
         self.assertIn("run", stdout)
+
+    def test_action_help_shows_router_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("action", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona action", stdout)
+        self.assertIn("list", stdout)
+        self.assertIn("run", stdout)
+        self.assertIn("history", stdout)
+
+    def test_voice_help_shows_translation_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("voice", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona voice", stdout)
+        self.assertIn("parse", stdout)
+        self.assertIn("run", stdout)
+
+    def test_macro_help_shows_macro_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("macro", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona macro", stdout)
+        self.assertIn("list", stdout)
+        self.assertIn("save", stdout)
+        self.assertIn("run", stdout)
+
+    def test_recall_help_shows_remembrance_commands(self) -> None:
+        code, stdout, stderr = self._run_cli("recall", "help")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(stderr, "")
+        self.assertIn("usage: fiona recall", stdout)
+        self.assertIn("list", stdout)
+        self.assertIn("search", stdout)
+        self.assertIn("remember", stdout)
 
     def test_cli_help_shows_terminal_command_center(self) -> None:
         code, stdout, stderr = self._run_cli("cli", "help")

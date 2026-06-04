@@ -30,6 +30,8 @@ nav:
       - SeeOnDesk: modules/seeondesk.md
       - EyeControl: modules/eyecontrol.md
       - TerminalAssist: modules/terminalassist.md
+      - RecallVault: modules/recallvault.md
+      - CmdTrace: modules/cmdtrace.md
       - Agent: modules/agent.md
   - Current State: current-state.md
   - Roadmap: roadmap.md

@@ -35,6 +35,8 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona eyecontrol ...` / `fiona eye ...` | EyeControl | Optional camera-based eye-controlled mouse tracker | mixed |
 | `fiona fat ...` / `fiona terminal-assist ...` | TerminalAssist | btop-style dashboard and Zellij layout helper | mixed |
 | `fiona cli` | TerminalAssist | sliding terminal command center | foreground TUI |
+| `fiona recall ...` | RecallVault | Small persistent remembrance store | one-shot |
+| `fiona action ...` | CmdTrace | Action trace logging and observability | one-shot |
 | `fiona seeondesk ...` / `fiona sod ...` | SeeOnDesk | Active desktop/window identification | one-shot |
 | `fiona vsee` | Vsee | Standalone holography viewer | foreground GUI |
 | `fiona phiconnect` | PhiConnect | Standalone encrypted chat | foreground GUI |
@@ -202,25 +204,47 @@ Mechanics:
 ```bash
 fiona cli
 fiona cli --preview
-fiona fat
 fiona fat status
-fiona fat tui
+fiona fat status --json
 fiona fat json
-fiona fat layout --print
-fiona fat layout --out /tmp/fiona-fat.kdl
 fiona fat run
 ```
 
 Mechanics:
+- `fiona cli` opens the sliding curses command center with a 1-second auto-refresh and live search.
+- `status` prints a btop-inspired terminal dashboard with live CPU, memory, disk, and uptime.
+- `--json` or the `json` command prints machine-readable system status for API consumption.
+- `run` writes the Zellij layout and launches the workspace.
 
-- no subcommand defaults to `status`
-- `fiona cli` opens the sliding curses command center
-- `fiona cli --preview` prints the command-center pages without entering curses mode
-- `fat tui` opens the same command center through the fAT namespace
-- `status` prints a btop-inspired terminal dashboard
-- `json` prints machine-readable readiness data
-- `layout` prints or writes a Zellij KDL layout
-- `run` writes the layout and launches `zellij --layout <path>`
+## RecallVault Commands
+
+```bash
+fiona recall remember <key> <value> --category <cat>
+fiona recall search <query>
+fiona recall forget <key>
+fiona recall categories
+fiona recall clear
+```
+
+Mechanics:
+- `remember` saves or replaces a key-value snippet.
+- `search` filters stored entries by key, value, or category.
+- `forget` removes a single entry by key.
+- `categories` lists all unique categories in the vault.
+- `clear` deletes the entire remembrance store.
+
+## CmdTrace Commands
+
+```bash
+fiona action history --limit 50
+fiona action history --name host.status
+fiona action clear
+```
+
+Mechanics:
+- `history` reads the append-only JSONL log of routed actions.
+- `--name` filters the history to show only events for a specific action.
+- `clear` deletes the command trace log file.
 
 ## Failure Modes
 

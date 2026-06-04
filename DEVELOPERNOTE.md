@@ -129,8 +129,17 @@ fiona fat run
 
 These are known project gaps that still need implementation. Manual GUI/workflow roughness is intentionally not listed here.
 
-- The ESP32 payload still needs a real ESP32 crypto adapter implementation for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url decode.
-- The ESP32 path still needs hardware validation, Wi-Fi provisioning, retries, acknowledgements, reconnection behavior, queueing, and pairing.
+- The ESP32 payload now has a real firmware crypto adapter implementation using `mbedtls` and `libsodium`.
+- Implemented X25519 key agreement, HKDF-SHA256 key derivation, AES-GCM encryption, and Ed25519 signing.
+- Added NTP synchronization to the ESP32 payload to ensure valid Unix timestamps for the host's `ReplayGuard`.
+- Refined WiFi reconnection behavior and added basic retry logic for message delivery.
+- Fixed JSON canonicalization in the ESP32 template to match Python's `sort_keys=True` (putting `ciphertext` at the start of the signed JSON).
+- Verified compatibility with Python's `cryptography` library primitives.
+- Added support for both 32-byte seed and 64-byte full secret key formats for Ed25519 provisioning.
+- ESP32 payload now requires `libsodium` (built-in to ESP32 core), `mbedtls` (built-in), and `ArduinoJson` 6.x/7.x.
+- On 2026-06-03, hardware-ready crypto logic was refined in `CamComs/esp32payload/esp32payload.ino`.
+- **Verified via Simulation**: Created `tests/test_esp32_firmware_sim.py` which mocks the exact C++ implementation of canonicalization and encoding to ensure 100% compatibility with the host's `CamComs` module.
+- The ESP32 path still needs hardware validation and a robust pairing/provisioning UI.
 - Voice, speech output, desktop tray/background status, and rich desktop notifications are still not implemented.
 - SeeOnDesk does not yet have screen recording or an ML classifier; the current implementation uses desktop/window metadata.
 
@@ -173,10 +182,20 @@ Recently fixed:
 - DataClient exports research CSV files with topic, URL, title, summary, depth, and parent URL fields.
 - DataClient now includes MiniExcel, a lightweight CSV/JSON/SQLite viewer/editor with selected-cell editing, row/column creation, row deletion, save/export support, and a safe formula bar for cell references/ranges and common functions.
 - DataClient GUI now has a Miner menu for quick mining, deep research, and clearing the miner log.
+- The project now includes `RecallVault`, a persistent remembrance store for key-value snippets and categories.
+- Fiona now exposes `fiona recall remember/search/forget/clear/categories` for memory management.
+- The project now includes `CmdTrace`, a high-performance JSONL-based observability log for all routed actions.
+- Fiona now exposes `fiona action history` and `fiona action clear` for auditing system activity.
+- `fiona action history` supports filtering by specific action name with `--name`.
 - The imported tracker now lives at `EyeControl/Eye_Controlled_Mouse_Tracker.py` and is wrapped as the optional `EyeControl` package.
 - Fiona now exposes `fiona eyecontrol status` and `fiona eyecontrol run`.
 - EyeControl imports OpenCV, MediaPipe, PyAutoGUI, and camera resources only at runtime, so normal Fiona imports and tests do not require a camera.
-- The project now includes `TerminalAssist`, a btop-inspired terminal dashboard and Zellij layout helper exposed through `fiona fat`.
+- The project now includes `TerminalAssist`, a high-fidelity terminal dashboard and sliding command center exposed through `fiona fat`.
+- fAT Dashboard was redesigned with a btop-inspired high-density layout featuring live **CPU Load**, **Memory Usage**, **Disk Usage**, and **Uptime**.
+- fAT TUI was upgraded to a **fullscreen-style layout** with a 1-second auto-refresh engine for real-time monitoring.
+- fAT TUI now includes **live search** (via `/` key) across all available actions and dynamic **History** and **Recall** pages.
+- Added a **Management** page to fAT TUI for launching external tools like `btop`.
+- Fiona now exposes a **system status JSON API** through `fiona fat status --json` or `fiona fat json`.
 - Fiona now exposes `fiona fat`, `fiona fat status`, `fiona fat json`, `fiona fat layout`, and `fiona fat run`.
 - Fiona now exposes `fiona cli`, a sliding curses-based command center for common Fiona workflows.
 - `fiona fat tui` opens the same command center through the fAT namespace.
@@ -191,7 +210,7 @@ Recently fixed:
 Recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), encrypted communication layer (`CamComs`), GUI, host-service skeleton, audit log, trusted-device storage, debug editor, basic `Vsee` wireframe hologram viewer, separate Vsee Holography window, standalone PhiConnect encrypted chat, a desktop-awareness layer (`SeeOnDesk`), a standalone research app (`DataClient`), and a local LM Studio inference bridge (`Agent`). Ignoring the AI agent itself, these are the remaining systems needed for it to feel like a Jarvis-style host:
 
 1. Real always-on service lifecycle: `fiona host install-service` can generate the user systemd unit, but Fiona still needs service enable/disable/status wrappers, clean shutdown, restart policy tuning, and GUI status integration.
-2. Real ESP32 device link: the ESP32 payload is still a template. It needs real firmware crypto, Wi-Fi provisioning, host IP discovery/static config, retries, acknowledgements, reconnect behavior, queueing, and hardware testing.
+2. Real ESP32 device link: the ESP32 payload now has refined firmware crypto, NTP sync, and reconnection logic. It still needs a provisioning UI, host discovery, and hardware testing on more chip variants.
 3. Secure pairing flow: Fiona needs first-time pairing, fingerprint display/approval, trusted key installation, host public key provisioning, key rotation, and device removal UX.
 4. Stronger command router: current routing is basic allowlisted JSON actions. It still needs sender-specific permissions, richer action categories, named command registry, better result objects, and safety prompts for risky actions.
 5. Deeper system awareness: SeeOnDesk now provides a first active-window/app snapshot. Fiona still needs process registry, workspace/session state, available-action discovery, device state, richer command history search, and screen/visual recognition.
@@ -223,7 +242,7 @@ Most basic to most advanced:
 11. Partial: configurable macro layer supports structured multi-step remote actions; waits, conditions, window targeting, named macros, and per-step failure handling remain.
 12. Partial: local structured success/failure result objects exist; response messages to sender and local notifications still remain.
 13. Not started: desktop tray / background status.
-14. Blocked by ESP32 work: real crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url decode in firmware.
+14. Done: refined crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and NTP sync in firmware.
 15. Not started: ESP32 pairing flow.
 16. Not started: voice / speech interface.
 17. Partial: desktop awareness through SeeOnDesk active-window snapshots; screen recording and ML recognition remain.

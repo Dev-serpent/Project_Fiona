@@ -10,9 +10,11 @@ class PackageStructureTests(unittest.TestCase):
 
         self.assertIs(importlib.import_module("fiona.QuikTieper"), fiona.QuikTieper)
         self.assertIs(importlib.import_module("fiona.CamComs"), fiona.CamComs)
+        self.assertIs(importlib.import_module("fiona.CmdTrace"), fiona.CmdTrace)
         self.assertIs(importlib.import_module("fiona.Vsee"), fiona.Vsee)
         self.assertIs(importlib.import_module("fiona.Agent"), fiona.Agent)
         self.assertIs(importlib.import_module("fiona.PhiConnect"), fiona.PhiConnect)
+        self.assertIs(importlib.import_module("fiona.RecallVault"), fiona.RecallVault)
         self.assertIs(importlib.import_module("fiona.SeeOnDesk"), fiona.SeeOnDesk)
         self.assertIs(importlib.import_module("fiona.DataClient"), fiona.DataClient)
         self.assertIs(importlib.import_module("fiona.EyeControl"), fiona.EyeControl)
@@ -21,17 +23,21 @@ class PackageStructureTests(unittest.TestCase):
     def test_subsystems_are_directly_importable(self) -> None:
         import Agent
         import CamComs
+        import CmdTrace
         import DataClient
         import EyeControl
         import PhiConnect
         import QuikTieper
+        import RecallVault
         import SeeOnDesk
         import TerminalAssist
         import Vsee
 
         self.assertTrue(hasattr(CamComs, "encrypt_message"))
         self.assertTrue(hasattr(CamComs, "CamComsHttpClient"))
+        self.assertTrue(hasattr(CmdTrace, "append_trace"))
         self.assertTrue(hasattr(QuikTieper, "AppLauncher"))
+        self.assertTrue(hasattr(RecallVault, "remember"))
         self.assertIn("ChordListener", QuikTieper.__all__)
         self.assertTrue(hasattr(Vsee, "HologramModel"))
         self.assertTrue(hasattr(Agent, "LMStudioClient"))
