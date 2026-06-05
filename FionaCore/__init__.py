@@ -6,7 +6,9 @@ from .actions import ActionResult, ActionRouter, ActionSpec, default_action_spec
 from .macros import DEFAULT_MACROS_PATH, MacroStep, load_macros, run_macro, save_macro
 from .notifications import Notification, build_notification, notify_result
 from .permissions import PermissionProfile, permission_allows
+from .speech import speak
 from .voice import VoiceCommand, parse_voice_command
+from .voice_engine import WhisperEngine, quick_transcribe
 
 __all__ = [
     "ActionResult",
@@ -17,12 +19,15 @@ __all__ = [
     "Notification",
     "PermissionProfile",
     "VoiceCommand",
+    "WhisperEngine",
     "build_notification",
     "default_action_specs",
     "load_macros",
     "notify_result",
     "parse_voice_command",
     "permission_allows",
+    "quick_transcribe",
     "run_macro",
     "save_macro",
+    "speak",
 ]

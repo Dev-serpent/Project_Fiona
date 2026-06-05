@@ -48,8 +48,10 @@ from FionaCore import (
     load_macros,
     notify_result,
     parse_voice_command,
+    quick_transcribe,
     run_macro,
     save_macro,
+    WhisperEngine,
 )
 from QuikTieper.remote import RemoteActionRunner
 from RecallVault import clear_recall, forget, list_categories, remember, search_recall
@@ -290,6 +292,11 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     voice_run.add_argument("phrase", nargs="+")
     voice_run.add_argument("--dry-run", action="store_true")
     voice_run.add_argument("--profile", default="local", dest="permission_profile")
+    
+    voice_listen = voice_subparsers.add_parser("listen", help="Listen to microphone and run detected action.")
+    voice_listen.add_argument("--duration", type=float, default=5.0, help="Recording duration in seconds.")
+    voice_listen.add_argument("--model", default="tiny", help="Whisper model size (tiny, base, small).")
+    voice_listen.add_argument("--dry-run", action="store_true")
 
     macro = subparsers.add_parser("macro", help="Save and run named Fiona action macros.")
     macro_subparsers = macro.add_subparsers(dest="macro_command", required=True)
@@ -336,6 +343,7 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     fat_status.add_argument("--json", action="store_true", help="Output status as JSON.")
     fat_status.add_argument("--width", type=int, default=96)
     fat_subparsers.add_parser("tui", help="Open the sliding Fiona terminal command center.")
+    fat_subparsers.add_parser("gui", help="Open the high-fidelity Fiona fAT GUI dashboard.")
     fat_subparsers.add_parser("api", help="Print fAT system status as JSON.")
     fat_layout = fat_subparsers.add_parser("layout", help="Print or write the fAT Zellij layout.")
     fat_layout.add_argument("--out", type=Path, default=None)
@@ -726,7 +734,10 @@ def _run_agent(args: argparse.Namespace) -> None:
         timeout_seconds=args.timeout,
     )
     if args.agent_command == "status":
-        print(_pretty_json(client.health()))
+        try:
+            print(_pretty_json(client.health()))
+        except Exception as e:
+            print(_pretty_json({"available": False, "error": str(e), "base_url": client.base_url}))
         return
     if args.agent_command == "ask":
         print(
@@ -834,6 +845,36 @@ def _run_action_router(args: argparse.Namespace) -> None:
 
 
 def _run_voice(args: argparse.Namespace) -> None:
+    if args.voice_command == "listen":
+        print(f"Listening for {args.duration}s (model: {args.model})...")
+        try:
+            engine = WhisperEngine(model_size=args.model)
+            phrase = engine.listen_and_transcribe(duration_seconds=args.duration)
+            print(f"Transcribed: \"{phrase}\"")
+            if not phrase:
+                print("No speech detected.")
+                return
+            
+            parsed = parse_voice_command(phrase)
+            if not parsed:
+                print("No matching Fiona action found.")
+                return
+            
+            print(f"Action: {parsed.action} (conf: {parsed.confidence})")
+            if args.dry_run:
+                print("[dry-run] Would execute action.")
+                return
+                
+            result = ActionRouter().run(
+                parsed.action,
+                source="voice",
+                permission_profile="local",
+            )
+            print(_pretty_json({"voice": parsed.to_dict(), "result": result.to_dict()}))
+        except Exception as e:
+            raise SystemExit(f"Voice engine error: {e}")
+        return
+
     phrase = " ".join(args.phrase)
     parsed = parse_voice_command(phrase)
     if parsed is None:
@@ -908,6 +949,11 @@ def _run_fat(args: argparse.Namespace) -> None:
         code = run_terminal_cli()
         if code:
             raise SystemExit(code)
+        return
+    
+    if command == "gui":
+        from TerminalAssist.gui import run_gui
+        run_gui()
         return
     if command == "status":
         if getattr(args, "json", False):

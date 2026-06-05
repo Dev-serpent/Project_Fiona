@@ -31,7 +31,7 @@ This roadmap focuses on what Fiona still needs to become a JARVIS-style host, ex
 - Add screen capture and visual recognition to SeeOnDesk.
 - Add command history search.
 - Add desktop notifications, status overlay, tray controls, and spoken responses.
-- Add voice input through push-to-talk or wake-word flow.
+- [DONE] Add voice input through push-to-talk or wake-word flow (Implemented 'v' trigger in TUI).
 
 ## Packaging
 

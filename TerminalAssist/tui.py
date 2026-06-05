@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from CmdTrace import read_trace
+from FionaCore import ActionRouter, parse_voice_command, quick_transcribe, speak
 from RecallVault import search_recall
 from .dashboard import build_dashboard, get_mouse_info, terminal_assist_status
 
@@ -202,7 +203,7 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
     page_index = 0
     selected = 0
     query = ""
-    message = "left/right: slide  up/down: select  /: search  enter: run  q: quit"
+    message = "l/r: slide  u/d: select  /: search  v: voice  enter: run  q: quit"
     last_refresh = 0.0
     status = terminal_assist_status()
 
@@ -270,6 +271,27 @@ def _run_curses(screen: curses.window, *, runner: Callable[[tuple[str, ...]], Co
         if key in (curses.KEY_UP, ord("k"), ord("K")):
             if page.actions:
                 selected = (selected - 1) % len(page.actions)
+            continue
+        if key in (ord("v"), ord("V")):
+            message = "Voice: [LISTENING for 3s]..."
+            _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message, status=status)
+            try:
+                # One-shot 3s listen
+                phrase = quick_transcribe(phrase_seconds=3.0)
+                if phrase:
+                    message = f"Voice: \"{phrase}\""
+                    parsed = parse_voice_command(phrase)
+                    if parsed:
+                        message = f"Voice: {parsed.action} triggered."
+                        _draw(screen, pages=pages, page_index=page_index, selected=selected, message=message, status=status)
+                        ActionRouter().run(parsed.action, source="voice", permission_profile="local")
+                        speak(f"Triggered {parsed.action}")
+                    else:
+                        message = f"Voice: Could not map \"{phrase}\""
+                else:
+                    message = "Voice: No speech detected."
+            except Exception as e:
+                message = f"Voice error: {e}"
             continue
         if key in (10, 13, curses.KEY_ENTER):
             if page.actions:
