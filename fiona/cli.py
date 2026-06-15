@@ -65,6 +65,7 @@ from TerminalAssist import (
     write_zellij_layout,
 )
 from TerminalAssist.dashboard import run_zellij
+from Mantatree import get_pipeline
 
 
 QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-keys", "normalize-app-cmds"}
@@ -130,6 +131,10 @@ def main() -> None:
 
     if args.layer == "recall":
         _run_recall(args)
+        return
+
+    if args.layer == "mantatree":
+        _run_mantatree(args)
         return
 
     if args.layer in {"fat", "terminal-assist"}:
@@ -456,6 +461,16 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     audit.add_argument("--limit", type=int, default=50)
 
     camcoms_subparsers.add_parser("smoke-test", help="Run a local encrypt/decrypt check.")
+
+    mantatree = subparsers.add_parser("mantatree", help="General communication pipeline for Fiona modules.")
+    mantatree_subparsers = mantatree.add_subparsers(dest="mantatree_command", required=True)
+    mantatree_subparsers.add_parser("gui", help="Open the universal Mantatree communication hub.")
+    mantatree_subparsers.add_parser("status", help="Show the current state of the pipeline.")
+    mantatree_publish = mantatree_subparsers.add_parser("publish", help="Publish a message to the pipeline.")
+    mantatree_publish.add_argument("topic", help="Message topic")
+    mantatree_publish.add_argument("payload", help="Message payload (string or JSON)")
+    mantatree_publish.add_argument("--sender", default="cli", help="Identifier for the message sender.")
+
     return parser
 
 
@@ -1032,6 +1047,26 @@ def _write_or_print(data: dict[str, Any], path: Path | None, *, label: str) -> N
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_pretty_json(data) + "\n", encoding="utf-8")
     print(f"Wrote {label} keys to {path}")
+
+
+def _run_mantatree(args: argparse.Namespace) -> None:
+    pipeline = get_pipeline()
+    if args.mantatree_command == "gui":
+        from Mantatree.gui import run_mantatree_gui
+        run_mantatree_gui()
+        return
+    if args.mantatree_command == "status":
+        print(_pretty_json(pipeline.dump_state()))
+        return
+    if args.mantatree_command == "publish":
+        try:
+            payload = json.loads(args.payload)
+        except:
+            payload = args.payload
+        pipeline.publish(args.topic, payload, sender=args.sender)
+        print(f"Published to {args.topic} (sender: {args.sender})")
+        return
+    raise SystemExit(f"unknown mantatree command: {args.mantatree_command}")
 
 
 def _pretty_json(data: dict[str, Any]) -> str:
