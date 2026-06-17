@@ -8,7 +8,15 @@ from dataclasses import replace
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from PhiConnect.chat import PhiConnectConfig, ensure_identity, read_recent_messages, run_phiconnect_receiver, send_chat_message, trust_public_key
+from PhiConnect.chat import (
+    PhiConnectConfig,
+    build_phiconnect_server,
+    ensure_identity,
+    read_recent_messages,
+    run_phiconnect_receiver,
+    send_chat_message,
+    trust_public_key,
+)
 
 
 class PhiConnectApp(tk.Tk):
@@ -17,12 +25,14 @@ class PhiConnectApp(tk.Tk):
         self.title("PhiConnect")
         self.geometry("900x640")
         self.config_model = config or PhiConnectConfig()
+        self.receiver_server = None
         self.receiver_thread: threading.Thread | None = None
         self.status_var = tk.StringVar(value="Receiver stopped")
         self.listen_host = tk.StringVar(value=self.config_model.listen_host)
         self.listen_port = tk.StringVar(value=str(self.config_model.listen_port))
         self.peer_host = tk.StringVar(value=self.config_model.peer_host)
         self.peer_port = tk.StringVar(value=str(self.config_model.peer_port))
+        self.use_agent = tk.BooleanVar(value=False)
         ensure_identity(self.config_model)
         self._build_ui()
         self._refresh_loop()
@@ -40,7 +50,9 @@ class PhiConnectApp(tk.Tk):
     def _build_chat_tab(self, parent: ttk.Frame) -> None:
         top = ttk.Frame(parent)
         top.pack(fill=tk.X)
-        ttk.Button(top, text="Start Receiver", command=self._start_receiver).pack(side=tk.LEFT)
+        self.toggle_btn = ttk.Button(top, text="Start Receiver", command=self._toggle_receiver)
+        self.toggle_btn.pack(side=tk.LEFT)
+        ttk.Checkbutton(top, text="Agent Bridge", variable=self.use_agent).pack(side=tk.LEFT, padx=10)
         ttk.Label(top, textvariable=self.status_var).pack(side=tk.LEFT, padx=10)
         listen = ttk.Frame(parent)
         listen.pack(fill=tk.X, pady=8)
@@ -90,8 +102,14 @@ class PhiConnectApp(tk.Tk):
         text.configure(state=tk.DISABLED)
         text.pack(fill=tk.BOTH, expand=True)
 
+    def _toggle_receiver(self) -> None:
+        if self.receiver_server:
+            self._stop_receiver()
+        else:
+            self._start_receiver()
+
     def _start_receiver(self) -> None:
-        if self.receiver_thread and self.receiver_thread.is_alive():
+        if self.receiver_server:
             return
         try:
             self.config_model = replace(
@@ -102,9 +120,33 @@ class PhiConnectApp(tk.Tk):
         except ValueError as exc:
             messagebox.showerror("Invalid receiver port", str(exc))
             return
-        self.receiver_thread = threading.Thread(target=run_phiconnect_receiver, args=(self.config_model,), daemon=True)
+
+        on_message = None
+        if self.use_agent.get():
+            from PhiConnect.bridge import PhiConnectAgentBridge
+            bridge = PhiConnectAgentBridge(config=self.config_model)
+            on_message = bridge.handle_message
+
+        try:
+            self.receiver_server = build_phiconnect_server(self.config_model, on_message=on_message)
+        except Exception as exc:
+            messagebox.showerror("Could not start receiver", str(exc))
+            return
+
+        self.receiver_thread = threading.Thread(target=self.receiver_server.serve_forever, daemon=True)
         self.receiver_thread.start()
         self.status_var.set(f"Listening on {self.config_model.listen_host}:{self.config_model.listen_port}")
+        self.toggle_btn.configure(text="Stop Receiver")
+
+    def _stop_receiver(self) -> None:
+        if not self.receiver_server:
+            return
+        self.receiver_server.shutdown()
+        self.receiver_server.server_close()
+        self.receiver_server = None
+        self.receiver_thread = None
+        self.status_var.set("Receiver stopped")
+        self.toggle_btn.configure(text="Start Receiver")
 
     def _send_message(self) -> None:
         body = self.message_var.get().strip()

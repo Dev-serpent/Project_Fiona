@@ -38,10 +38,9 @@ from CamComs import (
     save_trusted_sender,
     trusted_public_key_path,
 )
-from Agent import DEFAULT_LM_STUDIO_BASE_URL, LMStudioClient, command_registry
+from Agent import DEFAULT_OLLAMA_BASE_URL, OllamaClient, command_registry
 from CmdTrace import clear_trace, read_trace
 from DataClient import convert_table, deep_research_topic, load_table, mine_topic
-from EyeControl import EyeTrackerConfig, dependency_status, run_eye_tracker
 from FionaCore import (
     ActionRouter,
     MacroStep,
@@ -112,10 +111,6 @@ def main() -> None:
         _run_dataclient(args)
         return
 
-    if args.layer in {"eyecontrol", "eye"}:
-        _run_eyecontrol(args)
-        return
-
     if args.layer == "action":
         _run_action_router(args)
         return
@@ -175,7 +170,6 @@ def _build_parser() -> argparse.ArgumentParser:
   fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
   fiona agent ...        LM Studio bridge and agent-visible command registry
   fiona dataclient ...   Search, scrape, summarize, and export topic research
-  fiona eyecontrol ...   Optional camera-based eye-controlled mouse tracker
   fiona action ...       Shared action router, command tracing, permissions, and notifications
   fiona voice ...        Deterministic typed/voice phrase to action translation
   fiona macro ...        Named reusable action macros
@@ -205,14 +199,18 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     host = subparsers.add_parser("host", help="Manage the unified Fiona host service.")
     _add_service_subcommands(host)
 
-    agent = subparsers.add_parser("agent", help="Talk to a local LM Studio model.")
+    agent = subparsers.add_parser("agent", help="Talk to a local Ollama model.")
     agent_subparsers = agent.add_subparsers(dest="agent_command", required=True)
     agent_commands = agent_subparsers.add_parser("commands", help="List Fiona commands available to a future agent.")
     agent_commands.add_argument("--config", type=Path, default=None, help="QuikTieper bindings file used for app names.")
-    agent_status = agent_subparsers.add_parser("status", help="Check the LM Studio local server.")
-    _add_lmstudio_args(agent_status)
-    agent_ask = agent_subparsers.add_parser("ask", help="Send a prompt to LM Studio.")
-    _add_lmstudio_args(agent_ask)
+    agent_status = agent_subparsers.add_parser("status", help="Check the Ollama local server.")
+    _add_ollama_args(agent_status)
+    agent_run = agent_subparsers.add_parser("run", help="Initiate the autonomous agent to solve a goal.")
+    _add_ollama_args(agent_run)
+    agent_run.add_argument("goal", nargs="+", help="The task you want Fiona to accomplish.")
+    agent_run.add_argument("--turns", type=int, default=5, help="Maximum number of thinking turns.")
+    agent_ask = agent_subparsers.add_parser("ask", help="Send a prompt to Ollama.")
+    _add_ollama_args(agent_ask)
     agent_ask.add_argument("prompt", nargs="+")
     agent_ask.add_argument("--system", default="You are Fiona, a local workstation control assistant.")
     agent_ask.add_argument("--temperature", type=float, default=0.3)
@@ -247,24 +245,6 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     data_view.add_argument("input", type=Path)
     data_view.add_argument("--limit", type=int, default=10)
     dataclient_subparsers.add_parser("gui", help="Open the standalone DataClient GUI.")
-
-    eyecontrol = subparsers.add_parser(
-        "eyecontrol",
-        aliases=["eye"],
-        help="Run the optional camera-based eye-controlled mouse tracker.",
-    )
-    eyecontrol_subparsers = eyecontrol.add_subparsers(dest="eyecontrol_command", required=True)
-    eyecontrol_subparsers.add_parser("status", help="Show optional dependency and camera requirements.")
-    eye_run = eyecontrol_subparsers.add_parser("run", help="Run the eye-controlled mouse tracker.")
-    eye_source = eye_run.add_mutually_exclusive_group()
-    eye_source.add_argument("--url", default=None, help="IP camera snapshot URL, usually ending in /shot.jpg.")
-    eye_source.add_argument("--camera-index", type=int, default=None, help="Local OpenCV camera index.")
-    eye_run.add_argument("--window-width", type=int, default=800)
-    eye_run.add_argument("--window-height", type=int, default=600)
-    eye_run.add_argument("--click-threshold", type=float, default=0.015)
-    eye_run.add_argument("--click-sleep", type=float, default=0.5, dest="click_sleep_seconds")
-    eye_run.add_argument("--no-click", action="store_true", help="Move the pointer but do not trigger blink clicks.")
-    eye_run.add_argument("--timeout", type=float, default=5.0, dest="request_timeout_seconds")
 
     action = subparsers.add_parser("action", help="Use Fiona's shared action router.")
     action_subparsers = action.add_subparsers(dest="action_command", required=True)
@@ -366,7 +346,16 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     )
     seeondesk_subparsers = seeondesk.add_subparsers(dest="seeondesk_command", required=True)
     seeondesk_subparsers.add_parser("active", help="Show the currently focused app/window.")
-    seeondesk_subparsers.add_parser("status", help="Show a desktop-awareness snapshot.")
+    seeondesk_subparsers.add_parser("list", help="List all open windows.")
+    status = seeondesk_subparsers.add_parser("status", help="Show a desktop-awareness snapshot.")
+    status.add_argument("--screenshot", action="store_true", help="Include a screen capture in the snapshot.")
+    
+    capture = seeondesk_subparsers.add_parser("capture", help="Capture the current screen.")
+    capture.add_argument("--out", type=Path, default=Path("screenshot.png"), help="Output path for the screenshot.")
+    
+    analyze = seeondesk_subparsers.add_parser("analyze", help="Analyze the screen using the local agent.")
+    analyze.add_argument("prompt", help="The question to ask about the screen.")
+    analyze.add_argument("--image", type=Path, default=None, help="Optional existing image to analyze.")
 
     vsee = subparsers.add_parser("vsee", help="Open the standalone Vsee Holography window.")
     vsee.add_argument("--points", type=Path, default=None)
@@ -485,11 +474,10 @@ def _add_service_subcommands(parser: argparse.ArgumentParser) -> None:
         service_action.add_argument("--name", default="fiona-host.service")
 
 
-def _add_lmstudio_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--base-url", default=DEFAULT_LM_STUDIO_BASE_URL)
-    parser.add_argument("--model", default="local-model")
-    parser.add_argument("--api-key", default="lm-studio")
-    parser.add_argument("--timeout", type=float, default=30.0)
+def _add_ollama_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--base-url", default=DEFAULT_OLLAMA_BASE_URL)
+    parser.add_argument("--model", default="qwen2:1.5b")
+    parser.add_argument("--timeout", type=float, default=60.0)
 
 
 def _should_delegate_to_quiktieper(argv: list[str]) -> bool:
@@ -727,10 +715,9 @@ def _run_agent(args: argparse.Namespace) -> None:
         registry = command_registry(args.config) if args.config else command_registry()
         print(_pretty_json(registry))
         return
-    client = LMStudioClient(
+    client = OllamaClient(
         base_url=args.base_url,
         model=args.model,
-        api_key=args.api_key,
         timeout_seconds=args.timeout,
     )
     if args.agent_command == "status":
@@ -738,6 +725,20 @@ def _run_agent(args: argparse.Namespace) -> None:
             print(_pretty_json(client.health()))
         except Exception as e:
             print(_pretty_json({"available": False, "error": str(e), "base_url": client.base_url}))
+        return
+
+    if args.agent_command == "run":
+        from Agent import AgentOrchestrator
+        goal = " ".join(args.goal)
+        orchestrator = AgentOrchestrator(client=client)
+        orchestrator.max_turns = args.turns
+        
+        print(f"Goal: {goal}")
+        print("-" * 40)
+        final_thought = orchestrator.run_goal(goal)
+        
+        print("-" * 40)
+        print(f"Final Outcome: {final_thought}")
         return
     if args.agent_command == "ask":
         print(
@@ -793,26 +794,6 @@ def _run_dataclient(args: argparse.Namespace) -> None:
         print(_pretty_json({"path": str(args.input), "rows": preview, "total_rows": len(rows)}))
         return
     raise SystemExit(f"unknown DataClient command: {args.dataclient_command}")
-
-
-def _run_eyecontrol(args: argparse.Namespace) -> None:
-    if args.eyecontrol_command == "status":
-        print(_pretty_json(dependency_status()))
-        return
-    if args.eyecontrol_command == "run":
-        config = EyeTrackerConfig(
-            url=args.url,
-            camera_index=args.camera_index,
-            window_width=args.window_width,
-            window_height=args.window_height,
-            click_threshold=args.click_threshold,
-            click_sleep_seconds=args.click_sleep_seconds,
-            enable_clicks=not args.no_click,
-            request_timeout_seconds=args.request_timeout_seconds,
-        )
-        run_eye_tracker(config)
-        return
-    raise SystemExit(f"unknown EyeControl command: {args.eyecontrol_command}")
 
 
 def _run_action_router(args: argparse.Namespace) -> None:
@@ -1003,11 +984,34 @@ def _run_phiconnect(_args: argparse.Namespace) -> None:
 
 
 def _run_seeondesk(args: argparse.Namespace) -> None:
+    from SeeOnDesk import (
+        active_window_info,
+        all_windows_info,
+        analyze_screen,
+        capture_screen,
+        desktop_snapshot,
+    )
+
     if args.seeondesk_command == "active":
         print(_pretty_json(active_window_info().to_dict()))
         return
+    if args.seeondesk_command == "list":
+        windows = [w.to_dict() for w in all_windows_info()]
+        print(_pretty_json({"windows": windows}))
+        return
     if args.seeondesk_command == "status":
-        print(_pretty_json(desktop_snapshot().to_dict()))
+        print(_pretty_json(desktop_snapshot(include_screenshot=args.screenshot).to_dict()))
+        return
+
+    if args.seeondesk_command == "capture":
+        if capture_screen(args.out):
+            print(f"Screenshot saved to: {args.out}")
+        else:
+            raise SystemExit("Error: Failed to capture screen.")
+        return
+    if args.seeondesk_command == "analyze":
+        print("Analyzing screen... (this may take a few seconds)")
+        print(analyze_screen(args.prompt, image_path=args.image))
         return
     raise SystemExit(f"unknown SeeOnDesk command: {args.seeondesk_command}")
 

@@ -168,8 +168,8 @@ Recently fixed:
 - The GUI now includes a Debug tab that can view/edit project text files, restricted to `tests`, `scripts`, `QuikTieper`, and `CamComs`.
 - The project now includes `Vsee`, a separate sibling package for point/edge 3D hologram viewing.
 - The GUI now includes a Vsee tab with editable point and edge tables, a dark grid canvas, and rotation/scale controls for rendering connected 3D wireframe shapes.
-- The project now includes `Agent`, a local LM Studio bridge for OpenAI-compatible chat-completion inference.
-- Fiona now exposes `fiona agent status` and `fiona agent ask` for LM Studio integration.
+- The project now includes `Agent`, a local Ollama bridge for chat-completion inference.
+- Fiona now exposes `fiona agent status` and `fiona agent ask` for Ollama integration.
 - Fiona now exposes `fiona vsee` for a separate `Vsee Holography` window outside the main `fiona edit` GUI.
 - The project now includes `PhiConnect`, a standalone encrypted computer-to-computer chat app outside `fiona edit`.
 - PhiConnect creates local chat identities, stores a peer public key for outbound encryption, trusts peer public keys for inbound verification, encrypts outbound chat with CamComs, decrypts inbound chat, and shows a rolling 3-minute chat window.
@@ -206,7 +206,8 @@ Recently fixed:
 
 ## Missing From Jarvis Except The AI Agent
 
-Recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), encrypted communication layer (`CamComs`), GUI, host-service skeleton, audit log, trusted-device storage, debug editor, basic `Vsee` wireframe hologram viewer, separate Vsee Holography window, standalone PhiConnect encrypted chat, a desktop-awareness layer (`SeeOnDesk`), a standalone research app (`DataClient`), and a local LM Studio inference bridge (`Agent`). Ignoring the AI agent itself, these are the remaining systems needed for it to feel like a Jarvis-style host:
+recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), encrypted communication layer (`CamComs`), GUI, host-service skeleton, audit log, trusted-device storage, debug editor, basic `Vsee` wireframe hologram viewer, separate Vsee Holography window, standalone PhiConnect encrypted chat, a desktop-awareness layer (`SeeOnDesk`), a standalone research app (`DataClient`), and a local Ollama inference bridge (`Agent`).
+ Ignoring the AI agent itself, these are the remaining systems needed for it to feel like a Jarvis-style host:
 
 1. Real always-on service lifecycle: `fiona host install-service` can generate the user systemd unit, but Fiona still needs service enable/disable/status wrappers, clean shutdown, restart policy tuning, and GUI status integration.
 2. Real ESP32 device link: the ESP32 payload now has refined firmware crypto, NTP sync, and reconnection logic. It still needs a provisioning UI, host discovery, and hardware testing on more chip variants.
@@ -222,7 +223,7 @@ Recorded on 2026-05-19. Fiona already has a local action layer (`QuikTieper`), e
 12. Vsee/holography expansion: Vsee is currently a point/edge wireframe viewer. It still needs saved scenes, import/export, richer primitives, camera controls, animation, live data binding, and any real hologram/projection output path.
 13. Packaging and public install polish: README is public-facing, but Fiona still needs stable package discovery, tested console-script install, dependency install guidance per platform, and release packaging.
 14. Cross-platform/runtime reliability: the current control stack is Linux/KDE/Wayland-oriented. Fiona still needs clearer platform support boundaries, graceful degradation, and dependency checks for missing tools like `ydotool`, `kdotool`, and `pynput`.
-15. Agent training/fine-tuning system: LM Studio integration is local inference only. Fiona still needs dataset capture, training/fine-tuning scripts, GPU/runtime selection, resource limits, evaluation, and rollback before any real model training should be attempted.
+15. Agent training/fine-tuning system: Ollama integration is local inference only. Fiona still needs dataset capture, training/fine-tuning scripts, GPU/runtime selection, resource limits, evaluation, and rollback before any real model training should be attempted.
 
 ## Build Order
 

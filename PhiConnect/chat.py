@@ -118,11 +118,13 @@ class PhiConnectMessageProcessor:
         trusted_dir: Path = DEFAULT_TRUSTED_DIR,
         replay_guard: ReplayGuard | None = None,
         chat_log: AuditLog | None = None,
+        on_message: Any | None = None,
     ) -> None:
         self.identity = identity
         self.trusted_dir = trusted_dir
         self.replay_guard = replay_guard or ReplayGuard(DEFAULT_PHICONNECT_DIR / "seen_messages.json")
         self.chat_log = chat_log or AuditLog(DEFAULT_CHAT_LOG_PATH)
+        self.on_message = on_message
 
     def process_encoded(self, encoded_message: str) -> dict[str, Any]:
         envelope: dict[str, Any] = {}
@@ -145,6 +147,11 @@ class PhiConnectMessageProcessor:
                 "body": message["body"],
             }
             self.chat_log.record(event)
+            if self.on_message:
+                try:
+                    self.on_message(event)
+                except Exception:
+                    pass
             return {"ok": True, "message_id": envelope["message_id"], "sender": envelope["sender"]}
         except (CamComsCryptoError, PhiConnectError, ValueError, json.JSONDecodeError) as exc:
             event = {
@@ -159,13 +166,14 @@ class PhiConnectMessageProcessor:
             raise
 
 
-def build_phiconnect_server(config: PhiConnectConfig) -> ThreadingHTTPServer:
+def build_phiconnect_server(config: PhiConnectConfig, on_message: Any | None = None) -> ThreadingHTTPServer:
     identity = ensure_identity(config)
     processor = PhiConnectMessageProcessor(
         identity=identity,
         trusted_dir=config.trusted_dir,
         replay_guard=ReplayGuard(config.chat_log_path.parent / "seen_messages.json"),
         chat_log=AuditLog(config.chat_log_path),
+        on_message=on_message,
     )
 
     class Handler(BaseHTTPRequestHandler):
@@ -189,8 +197,8 @@ def build_phiconnect_server(config: PhiConnectConfig) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((config.listen_host, config.listen_port), Handler)
 
 
-def run_phiconnect_receiver(config: PhiConnectConfig) -> None:
-    build_phiconnect_server(config).serve_forever()
+def run_phiconnect_receiver(config: PhiConnectConfig, on_message: Any | None = None) -> None:
+    build_phiconnect_server(config, on_message=on_message).serve_forever()
 
 
 def _chat_payload(body: str, *, sender: str, recipient: str) -> dict[str, Any]:

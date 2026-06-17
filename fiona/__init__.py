@@ -9,7 +9,6 @@ Fiona is split into sibling subsystems:
 - PhiConnect: encrypted computer-to-computer chat
 - SeeOnDesk: desktop-awareness snapshots
 - DataClient: topic search, scraping, summarization, and CSV export
-- EyeControl: optional camera-based eye-controlled mouse tracker
 - TerminalAssist: btop-style terminal dashboard and Zellij workspace
 - CmdTrace: command trace storage
 - RecallVault: structured remembrance storage
@@ -24,7 +23,6 @@ import Agent as Agent
 import CamComs as CamComs
 import CmdTrace as CmdTrace
 import DataClient as DataClient
-import EyeControl as EyeControl
 import FionaCore as FionaCore
 import PhiConnect as PhiConnect
 import QuikTieper as QuikTieper
@@ -51,7 +49,6 @@ sys.modules.setdefault(__name__ + ".CamComs", CamComs)
 sys.modules.setdefault(__name__ + ".Agent", Agent)
 sys.modules.setdefault(__name__ + ".CmdTrace", CmdTrace)
 sys.modules.setdefault(__name__ + ".DataClient", DataClient)
-sys.modules.setdefault(__name__ + ".EyeControl", EyeControl)
 sys.modules.setdefault(__name__ + ".FionaCore", FionaCore)
 sys.modules.setdefault(__name__ + ".PhiConnect", PhiConnect)
 sys.modules.setdefault(__name__ + ".QuikTieper", QuikTieper)
@@ -78,7 +75,6 @@ __all__ = [
     "CamComsIdentity",
     "CmdTrace",
     "DataClient",
-    "EyeControl",
     "FionaCore",
     "PhiConnect",
     "SeeOnDesk",
