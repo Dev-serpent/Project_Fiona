@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,8 @@ from CamComs import (
     DEFAULT_AUDIT_LOG_PATH,
     DEFAULT_CAMCOMS_DIR,
     DEFAULT_FIONA_CONFIG_PATH,
+    DEFAULT_IDENTITY_PATH,
+    DEFAULT_PUBKEY_PATH,
     DEFAULT_TRUSTED_DIR,
     AuditLog,
     CamComsIdentity,
@@ -22,16 +25,20 @@ from CamComs import (
     encode_envelope,
     encrypt_and_send_instruction,
     encrypt_message,
+    get_fingerprint,
     instruction_from_text,
     instruction_to_text,
     install_host_service_unit,
     list_trusted_senders,
+    load_identity,
+    prune_expired,
     read_host_service_logs,
     remove_trusted_sender,
     press_instruction,
     private_key_path,
     public_key_path,
     render_host_service_unit,
+    rotate_keys,
     run_host_receiver,
     run_user_service_command,
     save_host_service_config,
@@ -49,12 +56,13 @@ from FionaCore import (
     parse_voice_command,
     quick_transcribe,
     run_macro,
+    run_macro_steps,
     save_macro,
     WhisperEngine,
 )
 from QuikTieper.remote import RemoteActionRunner
 from RecallVault import clear_recall, forget, list_categories, remember, search_recall
-from SeeOnDesk import active_window_info, desktop_snapshot
+from SeeOnDesk import active_window_info, desktop_snapshot, discover_actions
 from TerminalAssist import (
     build_cli_preview,
     build_dashboard,
@@ -71,11 +79,13 @@ QUIKTIEPER_COMMANDS = {"init", "list", "edit", "run", "import-apps", "assign-key
 
 def _run_shell(args: argparse.Namespace) -> None:
     full_cmd = " ".join(args.cmd)
+    from FionaCore.shell_safety import ShellCommandError, safe_os_system
     try:
-        # Use os.system for direct shell execution as requested
-        code = os.system(full_cmd)
+        code = safe_os_system(full_cmd)
         if code != 0:
             raise SystemExit(code)
+    except ShellCommandError as e:
+        raise SystemExit(f"BLOCKED: {e}")
     except Exception as e:
         raise SystemExit(f"shell command failed: {e}")
 
@@ -94,6 +104,21 @@ def main() -> None:
 
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    # Handle top-level macro flags before layer dispatch
+    if args.list_macros:
+        _handle_list_macros()
+        return
+    if args.run_macro:
+        _handle_run_macro(args.run_macro)
+        return
+    if args.discover_actions:
+        _handle_discover_actions()
+        return
+
+    if args.tray_only:
+        TrayOnlyRunner().run()
+        return
 
     if args.layer in {"camcoms", "cc"}:
         _run_camcoms(args)
@@ -167,7 +192,10 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog="""Command groups:
   fiona quiktieper ...   QuikTieper app bindings, listener, and GUI editor
   fiona host ...         Unified host service setup, status, logs, and lifecycle
-  fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
+    fiona camcoms ...      Encrypted envelopes, keys, trust, receiver, and transport
+    fiona camcoms rotate-keys   Rotate the local device identity
+    fiona camcoms prune         Remove expired trusted senders
+    fiona camcoms fingerprint   Show the local public-key fingerprint
   fiona agent ...        LM Studio bridge and agent-visible command registry
   fiona dataclient ...   Search, scrape, summarize, and export topic research
   fiona action ...       Shared action router, command tracing, permissions, and notifications
@@ -186,6 +214,26 @@ Shortcuts:
   fiona list             Same as fiona quiktieper list
 
 Use "fiona <group> --help" for a group-specific command grid.""",
+    )
+    parser.add_argument(
+        "--run-macro",
+        metavar="MACRO_NAME",
+        help="Run a named macro with the full branching engine and print results.",
+    )
+    parser.add_argument(
+        "--list-macros",
+        action="store_true",
+        help="List all saved macros with step counts.",
+    )
+    parser.add_argument(
+        "--discover-actions",
+        action="store_true",
+        help="Discover SeeOnDesk actions grouped by category.",
+    )
+    parser.add_argument(
+        "--tray-only",
+        action="store_true",
+        help="Start Fiona in system tray only mode (no GUI window). Requires pystray.",
     )
     subparsers = parser.add_subparsers(dest="layer")
 
@@ -277,6 +325,14 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     voice_listen.add_argument("--duration", type=float, default=5.0, help="Recording duration in seconds.")
     voice_listen.add_argument("--model", default="tiny", help="Whisper model size (tiny, base, small).")
     voice_listen.add_argument("--dry-run", action="store_true")
+
+    voice_wake_test = voice_subparsers.add_parser("wake-test", help="Test wake word detection engine status.")
+    voice_wake_test.add_argument("--wake-word", default="fiona", help="Wake word to test (default: fiona).")
+
+    voice_feedback_test = voice_subparsers.add_parser("feedback-test", help="Test audio and notification feedback.")
+    voice_feedback_test.add_argument("--sound", default="ack", help="Sound name to play (default: ack).")
+    voice_feedback_test.add_argument("--notify", action="store_true", help="Send a test notification.")
+    voice_feedback_test.add_argument("--message", default="Fiona feedback test", help="Notification message.")
 
     macro = subparsers.add_parser("macro", help="Save and run named Fiona action macros.")
     macro_subparsers = macro.add_subparsers(dest="macro_command", required=True)
@@ -388,6 +444,7 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     trust_action.add_argument("--public", type=Path, help="Public key JSON to trust.")
     trust_action.add_argument("--list", action="store_true", help="List trusted sender public keys.")
     trust_action.add_argument("--remove", help="Remove a trusted sender by device id.")
+    trust.add_argument("--expires-in", type=int, default=None, help="Number of days until this trust entry expires.")
     trust.add_argument("--trusted-dir", type=Path, default=DEFAULT_TRUSTED_DIR)
 
     encrypt = camcoms_subparsers.add_parser("encrypt", help="Encrypt a message for another device.")
@@ -443,6 +500,16 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     audit = camcoms_subparsers.add_parser("audit", help="Show recent CamComs host audit log events.")
     audit.add_argument("--path", type=Path, default=DEFAULT_AUDIT_LOG_PATH)
     audit.add_argument("--limit", type=int, default=50)
+
+    rotate = camcoms_subparsers.add_parser("rotate-keys", help="Generate a new device identity and rotate keys.")
+    rotate.add_argument("--device-id", default="host")
+    rotate.add_argument("--yes", action="store_true", help="Skip confirmation prompt.")
+
+    prune = camcoms_subparsers.add_parser("prune", help="Remove expired trusted sender entries.")
+    prune.add_argument("--trusted-dir", type=Path, default=DEFAULT_TRUSTED_DIR)
+
+    fingerprint = camcoms_subparsers.add_parser("fingerprint", help="Show the local identity public-key fingerprint.")
+    fingerprint.add_argument("--identity", type=Path, default=DEFAULT_IDENTITY_PATH)
 
     camcoms_subparsers.add_parser("smoke-test", help="Run a local encrypt/decrypt check.")
     return parser
@@ -547,15 +614,18 @@ def _run_camcoms(args: argparse.Namespace) -> None:
 
     if command == "trust":
         if args.list:
-            trusted = [bundle.to_dict() for bundle in list_trusted_senders(args.trusted_dir)]
-            print(_pretty_json({"trusted_dir": str(args.trusted_dir), "senders": trusted}))
+            trusted_list = [trusted.to_dict() for trusted in list_trusted_senders(args.trusted_dir)]
+            print(_pretty_json({"trusted_dir": str(args.trusted_dir), "senders": trusted_list}))
             return
         if args.remove:
             removed = remove_trusted_sender(args.remove, args.trusted_dir)
             print(f"{'Removed' if removed else 'No trusted sender found for'} {args.remove}")
             return
         bundle = PublicKeyBundle.from_dict(_read_json(args.public))
-        path = save_trusted_sender(bundle, args.trusted_dir)
+        expires_at: int | None = None
+        if args.expires_in is not None:
+            expires_at = int(time.time()) + args.expires_in * 86400
+        path = save_trusted_sender(bundle, args.trusted_dir, expires_at=expires_at)
         print(f"Trusted sender {bundle.device_id} at {path}")
         return
 
@@ -634,6 +704,31 @@ def _run_camcoms(args: argparse.Namespace) -> None:
 
     if command == "audit":
         print(_pretty_json({"path": str(args.path), "events": AuditLog(args.path).read_recent(args.limit)}))
+        return
+
+    if command == "rotate-keys":
+        if not args.yes:
+            print("WARNING: Rotating keys will break all existing paired connections.")
+            answer = input("Continue? [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("Key rotation cancelled.")
+                return
+        old_fp, new_fp = rotate_keys(device_id=args.device_id)
+        print(f"Old fingerprint: {old_fp}")
+        print(f"New fingerprint: {new_fp}")
+        print("Keys rotated. Existing trusted senders will need to re-pair using the new public key.")
+        return
+
+    if command == "prune":
+        removed = prune_expired(args.trusted_dir)
+        print(f"Removed {len(removed)} expired trust entr{'y' if len(removed) == 1 else 'ies'}: {', '.join(removed) if removed else '(none)'}")
+        return
+
+    if command == "fingerprint":
+        identity = load_identity(args.identity)
+        fp = get_fingerprint(identity)
+        print(f"Fingerprint: {fp}")
+        print("Show this fingerprint when pairing with new devices.")
         return
 
     if command == "smoke-test":
@@ -856,6 +951,14 @@ def _run_voice(args: argparse.Namespace) -> None:
             raise SystemExit(f"Voice engine error: {e}")
         return
 
+    if args.voice_command == "wake-test":
+        _run_voice_wake_test(args)
+        return
+
+    if args.voice_command == "feedback-test":
+        _run_voice_feedback_test(args)
+        return
+
     phrase = " ".join(args.phrase)
     parsed = parse_voice_command(phrase)
     if parsed is None:
@@ -873,6 +976,43 @@ def _run_voice(args: argparse.Namespace) -> None:
         print(_pretty_json({"voice": parsed.to_dict(), "result": result.to_dict()}))
         return
     raise SystemExit(f"unknown voice command: {args.voice_command}")
+
+
+def _run_voice_wake_test(args: argparse.Namespace) -> None:
+    """Test wake word detection engine."""
+    from Voice import WakeWordEngine
+
+    engine = WakeWordEngine(wake_word=args.wake_word)
+    if engine.available:
+        print(f"Wake word engine: AVAILABLE")
+        print(f"Backend: {engine._backend}")
+        print(f"Wake word: {engine.wake_word}")
+        engine.start()
+        engine.stop()
+        print("Wake word engine test PASSED")
+    else:
+        print(f"Wake word engine: UNAVAILABLE")
+        print("No wake word detection library found (pvporcupine, snowboy, or mycroft_precise).")
+        print("Wake word engine test SKIPPED (graceful degradation)")
+
+
+def _run_voice_feedback_test(args: argparse.Namespace) -> None:
+    """Test audio and notification feedback."""
+    from Voice import FeedbackEngine
+
+    engine = FeedbackEngine()
+    print(f"Sound directory: {engine.sound_dir}")
+
+    if args.notify:
+        ok = engine.notify("Fiona Test", args.message, urgency="normal")
+        print(f"Desktop notification: {'OK' if ok else 'UNAVAILABLE (notify-send not found)'}")
+    else:
+        ok = engine.play_sound(args.sound)
+        if ok:
+            print(f"Sound '{args.sound}': PLAYED")
+        else:
+            print(f"Sound '{args.sound}': NOT FOUND (expected at {engine.sound_dir})")
+            print("Create a .wav, .mp3, or .ogg file there to test audio playback.")
 
 
 def _run_macro(args: argparse.Namespace) -> None:
@@ -893,6 +1033,60 @@ def _run_macro(args: argparse.Namespace) -> None:
         print(_pretty_json({"macro": args.name, "results": [result.to_dict() for result in results]}))
         return
     raise SystemExit(f"unknown macro command: {args.macro_command}")
+
+
+def _handle_list_macros() -> None:
+    """Print all saved macros with step counts."""
+    from FionaCore import DEFAULT_MACROS_PATH
+    macros = load_macros()
+    if not macros:
+        print("No macros found.")
+        return
+    for name in sorted(macros):
+        steps = macros[name]
+        print(f"  {name}: {len(steps)} step(s)")
+    print(f"\nTotal macros: {len(macros)}")
+
+
+def _handle_run_macro(name: str) -> None:
+    """Run a named macro with the full branching engine and print results."""
+    from FionaCore import DEFAULT_MACROS_PATH
+    macros = load_macros()
+    if name not in macros:
+        raise SystemExit(f"unknown macro: {name}")
+    steps = macros[name]
+    router = ActionRouter()
+    results = run_macro_steps(steps, router)
+    success_count = 0
+    for i, result in enumerate(results):
+        status = "OK" if result.ok else "FAILED"
+        if result.ok:
+            success_count += 1
+        print(f"  [{i}] {result.action} -> {status}")
+    failed = len(results) - success_count
+    print(f"Macro '{name}' executed {len(results)} steps, {success_count} succeeded, {failed} failed")
+
+
+def _handle_discover_actions() -> None:
+    """Discover SeeOnDesk actions and print them grouped by category."""
+    from SeeOnDesk import discover_actions as _discover_actions
+    actions = _discover_actions()
+    by_category: dict[str, list[dict[str, object]]] = {}
+    for action in actions:
+        cat = action.category
+        by_category.setdefault(cat, []).append({
+            "name": action.name,
+            "description": action.description,
+            "requires_confirmation": action.requires_confirmation,
+            "parameters": action.parameters,
+        })
+    for category in sorted(by_category):
+        print(f"\n[{category}]")
+        for entry in by_category[category]:
+            confirm = " [needs confirmation]" if entry["requires_confirmation"] else ""
+            print(f"  {entry['name']}: {entry['description']}{confirm}")
+    print()
+    print(f"Total actions discovered: {len(actions)}")
 
 
 def _run_recall(args: argparse.Namespace) -> None:
@@ -1040,6 +1234,32 @@ def _write_or_print(data: dict[str, Any], path: Path | None, *, label: str) -> N
 
 def _pretty_json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, sort_keys=True)
+
+
+class TrayOnlyRunner:
+    """Run Fiona in system tray only mode (no GUI window)."""
+
+    def __init__(self) -> None:
+        from QuikTieper.system_tray import SystemTrayIcon
+
+        self.tray = SystemTrayIcon(on_quit=self._quit)
+        self._running = True
+
+    def _quit(self) -> None:
+        self._running = False
+        self.tray.stop()
+
+    def run(self) -> None:
+        self.tray.start()
+        print(
+            "Fiona running in tray-only mode. "
+            "Select 'Quit Fiona' from the tray menu to exit."
+        )
+        try:
+            while self._running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self._quit()
 
 
 if __name__ == "__main__":

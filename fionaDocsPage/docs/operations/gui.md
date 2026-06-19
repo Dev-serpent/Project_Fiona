@@ -19,15 +19,32 @@ python3 -m fiona.cli edit
 The shared GUI is implemented by `QuikTieper.gui.ConfigEditorApp`. It is a Tkinter `ttk.Notebook` application with this tab order:
 
 ```text
-CamComs -> Vsee -> Bindings -> Raw Json -> Debug -> Host
+CamComs -> Vsee -> Bindings -> Raw Json -> Debug -> Host -> Pairing -> Voice
 ```
 
 The footer contains:
 
-- listener status
+- listener status indicator
 - current config/status message
 - `Start Listener` / stop listener control
 - `Save All`
+- `Minimize to tray` checkbox (when checked, closing hides to tray instead of quitting)
+
+### System Tray
+
+When `Minimize to tray` is checked, closing the window hides it to the system tray instead of destroying it. The system tray icon shows a color-coded status indicator:
+
+- **Green**: service running and listening
+- **Yellow**: service running but not listening
+- **Red**: service not running
+
+Right-click the tray icon to show or quit Fiona. The tray icon can also be started standalone:
+
+```bash
+fiona --tray-only
+```
+
+The tray state is refreshed every 5 seconds, showing service status, listening state, paired device count, and active macro name.
 
 ## CamComs Tab
 
@@ -41,6 +58,15 @@ Operational areas:
 - envelope encryption/decryption
 - encoded send helpers
 - smoke test output
+
+### Key Management (new)
+
+The CamComs tab now includes a **Key Management** section:
+
+- **Current Fingerprint**: read-only display of the host identity's public key fingerprint
+- **Rotate Keys** button: generates a new identity with confirmation dialog
+- **Prune Expired Trust** button: removes expired trusted sender entries
+- **Trust Store Location**: read-only path display (`~/.config/fiona/trusted/`)
 
 Data flow:
 
@@ -140,16 +166,66 @@ Typical capabilities:
 - initialize config
 - show host status
 - inspect key/trust paths
-- list trusted sender keys
-- remove trusted sender keys
+- list/remove trusted sender keys
 - inspect audit log
 - expose host receiver configuration
+- **live systemd service state** (color-coded status dot, 3s polling)
+- **Start/Stop/Restart/Journal** buttons (invoke `systemctl --user`)
+- **scrollable journalctl output** display
+- **SeeOnDesk info panel**: current workspace name, top processes, refresh button
 
 Operational model:
 
 ```text
 Host tab action -> HostService/load config/AuditLog/trust helpers -> rendered status/log text
 ```
+
+## Pairing Tab (new)
+
+Purpose: pair ESP32 and other devices with Fiona using the pairing protocol.
+
+**Device Pairing** section:
+
+- **Listen for Pairing Requests** toggle: starts/stops the pairing HTTP server on port 8090
+- Status label showing "Listening" or "Stopped"
+
+**Pending Requests** section:
+
+- Treeview: Device ID, Fingerprint, Received At, Expires In
+- **Approve** / **Deny** buttons
+- Expires in (days) spinbox (default 30, 0 = no expiry)
+- Polls every 2 seconds
+
+**Trusted Devices** section:
+
+- Treeview: Device ID, Fingerprint, Added At, Expires, Status
+- Status shows "OK (expires in N days)", "EXPIRED" (red), or "Never"
+- **Remove** button with confirmation dialog
+- **Refresh** button
+- Auto-poll every 10 seconds
+
+## Voice Tab (new)
+
+Purpose: control voice features from the GUI.
+
+**Voice Control** section:
+
+- Wake word engine status (Available / Unavailable)
+- Start/Stop listening toggle
+- Wake word text entry (default "fiona")
+- Manual trigger button ("Hey Fiona")
+
+**Feedback** section:
+
+- Test sound buttons (Ack, Error, Success)
+- Test Notification button
+- Urgency selector (low / normal / critical)
+
+**Push to Talk** section:
+
+- Status indicator (Available / Unavailable)
+- Hotkey display (Ctrl+Space)
+- Start/Stop listener toggle
 
 ## Standalone Vsee
 
@@ -186,6 +262,8 @@ Local test path:
 ```text
 Use Local Public Key -> Start Receiver -> send to 127.0.0.1:5000
 ```
+
+The PhiConnect GUI now includes trust expiry checking and an optional Agent bridge checkbox for forwarding chat messages to the local Ollama agent.
 
 ## Standalone DataClient
 

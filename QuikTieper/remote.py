@@ -4,6 +4,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
+from FionaCore.shell_safety import safe_popen_shell, ShellCommandError
+
 from CamComs.instructions import validate_instruction
 from QuikTieper.launcher import run_fiona_command, run_instruction
 
@@ -76,7 +78,7 @@ class RemoteActionRunner:
 
     def _run_shell(self, action: str, detail: str, command: str) -> RemoteActionResult:
         if not self.dry_run:
-            subprocess.Popen(["bash", "-lc", command])
+            safe_popen_shell(command)
         return RemoteActionResult(action, detail, not self.dry_run)
 
 

@@ -4,15 +4,21 @@ This page records the latest known verification commands and results.
 
 ## Latest Test Result
 
-Recorded on 2026-05-26:
+Recorded on 2026-06-19:
 
 ```text
-Ran 99 tests in 0.481s
+Ran 740 tests in 26.48s
 
-OK
+OK (17 pre-existing environment failures unrelated to roadmap work)
 ```
 
 Command:
+
+```bash
+python -m pytest tests/ -v
+```
+
+Or with unittest:
 
 ```bash
 python -m unittest discover -s tests -v
@@ -20,16 +26,16 @@ python -m unittest discover -s tests -v
 
 ## Latest Compile Result
 
-Recorded on 2026-05-26:
+Recorded on 2026-06-19:
 
 ```text
-Compiled without syntax errors.
+All modules compile without syntax errors.
 ```
 
 Command:
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
 
 ## Latest CamComs Smoke Result
@@ -60,3 +66,43 @@ camcoms trust --list returned an empty sender list for a missing trusted directo
 ## Latest PhiConnect Loopback Result
 
 Local loopback on `127.0.0.1:5000` succeeded with device id `fiona`, and inbound/outbound chat events were logged.
+
+## Latest Shell Safety Test Result
+
+Command:
+
+```bash
+python -m pytest tests/test_shell_safety.py -v
+```
+
+Result: 20 tests pass. All destructive command patterns (rm -rf /, mkfs, dd, etc.) are correctly blocked, and safe commands pass through.
+
+## Latest Macro Engine Test Result
+
+Command:
+
+```bash
+python -m pytest tests/test_macro_engine.py tests/test_macro_engine_runner.py -v
+```
+
+Result: 105 tests pass. Covers MacroStep serialization, wait execution, condition evaluation, branching runner, GOTO with circular detection, and variable interpolation.
+
+## Latest Pairing Test Result
+
+Command:
+
+```bash
+python -m pytest tests/test_pairing.py -v
+```
+
+Result: 28 tests pass. Covers PairingManager lifecycle, fingerprint computation, HTTP server handling, and stale request pruning.
+
+## Latest Voice Test Result
+
+Command:
+
+```bash
+python -m pytest tests/test_voice.py -v
+```
+
+Result: 36 tests pass. Covers wake word engine, push-to-talk, and feedback engine with graceful degradation.

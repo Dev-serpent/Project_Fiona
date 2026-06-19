@@ -28,9 +28,9 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona run` | QuikTieper listener | Starts global chord listener | foreground service |
 | `fiona list` | QuikTieper config | Prints configured bindings | one-shot |
 | `fiona quiktieper ...` / `fiona qt ...` | QuikTieper | Explicit launcher layer commands | mixed |
-| `fiona camcoms ...` / `fiona cc ...` | CamComs | Crypto, transport, receiver, trust, audit | mixed |
+| `fiona camcoms ...` / `fiona cc ...` | CamComs | Crypto, transport, receiver, trust, audit, pairing, key rotation | mixed |
 | `fiona host ...` | CamComs HostService | Unified service config/lifecycle/logs | mixed |
-| `fiona agent ...` | Agent | LM Studio bridge and command registry | one-shot |
+| `fiona agent ...` | Agent | Ollama bridge and command registry | one-shot |
 | `fiona dataclient ...` / `fiona data ...` | DataClient | Research mining, conversion, GUI | mixed |
 | `fiona eyecontrol ...` / `fiona eye ...` | EyeControl | Optional camera-based eye-controlled mouse tracker | mixed |
 | `fiona fat ...` / `fiona terminal-assist ...` | TerminalAssist | btop-style dashboard and Zellij layout helper | mixed |
@@ -38,10 +38,16 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona api` | TerminalAssist | Short for 'fiona fat api' | one-shot JSON |
 | `fiona recall ...` | RecallVault | Small persistent remembrance store | one-shot |
 | `fiona action ...` | CmdTrace | Action trace logging and observability | one-shot |
-| `fiona run-shell ...` | fiona | Internal helper to run shell commands | one-shot |
-| `fiona seeondesk ...` / `fiona sod ...` | SeeOnDesk | Active desktop/window identification | one-shot |
+| `fiona run-shell ...` | fiona | Internal helper to run shell commands (with safety checks) | one-shot |
+| `fiona seeondesk ...` / `fiona sod ...` | SeeOnDesk | Active desktop/window identification, process tracking, workspace awareness | one-shot |
 | `fiona vsee` | Vsee | Standalone holography viewer | foreground GUI |
 | `fiona phiconnect` | PhiConnect | Standalone encrypted chat | foreground GUI |
+| `fiona --run-macro <name>` | FionaCore | Execute a named macro with the extended engine | one-shot |
+| `fiona --list-macros` | FionaCore | List all macros and step counts | one-shot |
+| `fiona --discover-actions` | SeeOnDesk | Discover available actions from system state | one-shot |
+| `fiona --tray-only` | QuikTieper | Run system tray icon only (no GUI window) | foreground service |
+| `fiona voice wake-test` | Voice | Test wake word detection | one-shot |
+| `fiona voice feedback-test` | Voice | Test audio/notification feedback | one-shot |
 
 ## QuikTieper Delegated Commands
 
@@ -78,7 +84,7 @@ Default bindings path:
 
 ## CamComs Commands
 
-CamComs commands operate on identities, encrypted envelopes, HTTP transport, trust state, receiver processing, and audit logs.
+CamComs commands operate on identities, encrypted envelopes, HTTP transport, trust state, receiver processing, pairing, key rotation, and audit logs.
 
 | Command | Reads | Writes | Notes |
 | --- | --- | --- | --- |
@@ -88,6 +94,7 @@ CamComs commands operate on identities, encrypted envelopes, HTTP transport, tru
 | `camcoms trust --public` | public bundle JSON | trusted sender directory | sender must be trusted before receiver accepts it |
 | `camcoms trust --list` | trusted sender directory | stdout | lists trusted public bundles |
 | `camcoms trust --remove` | trusted sender directory | trusted sender directory | removes by device id |
+| `camcoms trust --expires-in <days>` | public bundle JSON | trusted sender directory | adds sender with automatic expiry |
 | `camcoms encrypt` | sender private, recipient public | stdout | prints encoded envelope or JSON envelope |
 | `camcoms decrypt` | recipient private, optional sender public | stdout | verifies sender when supplied |
 | `camcoms send` | encoded message or envelope JSON | network POST | sends compact encoded envelope |
@@ -95,6 +102,9 @@ CamComs commands operate on identities, encrypted envelopes, HTTP transport, tru
 | `camcoms receive` | host private, trusted dir | HTTP receiver | foreground server |
 | `camcoms audit` | audit log | stdout | prints recent receiver events |
 | `camcoms smoke-test` | generated in-memory keys | stdout | no persistent files |
+| `camcoms rotate-keys` | existing identity | new identity + pubkey | atomic key rotation with confirmation |
+| `camcoms prune` | trusted sender directory | trusted sender directory | removes expired trust entries |
+| `camcoms fingerprint` | identity JSON | stdout | prints public key fingerprint |
 
 The envelope path is:
 
@@ -103,6 +113,29 @@ instruction JSON -> encrypted envelope dict -> base64url JSON string -> HTTP bod
 ```
 
 The decrypt path reverses that and optionally verifies the sender public key.
+
+### Key Rotation
+
+```bash
+fiona camcoms rotate-keys       # Requires confirmation
+fiona camcoms rotate-keys --yes # Skip confirmation
+```
+
+Prints old and new fingerprints. Existing trusted senders will need to re-pair.
+
+### Prune Expired Trust
+
+```bash
+fiona camcoms prune              # Remove all expired trust entries
+fiona camcoms prune --trusted-dir <dir>
+```
+
+### Show Fingerprint
+
+```bash
+fiona camcoms fingerprint
+fiona camcoms fingerprint --identity ~/.config/fiona/identity.json
+```
 
 ## Host Service Commands
 
@@ -138,7 +171,7 @@ Mechanics:
 
 ## Agent Commands
 
-Agent currently bridges to LM Studio's OpenAI-compatible local API.
+Agent currently bridges to Ollama's local API (replaced LM Studio).
 
 ```bash
 fiona agent status
@@ -148,8 +181,8 @@ fiona agent commands
 
 Mechanics:
 
-- `status` checks the configured base URL, defaulting to `http://localhost:1234/v1`.
-- `ask` constructs a chat-completions request with system prompt, temperature, max tokens, API key placeholder, and model id.
+- `status` checks the configured base URL, defaulting to `http://localhost:11434/v1`.
+- `ask` constructs a chat-completions request with system prompt, temperature, max tokens, and model id.
 - `commands` exposes an agent-readable registry of Fiona actions and available QuikTieper apps.
 
 ## DataClient Commands
@@ -183,6 +216,38 @@ Mechanics:
 - `active` returns focused window/app metadata.
 - `status` wraps active-window data with session and desktop state.
 - KDE/Wayland prefers `kdotool`; X11-compatible fallback uses `xdotool` and `xprop`.
+
+### Action Discovery
+
+```bash
+fiona --discover-actions
+```
+
+Prints all discoverable actions grouped by category (process, workspace, window), showing action name, description, and whether confirmation is required.
+
+## Voice Commands
+
+```bash
+fiona voice wake-test      # Test wake word detection availability
+fiona voice feedback-test  # Test audio and notification feedback
+```
+
+## Macro Engine Commands
+
+```bash
+fiona --run-macro <name>   # Execute a named macro with the extended engine
+fiona --list-macros        # Print all macros and step counts
+```
+
+The macro engine supports waits, conditions, branching, and variable interpolation. See the [FionaCore module page](../modules/fionacore.md) for details.
+
+## System Tray
+
+```bash
+fiona --tray-only  # Start system tray icon without the GUI window
+```
+
+Useful for autostart scripts. The tray icon shows a color-coded status indicator and provides right-click access to Show Fiona and Quit Fiona.
 
 ## EyeControl Commands
 
@@ -261,3 +326,6 @@ Mechanics:
 | DataClient search fails | network/search target | verify network access and output path permissions |
 | EyeControl cannot start | optional dependency/camera feed | run `fiona eyecontrol status`, then verify camera URL or local camera index |
 | fAT cannot launch Zellij | missing terminal multiplexer | run `fiona fat json` and verify `zellij_path` |
+| Shell command blocked | FionaCore shell safety | check if the command matches a destructive pattern; use safe alternatives |
+| Pairing server won't start | port conflict | verify port 8090 is available or stop the existing pairing server |
+| Macro not found | macro config | run `fiona --list-macros` to verify the macro name |

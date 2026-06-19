@@ -24,10 +24,12 @@ nav:
       - QuikTieper: modules/quiktieper.md
       - CamComs: modules/camcoms.md
       - ESP32 Payload: modules/esp32payload.md
+      - FionaCore: modules/fionacore.md
       - PhiConnect: modules/phiconnect.md
       - DataClient: modules/dataclient.md
       - Vsee: modules/vsee.md
       - SeeOnDesk: modules/seeondesk.md
+      - Voice: modules/voice.md
       - EyeControl: modules/eyecontrol.md
       - TerminalAssist: modules/terminalassist.md
       - RecallVault: modules/recallvault.md

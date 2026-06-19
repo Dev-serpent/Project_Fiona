@@ -13,7 +13,7 @@ from CamComs.codec import decode_envelope, encode_envelope
 from CamComs.encryption import CamComsCryptoError, CamComsIdentity, PublicKeyBundle, decrypt_text, encrypt_message
 from CamComs.replay import ReplayGuard
 from CamComs.transport import CamComsHttpClient
-from CamComs.trust import find_trusted_sender, save_trusted_sender
+from CamComs.trust import find_trusted_sender, is_trust_expired, save_trusted_sender
 
 
 DEFAULT_PHICONNECT_DIR = Path.home() / ".config" / "fiona" / "phiconnect"
@@ -135,8 +135,10 @@ class PhiConnectMessageProcessor:
             trusted_sender = find_trusted_sender(str(envelope.get("sender", "")), self.trusted_dir)
             if trusted_sender is None:
                 raise PhiConnectError("sender is not trusted")
+            if is_trust_expired(trusted_sender):
+                raise PhiConnectError("trusted sender key has expired")
             self.replay_guard.check_and_record(envelope)
-            plaintext = decrypt_text(envelope, recipient=self.identity, expected_sender=trusted_sender)
+            plaintext = decrypt_text(envelope, recipient=self.identity, expected_sender=trusted_sender.bundle)
             message = _validate_chat_payload(json.loads(plaintext))
             event = {
                 "direction": "inbound",

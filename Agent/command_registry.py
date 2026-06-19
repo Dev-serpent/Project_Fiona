@@ -7,7 +7,12 @@ from typing import Any
 from QuikTieper.config import DEFAULT_CONFIG_PATH, load_config
 
 
-DEFAULT_ALLOWED_ACTIONS = frozenset({"press", "click", "move", "launch_binding", "text", "macro"})
+DEFAULT_ALLOWED_ACTIONS = frozenset({
+    "press", "click", "move", "launch_binding", "text", "macro",
+    "seeondesk_list", "seeondesk_active", "seeondesk_analyze",
+    "dataclient_mine", "recall_remember", "recall_search",
+    "fiona_status"
+})
 
 
 @dataclass(frozen=True)
@@ -32,44 +37,84 @@ DEFAULT_COMMANDS = (
     CommandSpec(
         name="press",
         category="input",
-        description="Press a key chord through the local automation backend.",
-        input_schema={"version": 1, "type": "press", "keys": ["alt", "s"]},
+        description="Press a key chord (e.g. ['ctrl', 'c']) through the local automation backend.",
+        input_schema={"keys": ["alt", "s"]},
     ),
     CommandSpec(
         name="click",
         category="pointer",
-        description="Click a mouse button, optionally after moving to screen coordinates.",
-        input_schema={"version": 1, "type": "click", "button": "left", "x": 100, "y": 100},
+        description="Click a mouse button (left, right, middle), optionally at coordinates.",
+        input_schema={"button": "left", "x": 100, "y": 100},
     ),
     CommandSpec(
         name="move",
         category="pointer",
         description="Move the pointer to absolute screen coordinates.",
-        input_schema={"version": 1, "type": "move", "x": 100, "y": 100},
+        input_schema={"x": 100, "y": 100},
     ),
     CommandSpec(
         name="text",
         category="input",
-        description="Type text through the local automation backend.",
-        input_schema={"version": 1, "type": "text", "value": "hello"},
+        description="Type a string of text through the local automation backend.",
+        input_schema={"value": "hello"},
         requires_confirmation=True,
     ),
     CommandSpec(
         name="launch_binding",
         category="app",
-        description="Request an app launch by configured Fiona binding name.",
-        input_schema={"version": 1, "type": "launch_binding", "name": "terminal"},
+        description="Launch an application by its Fiona binding name.",
+        input_schema={"name": "terminal"},
     ),
     CommandSpec(
         name="macro",
         category="automation",
-        description="Run a sequence of validated Fiona action steps.",
+        description="Run a sequence of Fiona action steps.",
         input_schema={
-            "version": 1,
-            "type": "macro",
-            "steps": [{"version": 1, "type": "press", "keys": ["alt", "s"]}],
+            "steps": [{"type": "press", "keys": ["alt", "s"]}],
         },
         requires_confirmation=True,
+    ),
+    CommandSpec(
+        name="seeondesk_list",
+        category="awareness",
+        description="List all currently open windows and their titles.",
+        input_schema={},
+    ),
+    CommandSpec(
+        name="seeondesk_active",
+        category="awareness",
+        description="Get detailed information about the currently focused window.",
+        input_schema={},
+    ),
+    CommandSpec(
+        name="seeondesk_analyze",
+        category="vision",
+        description="Capture the screen and use vision AI to describe it. Use this to 'see' what is happening.",
+        input_schema={"prompt": "What is visible on the screen?"},
+    ),
+    CommandSpec(
+        name="dataclient_mine",
+        category="research",
+        description="Search the web for a topic and save summarized results to a CSV.",
+        input_schema={"topic": "current weather", "out": "research.csv", "max_links": 3},
+    ),
+    CommandSpec(
+        name="recall_remember",
+        category="memory",
+        description="Persistently remember a fact, snippet, or note.",
+        input_schema={"key": "my_favorite_color", "value": "blue", "category": "personal"},
+    ),
+    CommandSpec(
+        name="recall_search",
+        category="memory",
+        description="Search persistent memories by keyword or query.",
+        input_schema={"query": "favorite"},
+    ),
+    CommandSpec(
+        name="fiona_status",
+        category="system",
+        description="Get an overview of Fiona's subsystem statuses.",
+        input_schema={},
     ),
 )
 

@@ -7,7 +7,7 @@
     </div>
   </div>
   <p class="fiona-lede">
-    Fiona is a local host-control project inspired by JARVIS-style workstation control. It is the software base for local actions, encrypted communication, desktop awareness, data tools, LM Studio inference, and a simple 3D hologram viewer.
+    Fiona is a local host-control project inspired by JARVIS-style workstation control. It is the software base for local actions, encrypted communication, desktop awareness, data tools, Ollama inference, voice control, macros, and a simple 3D hologram viewer.
   </p>
   <div class="fiona-actions">
     <a class="fiona-button primary" href="getting-started/">Get started</a>
@@ -25,7 +25,15 @@
   </a>
   <a class="fiona-card" href="modules/camcoms/">
     <strong>CamComs</strong>
-    <span>Encrypted messages, trusted sender storage, host receiver, and audit logging.</span>
+    <span>Encrypted messages, trusted sender storage, host receiver, pairing, key rotation, and audit logging.</span>
+  </a>
+  <a class="fiona-card" href="modules/fionacore/">
+    <strong>FionaCore</strong>
+    <span>Shared primitives: action routing, ACL, shell safety, macro engine, verification prompts, notifications, and speech.</span>
+  </a>
+  <a class="fiona-card" href="modules/voice/">
+    <strong>Voice</strong>
+    <span>Wake-word detection, push-to-talk, and audio/visual feedback engine.</span>
   </a>
   <a class="fiona-card" href="modules/phiconnect/">
     <strong>PhiConnect</strong>
@@ -37,7 +45,7 @@
   </a>
   <a class="fiona-card" href="modules/seeondesk/">
     <strong>SeeOnDesk</strong>
-    <span>Desktop awareness for active app, active window, and session metadata.</span>
+    <span>Desktop awareness for active app, active window, process tracking, workspace awareness, and session metadata.</span>
   </a>
   <a class="fiona-card" href="modules/eyecontrol/">
     <strong>EyeControl</strong>
@@ -53,20 +61,21 @@
   </a>
   <a class="fiona-card" href="modules/agent/">
     <strong>Agent</strong>
-    <span>LM Studio bridge for local OpenAI-compatible inference.</span>
+    <span>Ollama bridge for local OpenAI-compatible inference with tool-use planning loop.</span>
   </a>
 </div>
 
 ## Main Commands
 
 ```bash
-python3 -m fiona.cli edit
-python3 -m fiona.cli run
-python3 -m fiona.cli camcoms smoke-test
-python3 -m fiona.cli phiconnect
-python3 -m fiona.cli dataclient
-python3 -m fiona.cli vsee
-python3 -m fiona.cli seeondesk status
+python3 -m fiona.cli edit              # Open shared GUI
+python3 -m fiona.cli run               # Start chord listener
+python3 -m fiona.cli camcoms smoke-test # Test encryption
+python3 -m fiona.cli phiconnect         # Encrypted chat
+python3 -m fiona.cli seeondesk status   # Desktop awareness
+python3 -m fiona.cli --list-macros      # List automation macros
+python3 -m fiona.cli --tray-only        # Start system tray
+python3 -m fiona.cli voice wake-test    # Test wake word
 ```
 
 After editable installation, `fiona ...` can be used instead of `python3 -m fiona.cli ...`.

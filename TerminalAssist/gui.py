@@ -222,7 +222,11 @@ class FatGuiApp:
     def _run_action(self, action):
         confirm = messagebox.askyesno("System Confirmation", f"Trigger {action.label}?")
         if confirm:
-            os.system(f"fiona run-shell {' '.join(action.command[1:])}")
+            from FionaCore.shell_safety import safe_os_system, ShellCommandError
+            try:
+                safe_os_system(f"fiona run-shell {' '.join(action.command[1:])}")
+            except ShellCommandError as e:
+                messagebox.showerror("Command Blocked", str(e))
 
     def _refresh_metrics(self):
         self.status = terminal_assist_status()

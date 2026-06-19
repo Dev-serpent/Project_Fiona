@@ -3,8 +3,10 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import logging
 from pathlib import Path
-from typing import Literal
+
+logger = logging.getLogger(__name__)
 
 
 def capture_screen(output_path: str | Path) -> bool:
@@ -46,15 +48,39 @@ def capture_screen(output_path: str | Path) -> bool:
 def capture_window(window_id: str, output_path: str | Path) -> bool:
     """
     Capture a specific window by ID.
-    Currently only supports X11 via scrot.
+
+    Tries kdotool to activate the target window first, then captures the
+    now-focused window via ``scrot -u``.  Falls back to capturing the
+    currently focused window if kdotool fails.
+
+    .. note::
+       The ``window_id`` parameter is best-effort on X11.  If kdotool is
+       not available the function captures the focused window regardless
+       of *window_id*.
     """
-    if not shutil.which("scrot"):
-        return False
-    
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    return _run(["scrot", "-u", "-o", str(output_path)]) # -u is for focused window, not necessarily window_id
+
+    # Try to bring the target window into focus for capture
+    if shutil.which("kdotool"):
+        try:
+            subprocess.run(
+                ["kdotool", "activate", window_id],
+                capture_output=True, timeout=3,
+            )
+        except (subprocess.SubprocessError, FileNotFoundError):
+            logger.debug("kdotool activate %s failed", window_id)
+
+    # Capture the now-focused window (or current focused window as fallback)
+    if shutil.which("scrot"):
+        return _run(["scrot", "-u", "-o", str(output_path)])
+
+    # Try gnome-screenshot with window flag
+    if shutil.which("gnome-screenshot"):
+        return _run(["gnome-screenshot", "-w", "-f", str(output_path)])
+
+    logger.warning("No screen capture tool found (scrot or gnome-screenshot)")
+    return False
 
 
 def analyze_screen(prompt: str, image_path: str | Path | None = None) -> str:

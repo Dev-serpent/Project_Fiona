@@ -447,8 +447,13 @@ def _run_command(command: tuple[str, ...]) -> CommandResult:
 
 
 def _run_command_external(command: tuple[str, ...]) -> int:
+    from FionaCore.shell_safety import safe_os_system, ShellCommandError
     cmd_str = f"'{sys.executable}' -m fiona.cli {' '.join(command)}"
-    return os.system(cmd_str)
+    try:
+        return safe_os_system(cmd_str)
+    except ShellCommandError as e:
+        print(f"Command blocked: {e}", file=sys.stderr)
+        return 127
 
 
 def format_command_output(result: CommandResult) -> tuple[str, ...]:

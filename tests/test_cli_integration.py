@@ -116,5 +116,82 @@ class FionaCliIntegrationTests(unittest.TestCase):
         except json.JSONDecodeError:
             self.fail("fiona eyecontrol status did not return valid JSON")
 
+    # ── Extended CLI integration tests ─────────────────────────────────
+
+    def test_list_macros_returns_macros_dict(self):
+        """macro subcommand returns a dict of macros."""
+        result = self._run_cmd(["macro", "list"])
+        self.assertEqual(result.returncode, 0)
+        try:
+            data = json.loads(result.stdout)
+            self.assertIn("macros", data)
+        except json.JSONDecodeError:
+            self.fail("macro list did not return valid JSON")
+
+    def test_discover_actions_returns_actions(self):
+        """--discover-actions returns available actions."""
+        result = self._run_cmd(["action", "list"])
+        self.assertEqual(result.returncode, 0)
+        try:
+            data = json.loads(result.stdout)
+            self.assertIn("actions", data)
+            actions = data["actions"]
+            self.assertIsInstance(actions, list)
+            if actions:
+                self.assertIn("name", actions[0])
+                self.assertIn("description", actions[0])
+        except json.JSONDecodeError:
+            self.fail("action list did not return valid JSON")
+
+    def test_voice_wake_test_graceful(self):
+        """--voice wake-test returns gracefully (no crash) without hardware."""
+        result = self._run_cmd(["voice", "wake-test"])
+        # Should not crash — may return non-zero or zero, but must not
+        # produce a traceback in stderr or stdout
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertNotIn("Traceback", result.stdout)
+        # The command should complete without signal death
+        self.assertGreaterEqual(result.returncode, 0)
+
+    def test_tray_only_graceful(self):
+        """--tray-only runs and exits gracefully (no crash when display missing)."""
+        result = self._run_cmd(["--tray-only"])
+        # When run headless, it should not crash with a traceback.
+        # It may exit with an error if display/tray unavailable, but no traceback.
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertNotIn("Traceback", result.stdout)
+        self.assertGreaterEqual(result.returncode, 0)
+
+    def test_camcoms_fingerprint_returns_fingerprint(self):
+        """camcoms fingerprint returns a fingerprint string (text output)."""
+        result = self._run_cmd(["camcoms", "fingerprint"])
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Fingerprint:", result.stdout)
+        self.assertIn("(no identity)", result.stdout)
+
+    def test_camcoms_fingerprint_with_custom_identity(self):
+        """camcoms fingerprint works with a temp identity file (--identity flag)."""
+        import tempfile
+        import json as _json
+        from CamComs import CamComsIdentity
+        identity = CamComsIdentity.generate("test_cli_device")
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False,
+        ) as tmp:
+            _json.dump(identity.to_private_dict(), tmp, indent=2, sort_keys=True)
+            tmp.write("\n")
+            tmp_path = tmp.name
+
+        try:
+            result = self._run_cmd([
+                "camcoms", "fingerprint",
+                "--identity", tmp_path,
+            ])
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("Fingerprint:", result.stdout)
+            self.assertNotIn("(no identity)", result.stdout)
+        finally:
+            os.unlink(tmp_path)
+
 if __name__ == "__main__":
     unittest.main()

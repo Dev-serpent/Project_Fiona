@@ -1,0 +1,117 @@
+"""Workspace/virtual desktop awareness for Linux (X11 via kdotool or wmctrl)."""
+
+from __future__ import annotations
+
+import logging
+import subprocess
+import time
+from dataclasses import dataclass
+from typing import Callable
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class WorkspaceInfo:
+    id: str
+    name: str
+    is_active: bool
+    window_count: int
+
+
+@dataclass(frozen=True)
+class WorkspaceChange:
+    old_workspace: WorkspaceInfo | None
+    new_workspace: WorkspaceInfo
+
+
+class WorkspaceWatcher:
+    """Poll-based workspace tracker.
+    
+    Uses kdotool if available, falls back to wmctrl.
+    """
+    
+    def __init__(self, poll_interval: float = 1.0):
+        self._poll_interval = poll_interval
+        self._last_id: str | None = None
+        self._on_change: list[Callable[[WorkspaceChange], None]] = []
+        self._running = False
+    
+    def list_workspaces(self) -> list[WorkspaceInfo]:
+        """List all workspaces/desktops."""
+        workspaces = []
+        
+        # Try kdotool first
+        try:
+            result = subprocess.run(
+                ["kdotool", "getdesktops"],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                desktop_ids = result.stdout.strip().split()
+                for did in desktop_ids:
+                    name_result = subprocess.run(
+                        ["kdotool", "getdesktopname", did],
+                        capture_output=True, text=True, timeout=2
+                    )
+                    name = name_result.stdout.strip() if name_result.returncode == 0 else f"Desktop {did}"
+                    workspaces.append(WorkspaceInfo(
+                        id=did, name=name, is_active=False, window_count=0
+                    ))
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+        
+        # Fallback to wmctrl
+        if not workspaces:
+            try:
+                result = subprocess.run(
+                    ["wmctrl", "-d"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split("\n"):
+                        if not line.strip():
+                            continue
+                        parts = line.split()  # e.g. "0  * DG: 1920x1080  VP: 0,0  WA: ...  workspace_name"
+                        if len(parts) >= 2:
+                            wid = parts[0]
+                            is_active = "*" in parts[1]
+                            name = " ".join(parts[4:]) if len(parts) > 4 else f"Desktop {wid}"
+                            workspaces.append(WorkspaceInfo(
+                                id=wid, name=name, is_active=is_active, window_count=0
+                            ))
+            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+                pass
+        
+        return workspaces
+    
+    def get_active_workspace(self) -> WorkspaceInfo | None:
+        """Get the currently active workspace."""
+        for ws in self.list_workspaces():
+            if ws.is_active:
+                return ws
+        return None
+    
+    def on_change(self, callback: Callable[[WorkspaceChange], None]) -> None:
+        self._on_change.append(callback)
+    
+    def poll(self) -> WorkspaceInfo | None:
+        """Poll for workspace changes and invoke callbacks on change."""
+        active = self.get_active_workspace()
+        if active and active.id != self._last_id:
+            change = WorkspaceChange(
+                old_workspace=next(
+                    (ws for ws in self.list_workspaces() if ws.id == self._last_id),
+                    None
+                ) if self._last_id else None,
+                new_workspace=active,
+            )
+            for cb in self._on_change:
+                try:
+                    cb(change)
+                except Exception:
+                    logger.exception("Workspace change callback error")
+            self._last_id = active.id
+        elif active:
+            self._last_id = active.id
+        return active

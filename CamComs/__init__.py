@@ -1,7 +1,23 @@
 """Fiona communications subsystem."""
 
 from CamComs.codec import decode_envelope, encode_envelope
+from CamComs.identity import (
+    DEFAULT_IDENTITY_PATH,
+    DEFAULT_PUBKEY_PATH,
+    get_fingerprint,
+    load_identity,
+    rotate_keys,
+)
 from CamComs.audit import DEFAULT_AUDIT_LOG_PATH, AuditLog
+from CamComs.pairing import (
+    DEFAULT_PAIRING_PORT,
+    PAIRING_REQUEST_TIMEOUT,
+    PairingHttpServer,
+    PairingManager,
+    PairingRequest,
+    compute_fingerprint,
+    handle_pairing_request_post,
+)
 from CamComs.encryption import (
     CamComsCryptoError,
     CamComsIdentity,
@@ -17,7 +33,15 @@ from CamComs.instructions import (
     press_instruction,
     validate_instruction,
 )
-from CamComs.paths import DEFAULT_CAMCOMS_DIR, ensure_camcoms_dir, private_key_path, public_key_path
+from CamComs.paths import (
+    DEFAULT_CAMCOMS_DIR,
+    check_private_permissions,
+    ensure_camcoms_dir,
+    ensure_private_directory_permissions,
+    ensure_private_permissions,
+    private_key_path,
+    public_key_path,
+)
 from CamComs.receiver import CamComsReceiverError, HostMessageProcessor, run_host_receiver
 from CamComs.replay import DEFAULT_REPLAY_PATH, ReplayGuard
 from CamComs.service import (
@@ -38,8 +62,11 @@ from CamComs.systemd import (
 )
 from CamComs.trust import (
     DEFAULT_TRUSTED_DIR,
+    TrustedSender,
+    is_trust_expired,
     list_trusted_senders,
     load_trusted_sender,
+    prune_expired,
     remove_trusted_sender,
     save_trusted_sender,
     trusted_public_key_path,
@@ -53,33 +80,47 @@ __all__ = [
     "CamComsInstructionError",
     "CamComsReceiverError",
     "AuditLog",
-    "DEFAULT_CAMCOMS_DIR",
     "DEFAULT_AUDIT_LOG_PATH",
     "DEFAULT_FIONA_CONFIG_PATH",
+    "DEFAULT_IDENTITY_PATH",
+    "DEFAULT_PAIRING_PORT",
+    "DEFAULT_PUBKEY_PATH",
     "DEFAULT_REPLAY_PATH",
     "DEFAULT_TRUSTED_DIR",
     "HealthCheck",
     "HostMessageProcessor",
     "HostService",
     "HostServiceConfig",
+    "PAIRING_REQUEST_TIMEOUT",
+    "PairingHttpServer",
+    "PairingManager",
+    "PairingRequest",
     "PublicKeyBundle",
     "ReplayGuard",
+    "compute_fingerprint",
+    "handle_pairing_request_post",
+    "check_private_permissions",
     "decode_envelope",
     "default_host_service_config",
     "decrypt_message",
+    "ensure_private_permissions",
+    "ensure_private_directory_permissions",
     "decrypt_text",
     "encode_envelope",
     "ensure_camcoms_dir",
     "encrypt_message",
     "encrypt_and_send_instruction",
+    "get_fingerprint",
     "instruction_from_text",
     "instruction_to_text",
+    "load_identity",
     "load_trusted_sender",
     "list_trusted_senders",
     "load_host_service_config",
     "press_instruction",
     "private_key_path",
     "public_key_path",
+    "rotate_keys",
     "run_host_receiver",
     "save_host_service_config",
     "save_trusted_sender",
@@ -92,5 +133,8 @@ __all__ = [
     "read_host_service_logs",
     "service_unit_path",
     "trusted_public_key_path",
+    "TrustedSender",
+    "is_trust_expired",
+    "prune_expired",
     "validate_instruction",
 ]

@@ -14,7 +14,7 @@ from CamComs.instructions import instruction_from_text, instruction_to_text, pre
 from CamComs.paths import private_key_path, public_key_path
 from CamComs.replay import ReplayGuard
 from CamComs.transport import CamComsHttpClient
-from CamComs.trust import DEFAULT_TRUSTED_DIR, find_trusted_sender
+from CamComs.trust import DEFAULT_TRUSTED_DIR, find_trusted_sender, is_trust_expired
 from QuikTieper.remote import RemoteActionRunner
 
 
@@ -45,8 +45,10 @@ class HostMessageProcessor:
             trusted_sender = find_trusted_sender(str(envelope.get("sender", "")), self.trusted_dir)
             if trusted_sender is None:
                 raise CamComsReceiverError("sender is not trusted")
+            if is_trust_expired(trusted_sender):
+                raise CamComsReceiverError("trusted sender key has expired")
             self.replay_guard.check_and_record(envelope)
-            plaintext = decrypt_text(envelope, recipient=self.host_identity, expected_sender=trusted_sender)
+            plaintext = decrypt_text(envelope, recipient=self.host_identity, expected_sender=trusted_sender.bundle)
             instruction = instruction_from_text(plaintext)
             result = self.action_runner.run(instruction)
             response = {

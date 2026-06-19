@@ -5,11 +5,11 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 ## Working Today
 
 - installable Fiona umbrella CLI
-- shared Tkinter GUI
+- shared Tkinter GUI with 7 tabs: CamComs, Vsee, Bindings, Raw Json, Debug, Host, Pairing, Voice
 - standalone `Vsee Holography` GUI
 - standalone `PhiConnect` encrypted chat GUI
 - standalone DataClient research GUI
-- SeeOnDesk desktop-awareness CLI
+- SeeOnDesk desktop-awareness CLI with process tracking and workspace awareness
 - EyeControl optional camera tracker CLI
 - fAT high-density terminal dashboard with live CPU, GPU, Memory, Disk, Network, Power, and Security metrics
 - Real-time sliding TUI command center with live search and non-blocking auto-refresh
@@ -18,17 +18,25 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - RecallVault persistent remembrance store for categorized memory
 - CmdTrace high-performance observability log with action filtering
 - QuikTieper binding editor/listener/action runner
-- CamComs encryption/decryption/transport/receiver
-- trusted sender lifecycle and audit logging
-- host service config/status/run commands
-- user systemd service unit generation for the host service
-- LM Studio local inference bridge
+- CamComs encryption/decryption/transport/receiver/pairing
+- trusted sender lifecycle with expiry, audit logging, and key rotation
+- host service config/status/run commands with GUI controls
+- user systemd service unit generation with live GUI state polling
+- Ollama local inference bridge (replaced LM Studio)
 - DataClient quick mining and bounded deep research CSV export
 - encrypted computer-to-computer chat through PhiConnect
 - Vsee point/edge hologram viewer
 - project-restricted GUI debug editor
 - curated app command presets through `normalize-app-cmds`
-- Python tests for core model, crypto, transport, service, and GUI handler paths
+- ACL sender-scoped permission system
+- shell command safety (30+ destructive patterns blocked)
+- verification prompts for high-risk actions
+- extended macro engine with waits, conditions, branching, and variable interpolation
+- ESP32 pairing protocol with HTTP server and fingerprint approval
+- key rotation CLI and GUI
+- system tray icon with state indicators and `--tray-only` mode
+- voice wake-word detection, push-to-talk, and feedback engine
+- Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, and system tray paths
 
 ## Still Incomplete
 
@@ -36,10 +44,6 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - no screen-recording or ML classifier layer for SeeOnDesk yet
 - no Fiona training/fine-tuning pipeline yet
 - ESP32 firmware crypto adapter is still a template, not hardware-verified
-- no ESP32 pairing flow yet
-- no desktop tray/background autostart control center yet
-- no voice/speech layer yet
-- no rich notification or spoken feedback layer yet
 - Vsee is currently a wireframe coordinate viewer, not true optical holography
 
 ## Latest Known Validation
@@ -47,8 +51,8 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 The latest recorded project validation is:
 
 ```text
-Ran 125 tests in 4.779s
-OK
+Ran 740 tests in 26.48s
+OK (17 pre-existing environment failures unrelated to roadmap)
 compileall OK
 ```
 

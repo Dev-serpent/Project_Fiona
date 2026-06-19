@@ -9,6 +9,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from FionaCore.shell_safety import safe_popen_shell, ShellCommandError, is_command_safe
+
 try:
     from wayland_automation import Mouse as WaylandMouse
 except ImportError:
@@ -328,7 +330,7 @@ class AppLauncher:
         for internal_command in binding.fiona_cmds:
             run_fiona_command(internal_command)
         if binding.command.strip():
-            subprocess.Popen(["bash", "-lc", binding.command])
+            safe_popen_shell(binding.command)
             write_debug_log(f"spawned shell command for {binding.name}: {binding.command}")
         self._last_triggered[binding.name] = time.monotonic()
 

@@ -33,6 +33,13 @@ pip install -e .
 - `pandas`
 - `requests`
 
+## Optional Runtime Packages
+
+- `pvporcupine` — best wake word detection
+- `snowboy` — alternative wake word detection
+- `pystray` + `Pillow` — system tray icon
+- `opencv-python` + `mediapipe` + `pyautogui` — EyeControl camera tracker (via `.[eyecontrol]`)
+
 ## Useful System Tools
 
 - `bash`
@@ -40,7 +47,11 @@ pip install -e .
 - `ydotool`
 - `ydotoold`
 - `tk` / `tkinter`
-- optional fallback tools: `xprop`, `xdotool`
+- `aplay` / `paplay` — audio feedback
+- `notify-send` — desktop notifications
+- `espeak` / `festival` — speech synthesis
+- `scrot` / `gnome-screenshot` — screen capture
+- optional fallback tools: `xprop`, `xdotool`, `wmctrl`
 
 ## Debug Logs
 
@@ -56,7 +67,7 @@ Fallback debug log:
 /tmp/fiona-debug.log
 ```
 
-Logs may contain key press/release traces, binding match/skip reasons, active-window detection results, pointer backend failures, and shell command launch events.
+Logs may contain key press/release traces, binding match/skip reasons, active-window detection results, pointer backend failures, shell command launch events, ACL resolution results, and pairing request activity.
 
 ## Permission Notes
 
@@ -68,4 +79,21 @@ Fiona may attempt daemon startup using:
 pkexec ydotoold
 sudo -n ydotoold
 ydotoold
+```
+
+Private key files are automatically saved with `0o600` permissions. This is enforced in `CamComs.paths.ensure_private_permissions()` and called from trust save, identity key rotation, and service health checks.
+
+## Key Storage Paths
+
+```text
+~/.config/fiona/identity.json          # Host private identity
+~/.config/fiona/identity.pub           # Host public key bundle
+~/.config/fiona/trusted/               # Trusted sender directory
+~/.config/fiona/sounds/                # Feedback sound files
+~/.config/fiona/bindings.json          # QuikTieper binding config
+~/.config/fiona/config.json            # Host service config
+~/.config/fiona/cmdtrace.jsonl         # Action trace log
+~/.config/fiona/debug.log              # Debug log
+~/.config/fiona/camcoms/               # Legacy CamComs key paths
+~/.config/fiona/phiconnect/            # PhiConnect identity and chat logs
 ```

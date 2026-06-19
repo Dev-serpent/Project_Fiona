@@ -10,7 +10,7 @@ from typing import Any
 
 from CamComs.audit import DEFAULT_AUDIT_LOG_PATH, AuditLog
 from CamComs.encryption import CamComsIdentity
-from CamComs.paths import DEFAULT_CAMCOMS_DIR, private_key_path
+from CamComs.paths import DEFAULT_CAMCOMS_DIR, check_private_permissions, private_key_path
 from CamComs.receiver import run_host_receiver
 from CamComs.replay import DEFAULT_REPLAY_PATH, ReplayGuard
 from CamComs.trust import DEFAULT_TRUSTED_DIR
@@ -92,8 +92,8 @@ class HostService:
     def health_checks(self, *, check_port: bool = False) -> list[HealthCheck]:
         checks = [
             _path_check("quiktieper_config", self.config.quiktieper_config_path, should_be_dir=False),
-            _path_check("host_private_key", self.config.host_private_path, should_be_dir=False),
-            _path_check("trusted_dir", self.config.trusted_dir, should_be_dir=True),
+            _path_check("host_private_key", self.config.host_private_path, should_be_dir=False, expected_permissions=0o600),
+            _path_check("trusted_dir", self.config.trusted_dir, should_be_dir=True, expected_permissions=0o700),
             _path_check("replay_dir", self.config.replay_path.parent, should_be_dir=True),
             _path_check("audit_log_dir", self.config.audit_log_path.parent, should_be_dir=True),
             _import_check("quiktieper_listener", "QuikTieper.listener"),
@@ -159,10 +159,17 @@ def save_host_service_config(config: HostServiceConfig, path: Path = DEFAULT_FIO
     return path
 
 
-def _path_check(name: str, path: Path, *, should_be_dir: bool) -> HealthCheck:
+def _path_check(name: str, path: Path, *, should_be_dir: bool, expected_permissions: int | None = None) -> HealthCheck:
     if should_be_dir:
-        return HealthCheck(name, path.is_dir(), str(path))
-    return HealthCheck(name, path.is_file(), str(path))
+        ok = path.is_dir()
+    else:
+        ok = path.is_file()
+    detail = str(path)
+    if ok and expected_permissions is not None:
+        if not check_private_permissions(path, expected_mode=expected_permissions):
+            ok = False
+            detail = f"{path} has incorrect permissions (expected {expected_permissions:o})"
+    return HealthCheck(name, ok, detail)
 
 
 def _command_check(command: str) -> HealthCheck:

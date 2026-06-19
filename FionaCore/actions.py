@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -9,7 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from CmdTrace import DEFAULT_TRACE_PATH, append_trace
+from .acl import resolve_sender_profile, resolve_sender_scope
 from .permissions import permission_allows
+from .verification import (
+    DEFAULT_VERIFICATION_PROMPT,
+    VerificationPrompt,
+    prompt_for_confirmation,
+)
 
 
 @dataclass(frozen=True)
@@ -20,6 +27,8 @@ class ActionSpec:
     risk: str = "low"
     permission: str = "read"
     external: bool = False
+    sender_scope: str = "any"
+    requires_confirmation: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -51,9 +60,9 @@ def default_action_specs() -> tuple[ActionSpec, ...]:
     return (
         ActionSpec("fat.status", ("fat", "status", "--no-color"), "Show fAT dashboard."),
         ActionSpec("host.status", ("host", "status", "--check-port"), "Show host service status."),
-        ActionSpec("host.init", ("host", "init"), "Initialize host service config.", risk="medium", permission="service"),
+        ActionSpec("host.init", ("host", "init"), "Initialize host service config.", risk="medium", permission="service", sender_scope="local"),
         ActionSpec("host.logs", ("host", "logs", "--lines", "80"), "Show host service logs."),
-        ActionSpec("host.restart", ("host", "restart"), "Restart host service.", risk="high", permission="service", external=True),
+        ActionSpec("host.restart", ("host", "restart"), "Restart host service.", risk="high", permission="service", external=True, sender_scope="local", requires_confirmation=True),
         ActionSpec("camcoms.paths", ("camcoms", "paths"), "Show CamComs paths."),
         ActionSpec("camcoms.smoke", ("camcoms", "smoke-test"), "Run CamComs smoke test."),
         ActionSpec("camcoms.audit", ("camcoms", "audit", "--limit", "20"), "Show CamComs audit log."),
@@ -63,27 +72,38 @@ def default_action_specs() -> tuple[ActionSpec, ...]:
         ActionSpec("seeondesk.status", ("seeondesk", "status"), "Show desktop awareness snapshot."),
         ActionSpec("eyecontrol.status", ("eyecontrol", "status"), "Show EyeControl readiness."),
         ActionSpec("agent.status", ("agent", "status"), "Show LM Studio bridge status.", risk="medium", permission="network"),
-        ActionSpec("phiconnect.open", ("phiconnect",), "Open PhiConnect.", risk="medium", permission="gui", external=True),
-        ActionSpec("dataclient.open", ("dataclient",), "Open DataClient.", risk="medium", permission="gui", external=True),
-        ActionSpec("vsee.open", ("vsee",), "Open Vsee.", risk="medium", permission="gui", external=True),
-        ActionSpec("fiona.edit", ("edit",), "Open shared Fiona GUI.", risk="medium", permission="gui", external=True),
-        ActionSpec("fiona.cli", ("cli",), "Open fAT command center.", risk="medium", permission="gui", external=True),
+        ActionSpec("phiconnect.open", ("phiconnect",), "Open PhiConnect.", risk="medium", permission="gui", external=True, sender_scope="local"),
+        ActionSpec("dataclient.open", ("dataclient",), "Open DataClient.", risk="medium", permission="gui", external=True, sender_scope="local"),
+        ActionSpec("vsee.open", ("vsee",), "Open Vsee.", risk="medium", permission="gui", external=True, sender_scope="local"),
+        ActionSpec("fiona.edit", ("edit",), "Open shared Fiona GUI.", risk="medium", permission="gui", external=True, sender_scope="local"),
+        ActionSpec("fiona.cli", ("cli",), "Open fAT command center.", risk="medium", permission="gui", external=True, sender_scope="local"),
     )
 
 
 class ActionRouter:
-    def __init__(self, specs: tuple[ActionSpec, ...] | None = None, *, trace_path: Path = DEFAULT_TRACE_PATH) -> None:
+    def __init__(
+        self,
+        specs: tuple[ActionSpec, ...] | None = None,
+        *,
+        trace_path: Path = DEFAULT_TRACE_PATH,
+        verification_prompt: VerificationPrompt | None = None,
+        lock: threading.RLock | None = None,
+    ) -> None:
         self.specs = {spec.name: spec for spec in (specs or default_action_specs())}
         self.trace_path = trace_path
+        self.verification_prompt = verification_prompt or DEFAULT_VERIFICATION_PROMPT
+        self._lock = lock or threading.RLock()
 
     def list_actions(self) -> list[dict[str, Any]]:
-        return [self.specs[name].to_dict() for name in sorted(self.specs)]
+        with self._lock:
+            return [self.specs[name].to_dict() for name in sorted(self.specs)]
 
     def get(self, name: str) -> ActionSpec:
-        try:
-            return self.specs[name]
-        except KeyError as exc:
-            raise ValueError(f"unknown action: {name}") from exc
+        with self._lock:
+            try:
+                return self.specs[name]
+            except KeyError as exc:
+                raise ValueError(f"unknown action: {name}") from exc
 
     def run(
         self,
@@ -94,15 +114,43 @@ class ActionRouter:
         dry_run: bool = False,
         timeout_seconds: float = 30.0,
         record_history: bool = True,
+        sender_id: str | None = None,
+        action_scope: str | None = None,
     ) -> ActionResult:
         spec = self.get(name)
         started = time.perf_counter()
         timestamp = datetime.now(timezone.utc).isoformat()
-        if not permission_allows(profile=permission_profile, risk=spec.risk, permission=spec.permission):
+
+        # Derive action scope from spec risk if not explicitly provided.
+        if action_scope is None:
+            action_scope = _risk_to_scope(spec.risk)
+
+        # ---- ACL sender-scoped check ----------------------------------------
+        if sender_id is not None:
+            effective_profile = resolve_sender_profile(sender_id, current_profile=permission_profile)
+            if not resolve_sender_scope(sender_id, action_scope):
+                result = ActionResult(
+                    ok=False,
+                    action=name,
+                    detail=f"ACL denied: sender={sender_id} scope={action_scope}",
+                    command=spec.command,
+                    returncode=126,
+                    source=source,
+                    timestamp=timestamp,
+                    duration_ms=_elapsed_ms(started),
+                    dry_run=dry_run,
+                )
+                self._record(result, record_history)
+                return result
+        else:
+            effective_profile = permission_profile
+        # ---------------------------------------------------------------------
+
+        if not permission_allows(profile=effective_profile, risk=spec.risk, permission=spec.permission):
             result = ActionResult(
                 ok=False,
                 action=name,
-                detail=f"permission denied for profile {permission_profile}",
+                detail=f"permission denied for profile {effective_profile}",
                 command=spec.command,
                 returncode=126,
                 source=source,
@@ -141,6 +189,20 @@ class ActionRouter:
             self._record(result, record_history)
             return result
 
+        # ---- Verification prompt (confirmation) ----------------------------
+        if spec.requires_confirmation:
+            if not prompt_for_confirmation(spec, self.verification_prompt):
+                result = ActionResult(
+                    ok=False, action=name,
+                    detail="verification cancelled by user",
+                    command=spec.command, returncode=122,
+                    source=source, timestamp=timestamp,
+                    duration_ms=_elapsed_ms(started),
+                )
+                self._record(result, record_history)
+                return result
+        # --------------------------------------------------------------------
+
         completed = subprocess.run(
             [sys.executable, "-m", "fiona.cli", *spec.command],
             check=False,
@@ -165,8 +227,21 @@ class ActionRouter:
 
     def _record(self, result: ActionResult, enabled: bool) -> None:
         if enabled:
-            append_trace(result.to_dict(), self.trace_path)
+            with self._lock:
+                append_trace(result.to_dict(), self.trace_path)
 
 
 def _elapsed_ms(started: float) -> int:
     return int((time.perf_counter() - started) * 1000)
+
+
+_RISK_TO_SCOPE: dict[str, str] = {
+    "low": "safe",
+    "medium": "restricted",
+    "high": "critical",
+}
+
+
+def _risk_to_scope(risk: str) -> str:
+    """Map an action *risk* level to its corresponding sender scope."""
+    return _RISK_TO_SCOPE.get(risk, "safe")

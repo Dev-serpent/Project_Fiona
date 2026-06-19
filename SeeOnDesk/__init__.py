@@ -10,6 +10,9 @@ from .desktop import (
     desktop_snapshot,
 )
 from .vision import analyze_screen, capture_screen, capture_window
+from .process_tracker import ProcessTracker, ProcessInfo
+from .workspace_watcher import WorkspaceWatcher, WorkspaceInfo, WorkspaceChange
+from .action_discovery import discover_actions, DiscoveredAction
 
 __all__ = [
     "ActiveWindowInfo",
@@ -20,4 +23,11 @@ __all__ = [
     "analyze_screen",
     "capture_screen",
     "capture_window",
+    "ProcessTracker",
+    "ProcessInfo",
+    "WorkspaceWatcher",
+    "WorkspaceInfo",
+    "WorkspaceChange",
+    "discover_actions",
+    "DiscoveredAction",
 ]
