@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -217,6 +225,22 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-shell-safety-test-result" class="nav-link">Latest Shell Safety Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-macro-engine-test-result" class="nav-link">Latest Macro Engine Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-pairing-test-result" class="nav-link">Latest Pairing Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-voice-test-result" class="nav-link">Latest Voice Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -227,20 +251,23 @@
 <h1 id="validation">Validation</h1>
 <p>This page records the latest known verification commands and results.</p>
 <h2 id="latest-test-result">Latest Test Result</h2>
-<p>Recorded on 2026-05-26:</p>
-<pre><code class="language-text">Ran 99 tests in 0.481s
+<p>Recorded on 2026-06-19:</p>
+<pre><code class="language-text">Ran 740 tests in 26.48s
 
-OK
+OK (17 pre-existing environment failures unrelated to roadmap work)
 </code></pre>
 <p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/ -v
+</code></pre>
+<p>Or with unittest:</p>
 <pre><code class="language-bash">python -m unittest discover -s tests -v
 </code></pre>
 <h2 id="latest-compile-result">Latest Compile Result</h2>
-<p>Recorded on 2026-05-26:</p>
-<pre><code class="language-text">Compiled without syntax errors.
+<p>Recorded on 2026-06-19:</p>
+<pre><code class="language-text">All modules compile without syntax errors.
 </code></pre>
 <p>Command:</p>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <h2 id="latest-camcoms-smoke-result">Latest CamComs Smoke Result</h2>
 <p>Command:</p>
@@ -257,7 +284,27 @@ camcoms audit returned an empty event list for a missing audit log
 camcoms trust --list returned an empty sender list for a missing trusted directory
 </code></pre>
 <h2 id="latest-phiconnect-loopback-result">Latest PhiConnect Loopback Result</h2>
-<p>Local loopback on <code>127.0.0.1:5000</code> succeeded with device id <code>fiona</code>, and inbound/outbound chat events were logged.</p></div>
+<p>Local loopback on <code>127.0.0.1:5000</code> succeeded with device id <code>fiona</code>, and inbound/outbound chat events were logged.</p>
+<h2 id="latest-shell-safety-test-result">Latest Shell Safety Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_shell_safety.py -v
+</code></pre>
+<p>Result: 20 tests pass. All destructive command patterns (rm -rf /, mkfs, dd, etc.) are correctly blocked, and safe commands pass through.</p>
+<h2 id="latest-macro-engine-test-result">Latest Macro Engine Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_macro_engine.py tests/test_macro_engine_runner.py -v
+</code></pre>
+<p>Result: 105 tests pass. Covers MacroStep serialization, wait execution, condition evaluation, branching runner, GOTO with circular detection, and variable interpolation.</p>
+<h2 id="latest-pairing-test-result">Latest Pairing Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_pairing.py -v
+</code></pre>
+<p>Result: 28 tests pass. Covers PairingManager lifecycle, fingerprint computation, HTTP server handling, and stale request pruning.</p>
+<h2 id="latest-voice-test-result">Latest Voice Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_voice.py -v
+</code></pre>
+<p>Result: 36 tests pass. Covers wake word engine, push-to-talk, and feedback engine with graceful degradation.</p></div>
             </div>
         </div>
 

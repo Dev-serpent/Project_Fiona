@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -201,6 +209,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#run-roadmap-tests" class="nav-link">Run Roadmap Tests</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#compile-check" class="nav-link">Compile Check</a>
               <ul class="nav flex-column">
               </ul>
@@ -221,21 +233,62 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="testing">Testing</h1>
-<p>Fiona uses Python <code>unittest</code>.</p>
+<p>Fiona uses Python <code>unittest</code> with pytest runner support.</p>
 <h2 id="run-all-tests">Run All Tests</h2>
 <p>From the repository root:</p>
 <pre><code class="language-bash">python -m unittest discover -s tests -v
 </code></pre>
+<p>Or with pytest for better output:</p>
+<pre><code class="language-bash">python -m pytest tests/ -v
+</code></pre>
 <p>Important: <code>python -m unittest discover -v</code> from the repository root currently discovers 0 tests in this layout. Use <code>-s tests</code>.</p>
+<h2 id="run-roadmap-tests">Run Roadmap Tests</h2>
+<p>Tests specific to the Fiona Enhancement Roadmap (740+ total):</p>
+<pre><code class="language-bash"># ACL system
+python -m pytest tests/test_acl.py -v
+
+# Shell safety
+python -m pytest tests/test_shell_safety.py -v
+
+# Verification prompts
+python -m pytest tests/test_verification.py -v
+
+# Pairing protocol
+python -m pytest tests/test_pairing.py -v
+
+# Key rotation &amp; identity
+python -m pytest tests/test_identity.py -v
+
+# Trust store extended
+python -m pytest tests/test_trust_extended.py -v
+
+# Macro engine
+python -m pytest tests/test_macro_engine.py tests/test_macro_engine_runner.py -v
+
+# Process tracker
+python -m pytest tests/test_process_tracker.py -v
+
+# Workspace watcher
+python -m pytest tests/test_workspace_watcher.py -v
+
+# Action discovery
+python -m pytest tests/test_action_discovery.py -v
+
+# Voice subsystem
+python -m pytest tests/test_voice.py -v
+
+# System tray
+python -m pytest tests/test_system_tray.py -v
+</code></pre>
 <h2 id="compile-check">Compile Check</h2>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <h2 id="camcoms-focused-tests">CamComs Focused Tests</h2>
-<pre><code class="language-bash">python3 -m unittest tests.test_camcoms_encryption tests.test_camcoms_transport
+<pre><code class="language-bash">python -m unittest tests.test_camcoms_encryption tests.test_camcoms_transport
 </code></pre>
 <h2 id="direct-smoke-commands">Direct Smoke Commands</h2>
 <p>CamComs encryption smoke test:</p>
-<pre><code class="language-bash">python3 -m fiona.cli camcoms smoke-test
+<pre><code class="language-bash">python -m fiona.cli camcoms smoke-test
 </code></pre>
 <p>Expected payload:</p>
 <pre><code class="language-text">{&quot;keys&quot;:[&quot;alt&quot;,&quot;s&quot;],&quot;type&quot;:&quot;press&quot;,&quot;version&quot;:1}
@@ -248,6 +301,12 @@ python -m fiona.cli camcoms trust --list --trusted-dir /tmp/fiona-trusted-missin
 </code></pre>
 <p>PhiConnect local loopback:</p>
 <pre><code class="language-text">Open PhiConnect, use the local public key as the peer key, start the receiver, and send to 127.0.0.1:5000.
+</code></pre>
+<p>Voice smoke test:</p>
+<pre><code class="language-bash">python -m fiona.cli voice feedback-test
+</code></pre>
+<p>Macro smoke test:</p>
+<pre><code class="language-bash">python -m fiona.cli --list-macros
 </code></pre></div>
             </div>
         </div>

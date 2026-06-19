@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -346,7 +354,7 @@
 </tr>
 <tr>
 <td><code>test_agent_lmstudio.py</code></td>
-<td>Verifies LM Studio chat-completions payload and response parsing</td>
+<td>Verifies Olama chat-completions payload and response parsing</td>
 <td>local model bridge</td>
 </tr>
 <tr>
@@ -354,15 +362,149 @@
 <td>Verifies agent-visible command registry and app list</td>
 <td>future agent tool surface</td>
 </tr>
+<tr>
+<td><code>test_agent_orchestrator.py</code></td>
+<td>Verifies agent think-act-observe loop and action execution</td>
+<td>agent safety loop</td>
+</tr>
+<tr>
+<td><code>test_agent_ollama.py</code></td>
+<td>Verifies Ollama client health/chat/embed/image</td>
+<td>model bridge</td>
+</tr>
+<tr>
+<td><code>test_phiconnect_bridge.py</code></td>
+<td>Verifies agent message bridge in PhiConnect</td>
+<td>chat-to-agent routing</td>
+</tr>
+<tr>
+<td><code>test_shell_safety.py</code></td>
+<td>Verifies destructive command blocking (30+ patterns)</td>
+<td>shell execution safety</td>
+</tr>
+<tr>
+<td><code>test_acl.py</code></td>
+<td>Verifies sender-scoped permission rules and resolution</td>
+<td>ACL system</td>
+</tr>
+<tr>
+<td><code>test_verification.py</code></td>
+<td>Verifies verification prompt ABC and implementations</td>
+<td>action confirmation</td>
+</tr>
+<tr>
+<td><code>test_macro_engine.py</code></td>
+<td>Verifies MacroStep extensions, wait executor, condition evaluator</td>
+<td>macro engine</td>
+</tr>
+<tr>
+<td><code>test_macro_engine_runner.py</code></td>
+<td>Verifies branching runner, GOTO, variable interpolation</td>
+<td>macro execution</td>
+</tr>
+<tr>
+<td><code>test_pairing.py</code></td>
+<td>Verifies pairing protocol, PairingManager, HTTP server</td>
+<td>device pairing</td>
+</tr>
+<tr>
+<td><code>test_identity.py</code></td>
+<td>Verifies key rotation, atomic save, fingerprint</td>
+<td>key management</td>
+</tr>
+<tr>
+<td><code>test_trust_extended.py</code></td>
+<td>Verifies remove/list/prune/expiry of trusted senders</td>
+<td>trust store extended</td>
+</tr>
+<tr>
+<td><code>test_process_tracker.py</code></td>
+<td>Verifies /proc-based process listing and watchers</td>
+<td>process tracking</td>
+</tr>
+<tr>
+<td><code>test_workspace_watcher.py</code></td>
+<td>Verifies workspace detection and change callbacks</td>
+<td>workspace awareness</td>
+</tr>
+<tr>
+<td><code>test_action_discovery.py</code></td>
+<td>Verifies action discovery from system state</td>
+<td>action discovery</td>
+</tr>
+<tr>
+<td><code>test_voice.py</code></td>
+<td>Verifies wake word, push-to-talk, feedback engine</td>
+<td>voice subsystem</td>
+</tr>
+<tr>
+<td><code>test_system_tray.py</code></td>
+<td>Verifies tray icon lifecycle and state updates</td>
+<td>system tray</td>
+</tr>
+<tr>
+<td><code>test_permissions.py</code></td>
+<td>Verifies sender-specific permission profiles</td>
+<td>permission system</td>
+</tr>
+<tr>
+<td><code>test_speech.py</code></td>
+<td>Verifies speech output via espeak/festival</td>
+<td>speech synthesis</td>
+</tr>
+<tr>
+<td><code>test_codec.py</code></td>
+<td>Verifies envelope codec encoding/decoding</td>
+<td>crypto adapter</td>
+</tr>
+<tr>
+<td><code>test_replay.py</code></td>
+<td>Verifies replay protection for duplicate/stale messages</td>
+<td>replay guard</td>
+</tr>
+<tr>
+<td><code>test_audit_log.py</code></td>
+<td>Verifies audit logging for accepted/rejected events</td>
+<td>audit trail</td>
+</tr>
+<tr>
+<td><code>test_systemd.py</code></td>
+<td>Verifies systemd service unit rendering</td>
+<td>service management</td>
+</tr>
+<tr>
+<td><code>test_notifications.py</code></td>
+<td>Verifies desktop notification building</td>
+<td>desktop notifications</td>
+</tr>
+<tr>
+<td><code>test_voice_command.py</code></td>
+<td>Verifies voice command parsing and routing</td>
+<td>voice command routing</td>
+</tr>
+<tr>
+<td><code>test_voice_engine.py</code></td>
+<td>Verifies whisper transcription backend</td>
+<td>voice transcription</td>
+</tr>
+<tr>
+<td><code>test_desktop.py</code></td>
+<td>Verifies desktop awareness snapshot including all-windows</td>
+<td>active-app data</td>
+</tr>
 </tbody>
 </table>
 <h2 id="why-the-tests-exist">Why The Tests Exist</h2>
 <p>The suite protects the parts of Fiona that can become dangerous or confusing if they regress:</p>
 <ul>
 <li><strong>Crypto and trust</strong>: encrypted messages must not decrypt for the wrong recipient, tampered messages must fail, and untrusted senders must be rejected.</li>
-<li><strong>Remote actions</strong>: decrypted instructions must pass schema validation and allowlist checks before any local action can execute.</li>
+<li><strong>Remote actions</strong>: decrypted instructions must pass schema validation, ACL checks, and allowlist checks before any local action can execute.</li>
 <li><strong>Desktop automation</strong>: generated launch keys must not collide and app import must not flood the config with low-value entries.</li>
+<li><strong>Shell safety</strong>: destructive commands must be blocked at all shell execution points.</li>
 <li><strong>Service lifecycle</strong>: host configs and generated systemd units must remain predictable.</li>
+<li><strong>ACL</strong>: sender-scoped permissions must be correctly resolved and enforced.</li>
+<li><strong>Macro engine</strong>: waits, conditions, branching, and GOTO must behave correctly with circular detection.</li>
+<li><strong>Pairing</strong>: device pairing must follow the approve/deny lifecycle and expire stale requests.</li>
 <li><strong>GUI handlers</strong>: non-display logic must stay testable without opening windows.</li>
 <li><strong>Data workflows</strong>: research/table tools must preserve structured output and avoid unsafe formula execution.</li>
 <li><strong>Agent bridge</strong>: local model requests must remain explicit and separate from action execution.</li>
@@ -370,10 +512,13 @@
 <h2 id="what-is-mocked">What Is Mocked</h2>
 <p>The tests avoid relying on machine-specific state:</p>
 <ul>
-<li>LM Studio HTTP calls are mocked.</li>
+<li>Ollama/LM Studio HTTP calls are mocked.</li>
 <li>CamComs HTTP transport is mocked where possible.</li>
 <li>systemd calls are mocked.</li>
 <li>desktop tool calls such as <code>kdotool</code>, <code>xdotool</code>, and <code>xprop</code> are mocked.</li>
+<li><code>/proc</code> reads are mocked with temp directories.</li>
+<li>audio/notification commands are mocked.</li>
+<li><code>pynput</code>, <code>pvporcupine</code>, <code>pystray</code>, and <code>PIL</code> are mocked.</li>
 <li>temporary directories replace real config/key/trust paths.</li>
 </ul>
 <p>This makes the suite suitable for regular development runs even when no ESP32, LM Studio server, or active desktop automation stack is available.</p>
@@ -391,8 +536,11 @@
 <p>Full test suite:</p>
 <pre><code class="language-bash">python -m unittest discover -s tests -v
 </code></pre>
+<p>Or with pytest:</p>
+<pre><code class="language-bash">python -m pytest tests/ -v
+</code></pre>
 <p>Compile check:</p>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl PhiConnect QuikTieper SeeOnDesk TerminalAssist Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <p>Docs build:</p>
 <pre><code class="language-bash">cd fionaDocsPage

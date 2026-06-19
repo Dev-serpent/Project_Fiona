@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>CmdTrace - Fiona</title>
+        <title>FionaCore - Fiona</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -88,7 +88,7 @@
 </li>
                                     
 <li>
-    <a href="../fionacore/" class="dropdown-item">FionaCore</a>
+    <a href="./" class="dropdown-item active" aria-current="page">FionaCore</a>
 </li>
                                     
 <li>
@@ -124,7 +124,7 @@
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active" aria-current="page">CmdTrace</a>
+    <a href="../cmdtrace/" class="dropdown-item">CmdTrace</a>
 </li>
                                     
 <li>
@@ -176,12 +176,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../recallvault/" class="nav-link">
+                                <a rel="prev" href="../esp32payload/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../agent/" class="nav-link">
+                                <a rel="next" href="../phiconnect/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -203,33 +203,57 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#cmdtrace" class="nav-link">CmdTrace</a>
+            <li class="nav-item" data-bs-level="1"><a href="#fionacore" class="nav-link">FionaCore</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#purpose" class="nav-link">Purpose</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#commands" class="nav-link">Commands</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="3"><a href="#view-recent-history" class="nav-link">View recent history</a>
+            <li class="nav-item" data-bs-level="2"><a href="#action-router" class="nav-link">Action Router</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#filter-history-by-action-name" class="nav-link">Filter history by action name</a>
+            <li class="nav-item" data-bs-level="2"><a href="#acl-access-control" class="nav-link">ACL (Access Control)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#clear-the-trace-log" class="nav-link">Clear the trace log</a>
+            <li class="nav-item" data-bs-level="2"><a href="#shell-safety" class="nav-link">Shell Safety</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#macro-engine" class="nav-link">Macro Engine</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#macrostep" class="nav-link">MacroStep</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#wait-types" class="nav-link">Wait Types</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#condition-types" class="nav-link">Condition Types</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#variable-interpolation" class="nav-link">Variable Interpolation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#goto" class="nav-link">GOTO</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#cli" class="nav-link">CLI</a>
               <ul class="nav flex-column">
               </ul>
             </li>
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#tui-integration" class="nav-link">TUI Integration</a>
+            <li class="nav-item" data-bs-level="2"><a href="#verification-prompts" class="nav-link">Verification Prompts</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#storage" class="nav-link">Storage</a>
+            <li class="nav-item" data-bs-level="2"><a href="#notifications" class="nav-link">Notifications</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#speech" class="nav-link">Speech</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -240,29 +264,149 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="cmdtrace">CmdTrace</h1>
-<p>CmdTrace provides a high-performance observability layer for Fiona. It records every action routed through the central <code>ActionRouter</code> into an append-only JSONL log.</p>
-<h2 id="purpose">Purpose</h2>
+<h1 id="fionacore">FionaCore</h1>
+<p>FionaCore provides shared primitives used across all Fiona subsystems: action routing, security policies, macro execution, shell safety, verification prompts, notifications, and speech synthesis.</p>
+<h2 id="action-router">Action Router</h2>
+<p>The central action dispatch system. Routes named actions to registered handler functions with ACL checking, verification prompts, and trace logging.</p>
+<pre><code class="language-python">from FionaCore.actions import ActionRouter, ActionResult
+
+router = ActionRouter()
+router.register(&quot;host.status&quot;, lambda: {&quot;ok&quot;: True})
+result = router.run(&quot;host.status&quot;)
+</code></pre>
+<p>Key features:</p>
 <ul>
-<li><strong>Audit Trail</strong>: Perfect record of every command executed via Fiona CLI, GUI, or remote ESP32 instructions.</li>
-<li><strong>Performance Monitoring</strong>: Records the execution time (<code>elapsed_ms</code>) of every action.</li>
-<li><strong>Failure Analysis</strong>: Logs the success/failure status and error messages for every routed task.</li>
+<li><strong>ACL integration</strong>: Sender-scoped permission rules checked before action execution</li>
+<li><strong>Verification prompts</strong>: High-risk actions require user confirmation</li>
+<li><strong>Thread safety</strong>: Uses <code>threading.RLock</code> for concurrent access</li>
+<li><strong>Trace logging</strong>: Every action result is recorded in the trace</li>
 </ul>
-<h2 id="commands">Commands</h2>
-<h3 id="view-recent-history">View recent history</h3>
-<pre><code class="language-bash">fiona action history --limit 20
+<h2 id="acl-access-control">ACL (Access Control)</h2>
+<p>Sender-scoped permission system. See the <a href="../../developer/security/">Security page</a> for full details.</p>
+<pre><code class="language-python">from FionaCore.acl import SenderACLRule, resolve_sender_profile, resolve_sender_scope
 </code></pre>
-<h3 id="filter-history-by-action-name">Filter history by action name</h3>
-<pre><code class="language-bash">fiona action history --name host.status
+<ul>
+<li>Rules match sender IDs using <code>fnmatch</code> patterns</li>
+<li>Built-in profiles: <code>local</code>, <code>ssh</code>, <code>websocket</code>, <code>ble</code></li>
+<li>Default tiers: local → agent:* → any other sender</li>
+<li>Unknown senders are denied by default</li>
+</ul>
+<h2 id="shell-safety">Shell Safety</h2>
+<p>Blocks destructive shell commands across all 5 shell execution points in Fiona.</p>
+<p>See the <a href="../../developer/security/">Security page</a> for the full pattern list.</p>
+<pre><code class="language-python">from FionaCore.shell_safety import safe_os_system, safe_popen_shell, check_command_safety
 </code></pre>
-<h3 id="clear-the-trace-log">Clear the trace log</h3>
-<pre><code class="language-bash">fiona action clear
+<p>Protected commands: <code>rm -rf /</code>, <code>mkfs</code>, <code>dd</code>, <code>wipefs</code>, <code>chmod 777 /etc/shadow</code>, <code>curl | bash</code>, and 25+ other destructive patterns.</p>
+<p>Wrapped execution points:</p>
+<ul>
+<li><code>fiona/cli.py</code> (<code>run-shell</code> command)</li>
+<li><code>TerminalAssist/gui.py</code> (shell action execution)</li>
+<li><code>TerminalAssist/tui.py</code> (shell action execution)</li>
+<li><code>QuikTieper/launcher.py</code> (app launch shell)</li>
+<li><code>QuikTieper/remote.py</code> (remote action shell)</li>
+</ul>
+<h2 id="macro-engine">Macro Engine</h2>
+<p>Extended macro execution engine with waits, conditions, branching, and variable interpolation.</p>
+<h3 id="macrostep">MacroStep</h3>
+<pre><code class="language-python">from FionaCore.macros import MacroStep
+
+step = MacroStep(
+    action=&quot;launch:brave&quot;,
+    wait_type=&quot;wait_for_window&quot;,
+    wait_value=&quot;Brave&quot;,
+    condition_type=&quot;process_running&quot;,
+    condition_value=&quot;brave&quot;,
+    fallback_action=&quot;notify:Brave is running&quot;,
+)
 </code></pre>
-<h2 id="tui-integration">TUI Integration</h2>
-<p>The <strong>History</strong> page in the <code>fiona cli</code> TUI provides a real-time sliding view of the latest system activity. It updates every second to reflect new actions.</p>
-<h2 id="storage">Storage</h2>
-<p>Data is stored as a series of JSON objects (one per line) in:
-<code>~/.config/fiona/cmdtrace.jsonl</code></p></div>
+<h3 id="wait-types">Wait Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sleep</code></td>
+<td>Pause for N milliseconds</td>
+</tr>
+<tr>
+<td><code>wait_for_window</code></td>
+<td>Poll active window title/class up to 30s</td>
+</tr>
+<tr>
+<td><code>wait_for_process</code></td>
+<td>Poll <code>/proc</code> for process name up to 30s</td>
+</tr>
+</tbody>
+</table>
+<h3 id="condition-types">Condition Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>window_active</code></td>
+<td>Check if window title/class matches</td>
+</tr>
+<tr>
+<td><code>process_running</code></td>
+<td>Check if process name found in <code>/proc</code></td>
+</tr>
+<tr>
+<td><code>action_result</code></td>
+<td>Check previous step result (<code>action_name:ok</code> / <code>action_name:failed</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="variable-interpolation">Variable Interpolation</h3>
+<p>String fields support <code>${variable_name}</code> placeholders:</p>
+<pre><code class="language-python">step = MacroStep(action=&quot;notify:Hello ${user_name}&quot;)
+</code></pre>
+<p>Available variables: all entries in the execution context, plus <code>step_index</code>, <code>last_result</code>, and <code>last_ok</code>.</p>
+<h3 id="goto">GOTO</h3>
+<p>Steps with action <code>GOTO:&lt;macro_name&gt;</code> branch to another macro's steps (max depth 10 to prevent circular references).</p>
+<h3 id="cli">CLI</h3>
+<pre><code class="language-bash">fiona --run-macro my_macro   # Execute a named macro
+fiona --list-macros          # List all macros and step counts
+</code></pre>
+<h2 id="verification-prompts">Verification Prompts</h2>
+<p>Requires user confirmation for high-risk actions before execution.</p>
+<pre><code class="language-python">from FionaCore.verification import StdoutVerificationPrompt, DesktopVerificationPrompt
+</code></pre>
+<ul>
+<li><strong>Desktop prompt</strong>: Tkinter dialog with Yes/No buttons</li>
+<li><strong>Stdout prompt</strong>: Terminal-based prompt with timeout</li>
+<li>Falls back from desktop → terminal → automatic denial</li>
+</ul>
+<h2 id="notifications">Notifications</h2>
+<p>Desktop notification builder with optional speech output.</p>
+<pre><code class="language-python">from FionaCore.notifications import build_notification
+
+build_notification(&quot;Fiona&quot;, &quot;Task complete&quot;, urgency=&quot;normal&quot;)
+</code></pre>
+<ul>
+<li>Uses <code>notify-send</code> for desktop notifications</li>
+<li>Truncates long bodies automatically</li>
+<li>Optional speech integration via <code>FionaCore.speech</code></li>
+</ul>
+<h2 id="speech">Speech</h2>
+<p>Minimal speech synthesis via system TTS engines.</p>
+<pre><code class="language-python">from FionaCore.speech import speak
+
+speak(&quot;Task complete&quot;)  # Uses espeak or festival
+</code></pre>
+<ul>
+<li>Prefers <code>espeak</code> (fast, widely available)</li>
+<li>Falls back to <code>festival</code></li>
+<li>Silent if no TTS engine is installed</li>
+</ul></div>
             </div>
         </div>
 

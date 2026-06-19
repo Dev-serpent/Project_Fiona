@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -214,16 +222,22 @@
 <li>Done: QuikTieper listener can be owned by the host service through <code>start_quiktieper_listener</code>.</li>
 <li>Done: remote action router connects decrypted CamComs instructions to configured QuikTieper actions with <code>execute_remote_actions</code> and <code>allowed_remote_actions</code>.</li>
 <li>Done: standalone encrypted computer-to-computer chat exists through PhiConnect.</li>
-<li>Partial: GUI Host tab shows config, health status, trusted keys, logs, and paths; live receiver process controls still need expansion.</li>
+<li>Done: GUI Host tab shows config, health status, trusted keys, logs, paths, live systemd state, and SeeOnDesk workspace/process info.</li>
 <li>Done: command history and audit log record accepted/rejected host message processing and are visible through CLI/GUI.</li>
-<li>Done: trusted device manager can list, add, remove, and inspect stored sender public key JSON.</li>
-<li>Partial: configurable macro layer supports structured multi-step remote actions; waits, conditions, window targeting, named macros, and per-step failure handling remain.</li>
-<li>Partial: local structured success/failure result objects exist; response messages to sender and local notifications still remain.</li>
-<li>Not started: desktop tray and background status.</li>
+<li>Done: trusted device manager can list, add, remove, inspect stored sender public key JSON, and enforce expiry.</li>
+<li>Done: configurable macro layer supports structured multi-step remote actions with waits, conditions, branching, fallback actions, variable interpolation, and GOTO support.</li>
+<li>Done: local structured success/failure result objects exist; ACL checks and verification prompts protect sensitive actions.</li>
+<li>Done: desktop tray icon with state indicators and <code>--tray-only</code> mode.</li>
 <li>Blocked by ESP32 work: real crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url decode in firmware.</li>
-<li>Not started: ESP32 pairing flow.</li>
-<li>Not started: voice and speech interface.</li>
-<li>Partial: desktop awareness through SeeOnDesk active-window snapshots; screen recording and ML recognition remain.</li>
+<li>Done: ESP32 pairing flow with fingerprint approval, trusted-key installation, key rotation, and device removal UX.</li>
+<li>Done: voice subsystem with wake word detection, push-to-talk, and feedback engine.</li>
+<li>Done: desktop awareness through SeeOnDesk with active-window snapshots, process tracking, and workspace awareness; screen recording and ML recognition remain.</li>
+<li>Done: ACL sender-scoped permission system.</li>
+<li>Done: shell command safety (30+ destructive patterns blocked at all 5 shell execution points).</li>
+<li>Done: private file permission enforcement for key material.</li>
+<li>Done: trust store expiry with auto-prune and backward-compatible format.</li>
+<li>Done: key rotation with atomic writes and confirmation prompt.</li>
+<li>Done: system tray icon with color-coded state and right-click menu.</li>
 </ol></div>
             </div>
         </div>

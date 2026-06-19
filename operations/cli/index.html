@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -211,6 +219,18 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#camcoms-commands" class="nav-link">CamComs Commands</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#key-rotation" class="nav-link">Key Rotation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#prune-expired-trust" class="nav-link">Prune Expired Trust</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#show-fingerprint" class="nav-link">Show Fingerprint</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#host-service-commands" class="nav-link">Host Service Commands</a>
@@ -226,6 +246,22 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#seeondesk-commands" class="nav-link">SeeOnDesk Commands</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#action-discovery" class="nav-link">Action Discovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#voice-commands" class="nav-link">Voice Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#macro-engine-commands" class="nav-link">Macro Engine Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#system-tray" class="nav-link">System Tray</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -309,7 +345,7 @@
 <tr>
 <td><code>fiona camcoms ...</code> / <code>fiona cc ...</code></td>
 <td>CamComs</td>
-<td>Crypto, transport, receiver, trust, audit</td>
+<td>Crypto, transport, receiver, trust, audit, pairing, key rotation</td>
 <td>mixed</td>
 </tr>
 <tr>
@@ -321,7 +357,7 @@
 <tr>
 <td><code>fiona agent ...</code></td>
 <td>Agent</td>
-<td>LM Studio bridge and command registry</td>
+<td>Ollama bridge and command registry</td>
 <td>one-shot</td>
 </tr>
 <tr>
@@ -369,13 +405,13 @@
 <tr>
 <td><code>fiona run-shell ...</code></td>
 <td>fiona</td>
-<td>Internal helper to run shell commands</td>
+<td>Internal helper to run shell commands (with safety checks)</td>
 <td>one-shot</td>
 </tr>
 <tr>
 <td><code>fiona seeondesk ...</code> / <code>fiona sod ...</code></td>
 <td>SeeOnDesk</td>
-<td>Active desktop/window identification</td>
+<td>Active desktop/window identification, process tracking, workspace awareness</td>
 <td>one-shot</td>
 </tr>
 <tr>
@@ -389,6 +425,42 @@
 <td>PhiConnect</td>
 <td>Standalone encrypted chat</td>
 <td>foreground GUI</td>
+</tr>
+<tr>
+<td><code>fiona --run-macro &lt;name&gt;</code></td>
+<td>FionaCore</td>
+<td>Execute a named macro with the extended engine</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona --list-macros</code></td>
+<td>FionaCore</td>
+<td>List all macros and step counts</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona --discover-actions</code></td>
+<td>SeeOnDesk</td>
+<td>Discover available actions from system state</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona --tray-only</code></td>
+<td>QuikTieper</td>
+<td>Run system tray icon only (no GUI window)</td>
+<td>foreground service</td>
+</tr>
+<tr>
+<td><code>fiona voice wake-test</code></td>
+<td>Voice</td>
+<td>Test wake word detection</td>
+<td>one-shot</td>
+</tr>
+<tr>
+<td><code>fiona voice feedback-test</code></td>
+<td>Voice</td>
+<td>Test audio/notification feedback</td>
+<td>one-shot</td>
 </tr>
 </tbody>
 </table>
@@ -419,7 +491,7 @@ fiona edit
 <pre><code class="language-text">~/.config/fiona/bindings.json
 </code></pre>
 <h2 id="camcoms-commands">CamComs Commands</h2>
-<p>CamComs commands operate on identities, encrypted envelopes, HTTP transport, trust state, receiver processing, and audit logs.</p>
+<p>CamComs commands operate on identities, encrypted envelopes, HTTP transport, trust state, receiver processing, pairing, key rotation, and audit logs.</p>
 <table>
 <thead>
 <tr>
@@ -467,6 +539,12 @@ fiona edit
 <td>removes by device id</td>
 </tr>
 <tr>
+<td><code>camcoms trust --expires-in &lt;days&gt;</code></td>
+<td>public bundle JSON</td>
+<td>trusted sender directory</td>
+<td>adds sender with automatic expiry</td>
+</tr>
+<tr>
 <td><code>camcoms encrypt</code></td>
 <td>sender private, recipient public</td>
 <td>stdout</td>
@@ -508,12 +586,43 @@ fiona edit
 <td>stdout</td>
 <td>no persistent files</td>
 </tr>
+<tr>
+<td><code>camcoms rotate-keys</code></td>
+<td>existing identity</td>
+<td>new identity + pubkey</td>
+<td>atomic key rotation with confirmation</td>
+</tr>
+<tr>
+<td><code>camcoms prune</code></td>
+<td>trusted sender directory</td>
+<td>trusted sender directory</td>
+<td>removes expired trust entries</td>
+</tr>
+<tr>
+<td><code>camcoms fingerprint</code></td>
+<td>identity JSON</td>
+<td>stdout</td>
+<td>prints public key fingerprint</td>
+</tr>
 </tbody>
 </table>
 <p>The envelope path is:</p>
 <pre><code class="language-text">instruction JSON -&gt; encrypted envelope dict -&gt; base64url JSON string -&gt; HTTP body
 </code></pre>
 <p>The decrypt path reverses that and optionally verifies the sender public key.</p>
+<h3 id="key-rotation">Key Rotation</h3>
+<pre><code class="language-bash">fiona camcoms rotate-keys       # Requires confirmation
+fiona camcoms rotate-keys --yes # Skip confirmation
+</code></pre>
+<p>Prints old and new fingerprints. Existing trusted senders will need to re-pair.</p>
+<h3 id="prune-expired-trust">Prune Expired Trust</h3>
+<pre><code class="language-bash">fiona camcoms prune              # Remove all expired trust entries
+fiona camcoms prune --trusted-dir &lt;dir&gt;
+</code></pre>
+<h3 id="show-fingerprint">Show Fingerprint</h3>
+<pre><code class="language-bash">fiona camcoms fingerprint
+fiona camcoms fingerprint --identity ~/.config/fiona/identity.json
+</code></pre>
 <h2 id="host-service-commands">Host Service Commands</h2>
 <p><code>fiona host ...</code> and <code>fiona camcoms service ...</code> call the same service implementation.</p>
 <pre><code class="language-bash">fiona host init
@@ -540,15 +649,15 @@ fiona host disable
 <li><code>logs</code> calls <code>journalctl --user -u &lt;service&gt;</code>.</li>
 </ul>
 <h2 id="agent-commands">Agent Commands</h2>
-<p>Agent currently bridges to LM Studio's OpenAI-compatible local API.</p>
+<p>Agent currently bridges to Ollama's local API (replaced LM Studio).</p>
 <pre><code class="language-bash">fiona agent status
 fiona agent ask --model &lt;model-id&gt; &quot;Prompt text&quot;
 fiona agent commands
 </code></pre>
 <p>Mechanics:</p>
 <ul>
-<li><code>status</code> checks the configured base URL, defaulting to <code>http://localhost:1234/v1</code>.</li>
-<li><code>ask</code> constructs a chat-completions request with system prompt, temperature, max tokens, API key placeholder, and model id.</li>
+<li><code>status</code> checks the configured base URL, defaulting to <code>http://localhost:11434/v1</code>.</li>
+<li><code>ask</code> constructs a chat-completions request with system prompt, temperature, max tokens, and model id.</li>
 <li><code>commands</code> exposes an agent-readable registry of Fiona actions and available QuikTieper apps.</li>
 </ul>
 <h2 id="dataclient-commands">DataClient Commands</h2>
@@ -577,6 +686,23 @@ fiona seeondesk status
 <li><code>status</code> wraps active-window data with session and desktop state.</li>
 <li>KDE/Wayland prefers <code>kdotool</code>; X11-compatible fallback uses <code>xdotool</code> and <code>xprop</code>.</li>
 </ul>
+<h3 id="action-discovery">Action Discovery</h3>
+<pre><code class="language-bash">fiona --discover-actions
+</code></pre>
+<p>Prints all discoverable actions grouped by category (process, workspace, window), showing action name, description, and whether confirmation is required.</p>
+<h2 id="voice-commands">Voice Commands</h2>
+<pre><code class="language-bash">fiona voice wake-test      # Test wake word detection availability
+fiona voice feedback-test  # Test audio and notification feedback
+</code></pre>
+<h2 id="macro-engine-commands">Macro Engine Commands</h2>
+<pre><code class="language-bash">fiona --run-macro &lt;name&gt;   # Execute a named macro with the extended engine
+fiona --list-macros        # Print all macros and step counts
+</code></pre>
+<p>The macro engine supports waits, conditions, branching, and variable interpolation. See the <a href="../../modules/fionacore/">FionaCore module page</a> for details.</p>
+<h2 id="system-tray">System Tray</h2>
+<pre><code class="language-bash">fiona --tray-only  # Start system tray icon without the GUI window
+</code></pre>
+<p>Useful for autostart scripts. The tray icon shows a color-coded status indicator and provides right-click access to Show Fiona and Quit Fiona.</p>
 <h2 id="eyecontrol-commands">EyeControl Commands</h2>
 <pre><code class="language-bash">fiona eyecontrol status
 fiona eyecontrol run --url http://192.168.0.103:8080/shot.jpg
@@ -680,6 +806,21 @@ fiona action clear
 <td>fAT cannot launch Zellij</td>
 <td>missing terminal multiplexer</td>
 <td>run <code>fiona fat json</code> and verify <code>zellij_path</code></td>
+</tr>
+<tr>
+<td>Shell command blocked</td>
+<td>FionaCore shell safety</td>
+<td>check if the command matches a destructive pattern; use safe alternatives</td>
+</tr>
+<tr>
+<td>Pairing server won't start</td>
+<td>port conflict</td>
+<td>verify port 8090 is available or stop the existing pairing server</td>
+</tr>
+<tr>
+<td>Macro not found</td>
+<td>macro config</td>
+<td>run <code>fiona --list-macros</code> to verify the macro name</td>
 </tr>
 </tbody>
 </table></div>

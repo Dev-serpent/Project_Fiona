@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -199,6 +207,46 @@
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#existing-protections" class="nav-link">Existing Protections</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#transport-security" class="nav-link">Transport Security</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#access-control-acl" class="nav-link">Access Control (ACL)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#shell-command-safety" class="nav-link">Shell Command Safety</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#file-permission-hardening" class="nav-link">File Permission Hardening</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#trust-expiry" class="nav-link">Trust Expiry</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#key-rotation" class="nav-link">Key Rotation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#verification-prompts" class="nav-link">Verification Prompts</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#thread-safety" class="nav-link">Thread Safety</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#pairing-protocol-security" class="nav-link">Pairing Protocol Security</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#pairing-listener" class="nav-link">Pairing Listener</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#sensitive-paths" class="nav-link">Sensitive Paths</a>
@@ -221,8 +269,9 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="security">Security</h1>
-<p>Fiona's security-sensitive code is mainly in CamComs and PhiConnect.</p>
+<p>Fiona's security-sensitive code spans CamComs, PhiConnect, FionaCore, and the shell execution layer.</p>
 <h2 id="existing-protections">Existing Protections</h2>
+<h3 id="transport-security">Transport Security</h3>
 <ul>
 <li>X25519 public/private key agreement</li>
 <li>HKDF-SHA256 message key derivation</li>
@@ -237,33 +286,154 @@
 <li>optional passphrase encryption for private key JSON</li>
 <li>audit log for accepted and rejected receiver events</li>
 </ul>
+<h3 id="access-control-acl">Access Control (ACL)</h3>
+<p>The <code>FionaCore.acl</code> module provides sender-scoped permission rules:</p>
+<ul>
+<li><code>SenderACLRule</code>: maps sender identity patterns to scope levels</li>
+<li><code>resolve_sender_profile()</code>: classifies senders as <code>local</code>, <code>ssh</code>, <code>websocket</code>, or <code>ble</code></li>
+<li><code>resolve_sender_scope()</code>: checks whether a sender has permission for a given action</li>
+<li>Built-in default rules: local full access → agent limited → any other denied</li>
+<li>Integration with <code>ActionRouter.run()</code> for automatic checking</li>
+</ul>
+<p>Actions can declare required <code>sender_scope</code> (e.g., <code>"safe"</code>, <code>"full"</code>) and <code>requires_confirmation</code>.</p>
+<h3 id="shell-command-safety">Shell Command Safety</h3>
+<p>The <code>FionaCore.shell_safety</code> module blocks destructive shell commands at <strong>all 5 shell execution points</strong>:</p>
+<p>Protected patterns include:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Example Blocked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rm -rf /</code></td>
+<td><code>rm -rf /</code> and variants (<code>rm -rf /*</code>, <code>rm -rf / --no-preserve-root</code>)</td>
+</tr>
+<tr>
+<td>Disk wipe</td>
+<td><code>mkfs</code>, <code>dd if=/dev/zero</code>, <code>wipefs</code>, <code>mkfs</code>, <code>fdisk</code>, <code>parted</code></td>
+</tr>
+<tr>
+<td>Raw block writes</td>
+<td><code>dd</code> + <code>/dev/sd</code>, <code>/dev/nvme</code>, <code>/dev/mmcblk</code></td>
+</tr>
+<tr>
+<td>Dangerous redirects</td>
+<td><code>&gt; /dev/sd</code>, <code>&gt; /dev/nvme</code></td>
+</tr>
+<tr>
+<td>Permission escalation</td>
+<td><code>chmod 777 /etc/shadow</code>, <code>chmod 777 /etc/sudoers</code></td>
+</tr>
+<tr>
+<td>System destruction</td>
+<td><code>shutdown -h now</code>, <code>poweroff</code>, <code>halt</code></td>
+</tr>
+<tr>
+<td>Package destruction</td>
+<td><code>apt remove essential</code>, <code>dpkg --purge</code>, <code>pacman -Rsc</code></td>
+</tr>
+<tr>
+<td>Remote pipe-to-shell</td>
+<td><code>curl .+ \| bash</code>, <code>wget .+ \| sh</code></td>
+</tr>
+<tr>
+<td>Fork bombs</td>
+<td><code>:(){ :\|:&amp; };:</code></td>
+</tr>
+<tr>
+<td>Reset/format</td>
+<td><code>reset</code>, <code>dd if=/dev/urandom</code></td>
+</tr>
+</tbody>
+</table>
+<p>Wrapped execution points:</p>
+<ul>
+<li><code>fiona/cli.py</code> (<code>run-shell</code> command → <code>safe_os_system</code>)</li>
+<li><code>TerminalAssist/gui.py</code> (shell action execution → <code>safe_os_system</code> + error dialog)</li>
+<li><code>TerminalAssist/tui.py</code> (shell action execution → <code>safe_os_system</code>)</li>
+<li><code>QuikTieper/launcher.py</code> (app launch shell → <code>safe_popen_shell</code>)</li>
+<li><code>QuikTieper/remote.py</code> (remote action shell → <code>safe_popen_shell</code>)</li>
+</ul>
+<h3 id="file-permission-hardening">File Permission Hardening</h3>
+<p>The <code>CamComs.paths</code> module enforces private permissions on key material:</p>
+<ul>
+<li><code>ensure_private_permissions(path, mode=0o600)</code>: sets file permissions</li>
+<li><code>ensure_private_directory_permissions(path, mode=0o700)</code>: sets directory permissions</li>
+<li><code>check_private_permissions(path)</code>: audits current permissions</li>
+<li>Integrated into <code>trust.py</code> (trusted key saves) and <code>service.py</code> (health checks)</li>
+</ul>
+<h3 id="trust-expiry">Trust Expiry</h3>
+<p>Trusted sender records support optional expiration:</p>
+<ul>
+<li><code>TrustedSender</code> dataclass with <code>expires_at</code> timestamp</li>
+<li>Auto-prune of expired entries via <code>prune_expired()</code></li>
+<li>Backward-compatible with old trust file format (no version key)</li>
+<li>Expiry enforced in <code>CamComs/receiver.py</code> and <code>PhiConnect/chat.py</code></li>
+<li>CLI <code>--expires-in &lt;days&gt;</code> flag, GUI expiry display with "EXPIRED" in red</li>
+</ul>
+<h3 id="key-rotation">Key Rotation</h3>
+<ul>
+<li><code>rotate_keys()</code> in <code>CamComs/identity.py</code> generates new identity atomically</li>
+<li>Atomic write via temp file + rename for both private and public keys</li>
+<li>Old key fingerprint captured before rotation</li>
+<li>Confirmation prompt required before rotation (<code>--yes</code> to skip)</li>
+<li>CLI: <code>fiona camcoms rotate-keys</code></li>
+<li>GUI: Rotate Keys button in CamComs tab with confirmation dialog</li>
+</ul>
+<h3 id="verification-prompts">Verification Prompts</h3>
+<p>The <code>FionaCore.verification</code> module requires user confirmation for high-risk actions:</p>
+<ul>
+<li><code>VerificationPrompt</code> ABC with two implementations</li>
+<li><code>StdoutVerificationPrompt</code>: terminal-based Y/n prompt with timeout</li>
+<li><code>DesktopVerificationPrompt</code>: Tkinter dialog + <code>notify-send</code> fallback</li>
+<li>Falls back from desktop → terminal → automatic denial on EOF/Ctrl+C</li>
+</ul>
+<h3 id="thread-safety">Thread Safety</h3>
+<ul>
+<li><code>ActionRouter</code> uses <code>threading.RLock</code> (reentrant lock)</li>
+<li>Protects <code>specs</code> dict access and trace writes</li>
+<li>Prevents deadlocks if <code>run()</code> calls itself</li>
+</ul>
+<h3 id="pairing-protocol-security">Pairing Protocol Security</h3>
+<p>The <code>CamComs/pairing</code> module implements secure device pairing:</p>
+<ul>
+<li>Pairing requests contain a visual fingerprint computed from the device's public key bundle</li>
+<li>User must explicitly approve each request (Approve/Deny in GUI or API)</li>
+<li>Pending requests expire after 120 seconds</li>
+<li>Approved devices are stored in the trusted sender directory</li>
+<li>Optional expiry on trusted device records</li>
+<li>Dedicated pairing HTTP server on port 8090 (separate from main receiver)</li>
+</ul>
+<h3 id="pairing-listener">Pairing Listener</h3>
+<p>The pairing HTTP server (<code>PairingHttpServer</code>) runs on a dedicated port (8090) and accepts POST requests on <code>/pair</code> or <code>/pairing</code>. It only handles pairing operations, not general message processing.</p>
 <h2 id="sensitive-paths">Sensitive Paths</h2>
-<pre><code class="language-text">~/.config/fiona/camcoms/host.private.json
-~/.config/fiona/camcoms/host.public.json
-~/.config/fiona/camcoms/esp32.private.json
-~/.config/fiona/camcoms/esp32.public.json
-~/.config/fiona/camcoms/trusted/
-~/.config/fiona/camcoms/audit.log
-~/.config/fiona/phiconnect/
+<pre><code class="language-text">~/.config/fiona/identity.json          # Host private identity
+~/.config/fiona/identity.pub           # Host public key bundle
+~/.config/fiona/camcoms/               # Legacy CamComs key paths
+~/.config/fiona/camcoms/trusted/       # Trusted sender directory
+~/.config/fiona/camcoms/audit.log      # Receiver audit events
+~/.config/fiona/phiconnect/            # PhiConnect identity and chat logs
 </code></pre>
 <h2 id="development-rules">Development Rules</h2>
 <ul>
 <li>Do not accept remote actions from untrusted senders.</li>
 <li>Keep receiver execution in dry-run mode until testing is complete.</li>
-<li>Treat private key JSON files as secrets.</li>
+<li>Treat private key JSON files as secrets (permissions enforced to 0o600).</li>
 <li>Prefer explicit trusted public key exchange over automatic trust.</li>
 <li>Use audit logs to diagnose rejected messages before loosening validation.</li>
+<li>Never add a new shell execution point without wrapping it in <code>safe_os_system</code> or <code>safe_popen_shell</code>.</li>
+<li>Key rotation must use atomic writes (temp file + rename).</li>
 </ul>
 <h2 id="remaining-security-work">Remaining Security Work</h2>
 <ul>
-<li>file permission checks for key material</li>
 <li>replay cache cleanup policy</li>
-<li>key rotation</li>
-<li>secure pairing UX</li>
-<li>public key fingerprint display and approval</li>
-<li>per-sender permissions</li>
+<li>encrypted replies from host back to trusted devices</li>
 <li>threat-oriented validation tests</li>
 <li>safer passphrase handling outside shell history</li>
+<li>ESP32 firmware crypto hardware verification</li>
 </ul></div>
             </div>
         </div>

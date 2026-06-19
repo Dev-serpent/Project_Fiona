@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -209,6 +217,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#esp32-pairing-workflow" class="nav-link">ESP32 Pairing Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#host-service-workflow" class="nav-link">Host Service Workflow</a>
               <ul class="nav flex-column">
               </ul>
@@ -222,6 +234,14 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#seeondesk-awareness-workflow" class="nav-link">SeeOnDesk Awareness Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#macro-engine-workflow" class="nav-link">Macro Engine Workflow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#voice-workflow" class="nav-link">Voice Workflow</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -272,6 +292,7 @@
 <li>missing app command fails at shell launch time</li>
 <li>unavailable desktop automation backend prevents pointer/keyboard execution</li>
 <li>active-window mismatch prevents app-specific shortcuts from firing</li>
+<li>destructive shell commands are blocked by <code>FionaCore.shell_safety</code></li>
 </ul>
 <h2 id="installed-app-import-workflow">Installed App Import Workflow</h2>
 <p>Goal: make system applications available as QuikTieper launch entries.</p>
@@ -299,10 +320,10 @@
   -&gt; decode_envelope
   -&gt; decrypt_text
   -&gt; sender signature verification
-  -&gt; trust store lookup
+  -&gt; trust store lookup (with expiry check)
   -&gt; ReplayGuard
   -&gt; strict instruction validation
-  -&gt; RemoteActionRunner
+  -&gt; RemoteActionRunner (with ACL check)
   -&gt; audit log
 </code></pre>
 <p>Trust and identity files:</p>
@@ -314,11 +335,33 @@
 <p>Important safety behavior:</p>
 <ul>
 <li>untrusted senders are rejected</li>
+<li>expired trust entries are rejected</li>
 <li>tampered ciphertext is rejected</li>
 <li>wrong-recipient envelopes are rejected</li>
 <li>stale or duplicate messages are rejected</li>
 <li>receiver defaults to dry-run unless execution is explicitly enabled</li>
+<li>ACL checks verify sender scope before executing actions</li>
+<li>destructive shell commands are blocked</li>
 </ul>
+<h2 id="esp32-pairing-workflow">ESP32 Pairing Workflow</h2>
+<p>Goal: securely pair a new ESP32 device with the host.</p>
+<pre><code class="language-text">ESP32 broadcasts pairing request
+  -&gt; HTTP POST to host pairing server (port 8090)
+  -&gt; contains device_id + public key bundle
+  -&gt; PairingManager.submit_request()
+  -&gt; fingerprint computed from public key
+  -&gt; pending request appears in GUI Pairing tab
+
+User approves:
+  -&gt; PairingManager.approve_request()
+  -&gt; device public key stored in ~/.config/fiona/trusted/
+  -&gt; optional expiry set (default 30 days)
+
+User denies:
+  -&gt; PairingManager.deny_request()
+  -&gt; request removed from pending list
+</code></pre>
+<p>Pending requests expire automatically after 120 seconds if not acted upon.</p>
 <h2 id="host-service-workflow">Host Service Workflow</h2>
 <p>Goal: run Fiona's receiver and optional listener as a longer-lived host process.</p>
 <pre><code class="language-text">fiona host init
@@ -338,6 +381,7 @@
   -&gt; journalctl --user -u fiona-host.service
 </code></pre>
 <p>The generated service is a user service, not a system service. It should run as the desktop user so it can access the correct config, session, and GUI/automation permissions.</p>
+<p>The Host tab in the GUI provides live systemd service state monitoring with color-coded status and Start/Stop/Restart/Journal controls.</p>
 <h2 id="phiconnect-chat-workflow">PhiConnect Chat Workflow</h2>
 <p>Goal: computer-to-computer encrypted chat.</p>
 <pre><code class="language-text">sender message body
@@ -346,7 +390,7 @@
   -&gt; CamComsHttpClient POST
   -&gt; peer receiver
   -&gt; decrypt_text
-  -&gt; trusted sender verification
+  -&gt; trusted sender verification (with expiry check)
   -&gt; replay check
   -&gt; chat.log event
   -&gt; recent chat display
@@ -381,14 +425,71 @@
   -&gt; save/export
 </code></pre>
 <h2 id="seeondesk-awareness-workflow">SeeOnDesk Awareness Workflow</h2>
-<p>Goal: identify the current desktop context.</p>
+<p>Goal: identify the current desktop context and discover available actions.</p>
 <pre><code class="language-text">fiona seeondesk active/status
   -&gt; kdotool getactivewindow on KDE/Wayland
   -&gt; xdotool/xprop fallback on X11-compatible sessions
   -&gt; process-name lookup
   -&gt; serializable desktop snapshot
+
+fiona --discover-actions
+  -&gt; ProcessTracker.list_processes()
+  -&gt; WorkspaceWatcher.list_workspaces()
+  -&gt; discover_actions()
+  -&gt; categorized action list
+</code></pre>
+<p><strong>Process Tracking</strong> (added in roadmap):</p>
+<pre><code class="language-text">ProcessTracker
+  -&gt; iterates /proc/*/comm
+  -&gt; finds processes by name substring
+  -&gt; registers/triggers watcher callbacks
+  -&gt; no psutil dependency required
+</code></pre>
+<p><strong>Workspace Awareness</strong> (added in roadmap):</p>
+<pre><code class="language-text">WorkspaceWatcher
+  -&gt; polls workspace state via kdotool (or wmctrl fallback)
+  -&gt; detects active workspace changes
+  -&gt; fires change callbacks
+  -&gt; tracks current workspace ID
 </code></pre>
 <p>The current implementation is metadata-based. Screen recording and ML classification are future work.</p>
+<h2 id="macro-engine-workflow">Macro Engine Workflow</h2>
+<p>Goal: execute multi-step automation with waits, conditions, and branching.</p>
+<pre><code class="language-text">macro steps
+  -&gt; variable interpolation (${var} -&gt; value)
+  -&gt; wait execution (sleep, wait_for_window, wait_for_process)
+  -&gt; condition evaluation (window_active, process_running, action_result)
+  -&gt; if condition met: execute action via ActionRouter
+  -&gt; if condition not met and fallback set: execute fallback
+  -&gt; if condition not met and no fallback: skip step
+  -&gt; if action is &quot;GOTO:&lt;name&gt;&quot;: branch to other macro (max depth 10)
+  -&gt; track results in context for subsequent conditions
+</code></pre>
+<p>CLI:</p>
+<pre><code class="language-bash">fiona --run-macro my_macro   # Execute macro
+fiona --list-macros          # List all macros
+</code></pre>
+<h2 id="voice-workflow">Voice Workflow</h2>
+<p>Goal: provide voice-based control with speech feedback.</p>
+<pre><code class="language-text">Wake word detected (or push-to-talk pressed)
+  -&gt; WakeWordEngine triggers callbacks
+  -&gt; optional audio/notification feedback
+  -&gt; voice command processing
+  -&gt; action execution
+</code></pre>
+<p>Wake word detection backends (auto-detected):</p>
+<pre><code class="language-text">pvporcupine (best) -&gt; snowboy -&gt; mycroft_precise -&gt; manual trigger fallback
+</code></pre>
+<p>Feedback channels:</p>
+<pre><code class="language-text">audio (aplay/paplay) + desktop notification (notify-send) + status bar text
+</code></pre>
+<p>Graceful degradation:</p>
+<ul>
+<li>if no wake word library → manual trigger only (push-to-talk)</li>
+<li>if no pynput → no push-to-talk</li>
+<li>if no sound files → silent feedback</li>
+<li>if no notify-send → visual feedback only</li>
+</ul>
 <h2 id="eyecontrol-tracker-workflow">EyeControl Tracker Workflow</h2>
 <p>Goal: move the mouse pointer from eye/iris position when a camera feed is available.</p>
 <pre><code class="language-text">fiona eyecontrol run
@@ -431,7 +532,7 @@ fiona fat run
   -&gt; command registry and app list
 
 fiona agent status
-  -&gt; LM Studio health request
+  -&gt; Ollama health request
 
 fiona agent ask
   -&gt; OpenAI-compatible chat-completions request
@@ -446,8 +547,11 @@ fiona agent ask
 <li>Crypto failure: use <code>camcoms smoke-test</code>, then verify key paths and trust.</li>
 <li>Transport failure: verify receiver host/port, firewall, and connection-refused errors.</li>
 <li>Execution failure: keep receiver dry-run first, then inspect allowed actions.</li>
+<li>Shell blocked: check <code>FionaCore.shell_safety</code> — command may match a destructive pattern.</li>
 <li>GUI failure: verify Tkinter/display availability and reproduce through CLI where possible.</li>
 <li>Service failure: inspect <code>fiona host status</code> and <code>fiona host logs</code>.</li>
+<li>Pairing failure: ensure pairing server is running on port 8090 and ESP32 can reach it.</li>
+<li>Macro failure: run <code>fiona --list-macros</code> to verify macro name and step count.</li>
 </ol></div>
             </div>
         </div>

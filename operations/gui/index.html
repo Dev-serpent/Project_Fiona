@@ -88,6 +88,10 @@
 </li>
                                     
 <li>
+    <a href="../../modules/fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
     <a href="../../modules/phiconnect/" class="dropdown-item">PhiConnect</a>
 </li>
                                     
@@ -101,6 +105,10 @@
                                     
 <li>
     <a href="../../modules/seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/voice/" class="dropdown-item">Voice</a>
 </li>
                                     
 <li>
@@ -199,10 +207,18 @@
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#shared-fiona-gui" class="nav-link">Shared Fiona GUI</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#system-tray" class="nav-link">System Tray</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#camcoms-tab" class="nav-link">CamComs Tab</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#key-management-new" class="nav-link">Key Management (new)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#vsee-tab" class="nav-link">Vsee Tab</a>
@@ -222,6 +238,14 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#host-tab" class="nav-link">Host Tab</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#pairing-tab-new" class="nav-link">Pairing Tab (new)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#voice-tab-new" class="nav-link">Voice Tab (new)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -254,15 +278,27 @@
 <pre><code class="language-bash">python3 -m fiona.cli edit
 </code></pre>
 <p>The shared GUI is implemented by <code>QuikTieper.gui.ConfigEditorApp</code>. It is a Tkinter <code>ttk.Notebook</code> application with this tab order:</p>
-<pre><code class="language-text">CamComs -&gt; Vsee -&gt; Bindings -&gt; Raw Json -&gt; Debug -&gt; Host
+<pre><code class="language-text">CamComs -&gt; Vsee -&gt; Bindings -&gt; Raw Json -&gt; Debug -&gt; Host -&gt; Pairing -&gt; Voice
 </code></pre>
 <p>The footer contains:</p>
 <ul>
-<li>listener status</li>
+<li>listener status indicator</li>
 <li>current config/status message</li>
 <li><code>Start Listener</code> / stop listener control</li>
 <li><code>Save All</code></li>
+<li><code>Minimize to tray</code> checkbox (when checked, closing hides to tray instead of quitting)</li>
 </ul>
+<h3 id="system-tray">System Tray</h3>
+<p>When <code>Minimize to tray</code> is checked, closing the window hides it to the system tray instead of destroying it. The system tray icon shows a color-coded status indicator:</p>
+<ul>
+<li><strong>Green</strong>: service running and listening</li>
+<li><strong>Yellow</strong>: service running but not listening</li>
+<li><strong>Red</strong>: service not running</li>
+</ul>
+<p>Right-click the tray icon to show or quit Fiona. The tray icon can also be started standalone:</p>
+<pre><code class="language-bash">fiona --tray-only
+</code></pre>
+<p>The tray state is refreshed every 5 seconds, showing service status, listening state, paired device count, and active macro name.</p>
 <h2 id="camcoms-tab">CamComs Tab</h2>
 <p>Purpose: operate the encryption layer without leaving the GUI.</p>
 <p>Operational areas:</p>
@@ -273,6 +309,14 @@
 <li>envelope encryption/decryption</li>
 <li>encoded send helpers</li>
 <li>smoke test output</li>
+</ul>
+<h3 id="key-management-new">Key Management (new)</h3>
+<p>The CamComs tab now includes a <strong>Key Management</strong> section:</p>
+<ul>
+<li><strong>Current Fingerprint</strong>: read-only display of the host identity's public key fingerprint</li>
+<li><strong>Rotate Keys</strong> button: generates a new identity with confirmation dialog</li>
+<li><strong>Prune Expired Trust</strong> button: removes expired trusted sender entries</li>
+<li><strong>Trust Store Location</strong>: read-only path display (<code>~/.config/fiona/trusted/</code>)</li>
 </ul>
 <p>Data flow:</p>
 <pre><code class="language-text">GUI fields -&gt; CamComs identity/public bundle loaders -&gt; encrypt_message/decrypt_text -&gt; output text widget
@@ -342,14 +386,60 @@ CamComs/
 <li>initialize config</li>
 <li>show host status</li>
 <li>inspect key/trust paths</li>
-<li>list trusted sender keys</li>
-<li>remove trusted sender keys</li>
+<li>list/remove trusted sender keys</li>
 <li>inspect audit log</li>
 <li>expose host receiver configuration</li>
+<li><strong>live systemd service state</strong> (color-coded status dot, 3s polling)</li>
+<li><strong>Start/Stop/Restart/Journal</strong> buttons (invoke <code>systemctl --user</code>)</li>
+<li><strong>scrollable journalctl output</strong> display</li>
+<li><strong>SeeOnDesk info panel</strong>: current workspace name, top processes, refresh button</li>
 </ul>
 <p>Operational model:</p>
 <pre><code class="language-text">Host tab action -&gt; HostService/load config/AuditLog/trust helpers -&gt; rendered status/log text
 </code></pre>
+<h2 id="pairing-tab-new">Pairing Tab (new)</h2>
+<p>Purpose: pair ESP32 and other devices with Fiona using the pairing protocol.</p>
+<p><strong>Device Pairing</strong> section:</p>
+<ul>
+<li><strong>Listen for Pairing Requests</strong> toggle: starts/stops the pairing HTTP server on port 8090</li>
+<li>Status label showing "Listening" or "Stopped"</li>
+</ul>
+<p><strong>Pending Requests</strong> section:</p>
+<ul>
+<li>Treeview: Device ID, Fingerprint, Received At, Expires In</li>
+<li><strong>Approve</strong> / <strong>Deny</strong> buttons</li>
+<li>Expires in (days) spinbox (default 30, 0 = no expiry)</li>
+<li>Polls every 2 seconds</li>
+</ul>
+<p><strong>Trusted Devices</strong> section:</p>
+<ul>
+<li>Treeview: Device ID, Fingerprint, Added At, Expires, Status</li>
+<li>Status shows "OK (expires in N days)", "EXPIRED" (red), or "Never"</li>
+<li><strong>Remove</strong> button with confirmation dialog</li>
+<li><strong>Refresh</strong> button</li>
+<li>Auto-poll every 10 seconds</li>
+</ul>
+<h2 id="voice-tab-new">Voice Tab (new)</h2>
+<p>Purpose: control voice features from the GUI.</p>
+<p><strong>Voice Control</strong> section:</p>
+<ul>
+<li>Wake word engine status (Available / Unavailable)</li>
+<li>Start/Stop listening toggle</li>
+<li>Wake word text entry (default "fiona")</li>
+<li>Manual trigger button ("Hey Fiona")</li>
+</ul>
+<p><strong>Feedback</strong> section:</p>
+<ul>
+<li>Test sound buttons (Ack, Error, Success)</li>
+<li>Test Notification button</li>
+<li>Urgency selector (low / normal / critical)</li>
+</ul>
+<p><strong>Push to Talk</strong> section:</p>
+<ul>
+<li>Status indicator (Available / Unavailable)</li>
+<li>Hotkey display (Ctrl+Space)</li>
+<li>Start/Stop listener toggle</li>
+</ul>
 <h2 id="standalone-vsee">Standalone Vsee</h2>
 <p>Open:</p>
 <pre><code class="language-bash">fiona vsee
@@ -373,6 +463,7 @@ CamComs/
 <p>Local test path:</p>
 <pre><code class="language-text">Use Local Public Key -&gt; Start Receiver -&gt; send to 127.0.0.1:5000
 </code></pre>
+<p>The PhiConnect GUI now includes trust expiry checking and an optional Agent bridge checkbox for forwarding chat messages to the local Ollama agent.</p>
 <h2 id="standalone-dataclient">Standalone DataClient</h2>
 <p>Open:</p>
 <pre><code class="language-bash">fiona dataclient
