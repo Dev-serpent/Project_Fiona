@@ -1,3 +1,10 @@
+"""Central action dispatch with ACL, verification, and trace logging.
+
+Supports PyInstaller frozen executables via ``IS_FROZEN`` detection.
+When frozen, ``sys.executable`` points at ``fiona.exe`` so sub-actions
+are forwarded directly without the ``-m fiona.cli`` prefix.
+"""
+
 from __future__ import annotations
 
 import subprocess
@@ -8,6 +15,9 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+# PyInstaller frozen-executable detection
+IS_FROZEN: bool = getattr(sys, "frozen", False)
 
 from CmdTrace import DEFAULT_TRACE_PATH, append_trace
 from .acl import resolve_sender_profile, resolve_sender_scope
@@ -203,8 +213,14 @@ class ActionRouter:
                 return result
         # --------------------------------------------------------------------
 
+        # Build the subprocess command respecting PyInstaller freeze
+        if IS_FROZEN:
+            cmd = [sys.executable] + list(spec.command)
+        else:
+            cmd = [sys.executable, "-m", "fiona.cli"] + list(spec.command)
+
         completed = subprocess.run(
-            [sys.executable, "-m", "fiona.cli", *spec.command],
+            cmd,
             check=False,
             capture_output=True,
             text=True,

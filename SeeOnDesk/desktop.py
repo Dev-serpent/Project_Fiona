@@ -76,36 +76,55 @@ def desktop_snapshot(include_screenshot: bool = False, screenshot_dir: str | Pat
 
 
 def active_window_info() -> ActiveWindowInfo:
+    # ---- Windows (Win32 API via ctypes) ----
+    win32_info = _active_window_from_win32()
+    if win32_info.ok:
+        return win32_info
+
+    # ---- Linux: kdotool (KDE/Wayland) ----
     kdotool_info = _active_window_from_kdotool()
     if kdotool_info.ok:
         return kdotool_info
+
+    # ---- Linux: xdotool / xprop (X11) ----
     x11_info = _active_window_from_x11()
     if x11_info.ok:
         return x11_info
+
+    # Collect all backend errors for diagnostics
+    errors = [e for e in (win32_info.error, kdotool_info.error, x11_info.error) if e]
+    combined_error = "; ".join(errors) if errors else "No supported desktop awareness backend found."
+
     return ActiveWindowInfo(
         ok=False,
         backend="unavailable",
-        error=kdotool_info.error or x11_info.error or "No supported desktop awareness backend found.",
-        raw={"kdotool": kdotool_info.to_dict(), "x11": x11_info.to_dict()},
+        error=combined_error,
+        raw={
+            "win32": win32_info.to_dict(),
+            "kdotool": kdotool_info.to_dict(),
+            "x11": x11_info.to_dict(),
+        },
     )
 
 
 def all_windows_info() -> list[ActiveWindowInfo]:
     """Gather information about all visible windows."""
-    # Try kdotool first (Wayland/KDE)
+    # ---- Windows: no reliable non-admin "all windows" without EnumWindows ----
+    if os.name == "nt":
+        # Return just the active window as a best-effort snapshot.
+        active = active_window_info()
+        return [active] if active.ok else []
+
+    # ---- Linux: kdotool (Wayland/KDE) ----
     ok, output, _error = _run_command(["kdotool", "search", ""])
     if ok and output.strip():
         window_ids = output.strip().splitlines()
         windows = []
         for wid in window_ids:
-            # We could fetch details for each, but that might be slow if many windows
-            # For now, let's just get IDs and names for a few, or all if it's fast enough.
-            # Best to implement a bulk fetcher if kdotool supports it.
-            # For now, let's just use the active window logic per ID.
             windows.append(_info_for_window_id_kdotool(wid))
         return [w for w in windows if w.ok]
 
-    # Fallback to xdotool
+    # ---- Linux: xdotool (X11) ----
     ok, output, _error = _run_command(["xdotool", "search", "--name", ".*"])
     if ok and output.strip():
         window_ids = output.strip().splitlines()
@@ -253,9 +272,82 @@ def _parse_xprop_int(output: str, key: str) -> int | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Windows (Win32 API) helpers
+# ---------------------------------------------------------------------------
+
+def _active_window_from_win32() -> ActiveWindowInfo:
+    """Retrieve the active window on Windows via ``ctypes`` / ``user32``."""
+    if os.name != "nt":
+        return ActiveWindowInfo(ok=False, backend="win32", error="Not Windows")
+
+    import ctypes  # noqa: PLC0415
+    from ctypes import wintypes  # noqa: PLC0415
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd:
+        return ActiveWindowInfo(ok=False, backend="win32", error="No active window")
+
+    # PID
+    pid = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+
+    # Title
+    length = user32.GetWindowTextLengthW(hwnd)
+    title_buf = ctypes.create_unicode_buffer(length + 1)
+    user32.GetWindowTextW(hwnd, title_buf, length + 1)
+    title = title_buf.value or ""
+
+    # Window class name
+    class_buf = ctypes.create_unicode_buffer(256)
+    user32.GetClassNameW(hwnd, class_buf, 256)
+    app_class = class_buf.value or ""
+
+    # Process name
+    process_name = _process_name_win32(pid.value)
+
+    return ActiveWindowInfo(
+        ok=True,
+        backend="win32",
+        window_id=str(hwnd),
+        app_class=app_class,
+        title=title,
+        pid=pid.value,
+        process_name=process_name,
+    )
+
+
+def _process_name_win32(pid: int) -> str:
+    """Resolve an executable name from a Windows PID."""
+    import ctypes  # noqa: PLC0415
+    from ctypes import wintypes  # noqa: PLC0415
+
+    kernel32 = ctypes.windll.kernel32
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    h_process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not h_process:
+        return "unknown"
+    try:
+        name_buf = ctypes.create_unicode_buffer(1024)
+        size = wintypes.DWORD(1024)
+        if kernel32.QueryFullProcessImageNameW(h_process, 0, name_buf, ctypes.byref(size)):
+            import os  # noqa: PLC0415
+            return os.path.basename(name_buf.value)
+        return "unknown"
+    finally:
+        kernel32.CloseHandle(h_process)
+
+
 def _process_name(pid: int | None) -> str:
     if pid is None:
         return ""
+    # Windows
+    if os.name == "nt":
+        return _process_name_win32(pid)
+    # Linux /proc
     proc_comm = Path("/proc") / str(pid) / "comm"
     try:
         return proc_comm.read_text(encoding="utf-8").strip()

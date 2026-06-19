@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# verify-backup — check if a Fiona backup is complete and intact
+# Usage: ./scripts/verify-backup <path-to-backup>
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <path-to-backup>"
+    echo "Compares the backup against the project at: $(dirname "$0")/.."
+    exit 1
+fi
+
+ORIGINAL="$(cd "$(dirname "$0")/.." && pwd)"
+BACKUP="$(cd "$1" 2>/dev/null && pwd)" || {
+    echo -e "${RED}ERROR: Backup directory '$1' does not exist${NC}"
+    exit 1
+}
+
+echo "Original: $ORIGINAL"
+echo "Backup:   $BACKUP"
+echo ""
+
+# ---- 1. File count ----
+orig_count=$(find "$ORIGINAL" -type f \
+    -not -path '*/.backups/*' \
+    -not -path '*/.git/*' \
+    -not -path '*/node_modules/*' \
+    -not -path '*/__pycache__/*' \
+    -not -path '*/.pytest_cache/*' \
+    -not -path '*/fiona.egg-info/*' \
+    -not -path '*/build/*' 2>/dev/null | wc -l)
+backup_count=$(find "$BACKUP" -type f 2>/dev/null | wc -l)
+
+echo "=== 1. FILE COUNT ==="
+if [ "$orig_count" -eq "$backup_count" ]; then
+    echo -e "  ${GREEN}✅${NC} $orig_count files (matches original)"
+else
+    echo -e "  ${YELLOW}ℹ${NC} Original (excluding generated dirs): $orig_count files"
+    echo -e "  ${YELLOW}ℹ${NC} Backup: $backup_count files"
+    # Check if the difference is only from generated/cache dirs
+    if [ "$((orig_count - backup_count))" -eq 1 ]; then
+        echo -e "  ${GREEN}✅${NC} Difference of 1 is from fiona.egg-info/ (generated metadata, excluded)"
+    elif [ "$((orig_count - backup_count))" -gt 1 ]; then
+        echo -e "  ${YELLOW}ℹ${NC} Difference of $((orig_count - backup_count)) may be from excluded dirs (.git, node_modules, .backups, etc.)"
+    fi
+fi
+echo ""
+
+# ---- 2. Top-level entries (excluding known generated dirs) ----
+echo "=== 2. TOP-LEVEL ENTRIES ==="
+EXCLUDE_PATTERNS=".backups|.git|node_modules|fiona.egg-info|__pycache__|.pytest_cache|build"
+for item in "$ORIGINAL"/*; do
+    bname=$(basename "$item")
+    echo "$bname"
+done | grep -vE "^($EXCLUDE_PATTERNS)$" | sort > /tmp/vb_orig_top.txt
+
+for item in "$BACKUP"/*; do
+    bname=$(basename "$item")
+    echo "$bname"
+done | sort > /tmp/vb_backup_top.txt
+
+if diff /tmp/vb_orig_top.txt /tmp/vb_backup_top.txt > /dev/null 2>&1; then
+    echo -e "  ${GREEN}✅${NC} All source entries present"
+else
+    echo -e "  ${RED}❌${NC} Missing from backup:"
+    diff /tmp/vb_orig_top.txt /tmp/vb_backup_top.txt | grep '^<' | sed 's/^<   /    - /'
+fi
+echo ""
+
+# ---- 3. Content spot-checks ----
+echo "=== 3. CONTENT SPOT-CHECKS ==="
+all_match=true
+for file in devlog.md DEVELOPERNOTE.md README.md pyproject.toml AGENTS.md .gitignore dependencies.md; do
+    if [ -f "$BACKUP/$file" ]; then
+        if diff "$ORIGINAL/$file" "$BACKUP/$file" > /dev/null 2>&1; then
+            echo -e "  ${GREEN}✅${NC} $file"
+        else
+            echo -e "  ${RED}❌${NC} $file (CONTENT MISMATCH)"
+            all_match=false
+        fi
+    else
+        echo -e "  ${RED}❌${NC} $file (MISSING FROM BACKUP)"
+        all_match=false
+    fi
+done
+echo ""
+
+# ---- 4. Critical subsystems ----
+echo "=== 4. CRITICAL SUBSYSTEMS ==="
+missing_subsystems=0
+for dir in Agent CamComs CmdTrace DataClient EyeControl FionaCore PhiConnect QuikTieper RecallVault SeeOnDesk TerminalAssist Voice Vsee fiona fionaDocsPage scripts tests; do
+    if [ -d "$BACKUP/$dir" ]; then
+        echo -e "  ${GREEN}✅${NC} $dir/"
+    else
+        echo -e "  ${RED}❌${NC} $dir/ (MISSING)"
+        missing_subsystems=$((missing_subsystems + 1))
+    fi
+done
+echo ""
+
+# ---- 5. Key files ----
+echo "=== 5. KEY FILES ==="
+for file in bsh logo.svg package.json package-lock.json; do
+    if [ -f "$BACKUP/$file" ]; then
+        echo -e "  ${GREEN}✅${NC} $file"
+    else
+        echo -e "  ${RED}❌${NC} $file (MISSING)"
+    fi
+done
+echo ""
+
+# ---- Summary ----
+echo "=== SUMMARY ==="
+errors=0
+warnings=0
+
+# File count: only count as error if the gap is larger than expected exclusions
+expected_gap=1  # fiona.egg-info
+if [ "$orig_count" -ne "$backup_count" ]; then
+    if [ "$((orig_count - backup_count))" -eq "$expected_gap" ]; then
+        warnings=$((warnings + 1))
+    else
+        errors=$((errors + 1))
+    fi
+fi
+
+# Content mismatches
+$all_match || errors=$((errors + 1))
+
+# Missing subsystems
+[ "$missing_subsystems" -gt 0 ] && errors=$((errors + missing_subsystems))
+
+if [ "$errors" -eq 0 ] && [ "$warnings" -eq 0 ]; then
+    echo -e "  ${GREEN}✅ BACKUP IS VALID AND COMPLETE${NC}"
+    echo "  Size: $(du -sh "$BACKUP" | cut -f1)"
+    exit 0
+elif [ "$errors" -eq 0 ] && [ "$warnings" -gt 0 ]; then
+    echo -e "  ${GREEN}✅${NC} BACKUP IS VALID (${YELLOW}$warnings minor note(s)${NC})"
+    echo "  Size: $(du -sh "$BACKUP" | cut -f1)"
+    exit 0
+else
+    echo -e "  ${RED}❌ BACKUP HAS $errors ERROR(S) ($warnings notes)${NC}"
+    exit 1
+fi

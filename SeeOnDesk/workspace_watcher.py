@@ -1,8 +1,14 @@
-"""Workspace/virtual desktop awareness for Linux (X11 via kdotool or wmctrl)."""
+"""Workspace/virtual desktop awareness.
+
+Linux: uses ``kdotool`` or ``wmctrl``.
+Windows: single-desktop mock (Windows virtual-desktop tracking requires
+complex COM/Shell interfaces, so Fiona reports a single desktop).
+"""
 
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -27,21 +33,32 @@ class WorkspaceChange:
 
 class WorkspaceWatcher:
     """Poll-based workspace tracker.
-    
-    Uses kdotool if available, falls back to wmctrl.
+
+    Linux: uses ``kdotool`` if available, falls back to ``wmctrl``.
+    Windows: always reports a single desktop (``win32-single``).
     """
-    
+
     def __init__(self, poll_interval: float = 1.0):
         self._poll_interval = poll_interval
         self._last_id: str | None = None
         self._on_change: list[Callable[[WorkspaceChange], None]] = []
         self._running = False
-    
+
     def list_workspaces(self) -> list[WorkspaceInfo]:
         """List all workspaces/desktops."""
+        # ---- Windows: single-desktop mock ----
+        if os.name == "nt":
+            return [
+                WorkspaceInfo(
+                    id="win32-0",
+                    name="Default Desktop",
+                    is_active=True,
+                    window_count=0,
+                )
+            ]
+
+        # ---- Linux: kdotool ----
         workspaces = []
-        
-        # Try kdotool first
         try:
             result = subprocess.run(
                 ["kdotool", "getdesktops"],
@@ -60,8 +77,8 @@ class WorkspaceWatcher:
                     ))
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
-        
-        # Fallback to wmctrl
+
+        # ---- Linux: wmctrl fallback ----
         if not workspaces:
             try:
                 result = subprocess.run(
@@ -72,7 +89,7 @@ class WorkspaceWatcher:
                     for line in result.stdout.strip().split("\n"):
                         if not line.strip():
                             continue
-                        parts = line.split()  # e.g. "0  * DG: 1920x1080  VP: 0,0  WA: ...  workspace_name"
+                        parts = line.split()
                         if len(parts) >= 2:
                             wid = parts[0]
                             is_active = "*" in parts[1]
@@ -82,7 +99,7 @@ class WorkspaceWatcher:
                             ))
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 pass
-        
+
         return workspaces
     
     def get_active_workspace(self) -> WorkspaceInfo | None:

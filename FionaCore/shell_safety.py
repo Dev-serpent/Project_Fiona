@@ -149,7 +149,10 @@ def safe_subprocess_run(
 
 
 def safe_popen_shell(command: str) -> subprocess.Popen[str]:
-    """Safe wrapper around subprocess.Popen with bash -lc for shell commands.
+    """Safe wrapper around subprocess.Popen with OS-appropriate shell.
+
+    On Linux: uses ``bash -lc``.
+    On Windows: uses ``cmd.exe /c``.
 
     Args:
         command: Shell command string to execute.
@@ -161,6 +164,8 @@ def safe_popen_shell(command: str) -> subprocess.Popen[str]:
         ShellCommandError: If the command matches a destructive pattern.
     """
     check_command_safety(command)
+    if os.name == "nt":
+        return subprocess.Popen(["cmd.exe", "/c", command])
     return subprocess.Popen(["bash", "-lc", command])
 
 

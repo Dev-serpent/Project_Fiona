@@ -16,6 +16,13 @@ try:
 except ImportError:
     WaylandMouse = None
 
+# PyAutoGUI — optional dependency for Windows pointer control
+try:
+    import pyautogui as _pyautogui
+    PYAUTOGUI_AVAILABLE = True
+except ImportError:
+    PYAUTOGUI_AVAILABLE = False
+
 
 _LAST_POINTER_TARGET: tuple[int, int] | None = None
 _YDOTOOLD_START_ATTEMPTED = False
@@ -54,6 +61,15 @@ if WaylandMouse is not None:
 
 
 def get_mouse_location() -> tuple[int, int] | None:
+    # Windows fallback via pyautogui
+    if os.name == "nt" and PYAUTOGUI_AVAILABLE:
+        try:
+            x, y = _pyautogui.position()
+            return int(x), int(y)
+        except Exception:
+            return None
+
+    # Linux via xdotool
     try:
         result = subprocess.run(
             ["xdotool", "getmouselocation"],
@@ -126,6 +142,23 @@ def run_pointer_backends(
     x11_command: list[str],
     wayland_command: list[str],
 ) -> bool:
+    # ---- Windows (pyautogui) ----
+    if os.name == "nt":
+        if PYAUTOGUI_AVAILABLE:
+            try:
+                if x is not None and y is not None:
+                    _pyautogui.moveTo(x, y)
+                if button == "left":
+                    _pyautogui.click(button="left")
+                elif button == "right":
+                    _pyautogui.click(button="right")
+                write_debug_log(f"pyautogui pointer: x={x} y={y} button={button}")
+                return True
+            except Exception as exc:
+                write_debug_log(f"pyautogui failed: {exc}")
+        return False
+
+    # ---- Linux ----
     commands_to_try: list[list[str]] = []
     prefer_wayland = bool(os.environ.get("WAYLAND_DISPLAY"))
     if shutil.which(wayland_command[0]):

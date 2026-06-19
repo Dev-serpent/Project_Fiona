@@ -1,5 +1,13 @@
+"""
+Host service lifecycle management.
+
+Linux: systemd user units via ``systemctl`` / ``journalctl``.
+Windows: Startup-folder ``.bat`` shortcut (no systemd equivalent).
+"""
+
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +18,10 @@ from CamComs.service import DEFAULT_FIONA_CONFIG_PATH
 DEFAULT_SYSTEMD_USER_DIR = Path.home() / ".config" / "systemd" / "user"
 DEFAULT_SERVICE_NAME = "fiona-host.service"
 
+
+# ---------------------------------------------------------------------------
+# Linux — systemd
+# ---------------------------------------------------------------------------
 
 def render_host_service_unit(
     *,
@@ -80,3 +92,51 @@ def read_host_service_logs(
     if follow:
         args.append("-f")
     return subprocess.run(args, check=True, text=True, capture_output=not follow)
+
+
+# ---------------------------------------------------------------------------
+# Windows — Startup-folder shortcut
+# ---------------------------------------------------------------------------
+
+def manage_windows_startup(action: str) -> None:
+    """Enable or disable Fiona auto-start on Windows.
+
+    Args:
+        action: ``"enable"`` or ``"disable"``.
+
+    Raises:
+        RuntimeError: If ``APPDATA`` is not set (not on Windows).
+        ValueError: If *action* is not supported.
+    """
+    if action not in ("enable", "disable"):
+        raise ValueError(f"unsupported startup action: {action}")
+
+    appdata = os.environ.get("APPDATA")
+    if not appdata:
+        raise RuntimeError("APPDATA is not set — not running on Windows")
+
+    startup_dir = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+    bat_path = startup_dir / "fiona-host.bat"
+
+    if action == "disable":
+        if bat_path.exists():
+            bat_path.unlink()
+        return
+
+    # enable — write a silent batch wrapper
+    python_exe = sys.executable
+    config_path = Path.home() / ".config" / "fiona" / "config.json"
+
+    if getattr(sys, "frozen", False):
+        bat_content = (
+            f'@echo off\n'
+            f'start "" "{python_exe}" host run --config "{config_path}"\n'
+        )
+    else:
+        bat_content = (
+            f'@echo off\n'
+            f'start "" "{python_exe}" -m fiona.cli host run --config "{config_path}"\n'
+        )
+
+    startup_dir.mkdir(parents=True, exist_ok=True)
+    bat_path.write_text(bat_content, encoding="utf-8")

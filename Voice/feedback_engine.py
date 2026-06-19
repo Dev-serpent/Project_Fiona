@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import logging
-import subprocess
 import os
+import subprocess
 from pathlib import Path
 from typing import Literal
 
 logger = logging.getLogger(__name__)
+
+# Windows built-in audio (winsound) for .wav playback
+try:
+    import winsound as _winsound
+    WINSOUND_AVAILABLE = True
+except ImportError:
+    _winsound = None  # noqa
+    WINSOUND_AVAILABLE = False
 
 
 class FeedbackEngine:
@@ -24,34 +32,46 @@ class FeedbackEngine:
     
     def play_sound(self, sound_name: str = "ack") -> bool:
         """Play a sound file from the sounds directory.
-        
-        Supported formats: .wav, .mp3, .ogg
-        Uses aplay (preferred), paplay, or ffplay.
+
+        Supported formats: .wav, .mp3, .ogg on Linux; .wav on Windows.
+        Uses winsound (Windows), aplay (ALSA), or paplay (PulseAudio).
         Returns True if sound was played, False otherwise.
         """
         for ext in [".wav", ".mp3", ".ogg"]:
             sound_path = self.sound_dir / f"{sound_name}{ext}"
-            if sound_path.exists():
+            if not sound_path.exists():
+                continue
+
+            # ---- Windows: winsound (native, .wav only) ----
+            if os.name == "nt" and WINSOUND_AVAILABLE and ext == ".wav":
                 try:
-                    # Try aplay first (ALSA)
-                    subprocess.run(
-                        ["aplay", "-q", str(sound_path)],
-                        capture_output=True, timeout=5
+                    _winsound.PlaySound(
+                        str(sound_path),
+                        _winsound.SND_FILENAME | _winsound.SND_ASYNC,
                     )
                     return True
-                except (FileNotFoundError, subprocess.TimeoutExpired):
+                except Exception:
                     pass
-                
-                try:
-                    # Try paplay (PulseAudio)
-                    subprocess.run(
-                        ["paplay", str(sound_path)],
-                        capture_output=True, timeout=5
-                    )
-                    return True
-                except (FileNotFoundError, subprocess.TimeoutExpired):
-                    pass
-        
+
+            # ---- Linux: aplay / paplay ----
+            try:
+                subprocess.run(
+                    ["aplay", "-q", str(sound_path)],
+                    capture_output=True, timeout=5
+                )
+                return True
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            try:
+                subprocess.run(
+                    ["paplay", str(sound_path)],
+                    capture_output=True, timeout=5
+                )
+                return True
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
         logger.debug("Sound '%s' not found in %s", sound_name, self.sound_dir)
         return False
     

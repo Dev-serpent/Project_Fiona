@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import configparser
+import json
 import os
 import re
 import shlex
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -14,6 +16,14 @@ DESKTOP_APP_DIRS = (
     Path("/usr/local/share/applications"),
     Path("/usr/share/applications"),
 )
+
+# Windows Start Menu shortcut directories
+WINDOWS_START_MENU_DIRS = (
+    Path(os.environ.get("ProgramData", "C:\\ProgramData"))
+    / "Microsoft" / "Windows" / "Start Menu" / "Programs",
+    Path(os.environ.get("APPDATA", ""))
+    / "Microsoft" / "Windows" / "Start Menu" / "Programs",
+) if os.name == "nt" else ()
 
 DEFAULT_K_PREFIX_ALLOWLIST = frozenset(
     {
@@ -212,6 +222,11 @@ def discover_desktop_apps(
     k_prefix_allowlist: frozenset[str] = DEFAULT_K_PREFIX_ALLOWLIST,
     skip_low_value_apps: bool = True,
 ) -> list[DesktopApp]:
+    # ---- Windows: scan .lnk files via PowerShell ----
+    if os.name == "nt":
+        return _discover_windows_apps()
+
+    # ---- Linux: scan .desktop files ----
     apps: dict[str, DesktopApp] = {}
     for app_dir in app_dirs:
         if not app_dir.is_dir():
@@ -226,6 +241,62 @@ def discover_desktop_apps(
                 continue
             apps.setdefault(app.name.lower(), app)
     return sorted(apps.values(), key=lambda app: app.name.lower())
+
+
+def _discover_windows_apps() -> list[DesktopApp]:
+    """Scan Windows Start Menu ``.lnk`` files via PowerShell.
+
+    Returns a list of DesktopApp instances parsed from shortcut metadata.
+    """
+    ps_script = """
+    $paths = @(
+        "$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs",
+        "$env:AppData\\Microsoft\\Windows\\Start Menu\\Programs"
+    )
+    $shortcuts = Get-ChildItem -Path $paths -Recurse -Filter *.lnk -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            try {
+                $shell = New-Object -ComObject WScript.Shell
+                $shortcut = $shell.CreateShortcut($_.FullName)
+                $target = $shortcut.TargetPath
+                if ($target -and $target.EndsWith(".exe")) {
+                    [PSCustomObject]@{
+                        Name        = $_.BaseName
+                        Command     = $target
+                        WindowMatch = [System.IO.Path]::GetFileNameWithoutExtension($target)
+                    }
+                }
+            } catch {}
+        }
+    $shortcuts | ConvertTo-Json -Compress
+    """
+    try:
+        res = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            capture_output=True, text=True, check=True, timeout=30,
+        )
+        if not res.stdout.strip():
+            return []
+        raw_apps = json.loads(res.stdout)
+        if isinstance(raw_apps, dict):
+            raw_apps = [raw_apps]
+
+        apps: list[DesktopApp] = []
+        for app in raw_apps:
+            name = app.get("Name", "").strip()
+            command = app.get("Command", "").strip()
+            window_match = app.get("WindowMatch", "").strip().lower()
+            if not name or not command:
+                continue
+            apps.append(DesktopApp(
+                name=name,
+                command=f'"{command}"',
+                desktop_id=name.lower().replace(" ", "_"),
+                window_match=window_match or Path(command).stem.lower(),
+            ))
+        return sorted(apps, key=lambda a: a.name.lower())
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return []
 
 
 def desktop_app_from_file(path: Path) -> DesktopApp | None:
