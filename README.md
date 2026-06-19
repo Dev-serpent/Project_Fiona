@@ -2,6 +2,8 @@
 
 Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, voice control, macros, automations, optional eye-controlled pointer experiments, terminal assistance, a local Ollama bridge, and a simple 3D hologram viewer.
 
+For more detail, Go to https://dev-serpent.github.io/Project_Fiona/
+
 After installation, the command is:
 
 ```bash
