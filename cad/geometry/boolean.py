@@ -21,9 +21,9 @@ class BooleanOperation(CADObject):
     """Abstract base for boolean operations between solids."""
 
     def __init__(self, name: str, objects: list[CADObject], operation: str) -> None:
-        super().__init__(name)
         self._operation = operation
         self._input_objects = objects
+        super().__init__(name)
         for obj in objects:
             self.add_dependency(obj)
 

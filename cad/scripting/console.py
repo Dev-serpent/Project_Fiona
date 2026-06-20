@@ -22,7 +22,7 @@ class ScriptingConsole:
     def __init__(self, registry: CommandRegistry,
                  doc: Document | None = None) -> None:
         self.registry = registry
-        self._doc = doc or active_document()
+        self._doc = doc if doc is not None else active_document()
         self._locals: dict[str, Any] = self._build_environment()
         self._history: list[str] = []
         self._output: list[str] = []

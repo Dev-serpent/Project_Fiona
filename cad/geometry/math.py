@@ -385,6 +385,14 @@ class Plane:
         p._v = Vector3.unit_z()
         return p
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Plane):
+            return NotImplemented
+        return self.origin == other.origin and self.normal == other.normal
+
+    def __hash__(self) -> int:
+        return hash((self.origin, self.normal))
+
     def to_dict(self) -> dict[str, Any]:
         return {"origin": self.origin.to_dict(), "normal": self.normal.to_dict()}
 

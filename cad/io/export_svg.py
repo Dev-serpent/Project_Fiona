@@ -19,8 +19,8 @@ def export_svg(doc: Document, path: str | Path,
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'width="{width}" height="{height}" '
-        f'viewBox="{-width/2} {-height/2} {width} {height}">',
-        f'  <rect x="{-width/2}" y="{-height/2}" '
+        f'viewBox="{int(-width/2)} {int(-height/2)} {width} {height}">',
+        f'  <rect x="{int(-width/2)}" y="{int(-height/2)}" '
         f'width="{width}" height="{height}" fill="#05070a"/>',
     ]
 

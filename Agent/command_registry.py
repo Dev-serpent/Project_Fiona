@@ -119,8 +119,24 @@ DEFAULT_COMMANDS = (
 )
 
 
-def command_registry(config_path: Path = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
-    commands = [spec.to_dict() for spec in DEFAULT_COMMANDS if spec.name in DEFAULT_ALLOWED_ACTIONS]
+def command_registry(
+    config_path: Path = DEFAULT_CONFIG_PATH,
+    enforcer: Any | None = None,  # Agent.permission.PermissionEnforcer | None
+) -> dict[str, Any]:
+    """Return available commands and apps.
+
+    If *enforcer* is provided (a :class:`Agent.permission.PermissionEnforcer`),
+    only commands the active personality is allowed to use are returned.
+    When *enforcer* is ``None`` (the default) behaviour is identical to the
+    original implementation.
+    """
+    commands = []
+    for spec in DEFAULT_COMMANDS:
+        if spec.name not in DEFAULT_ALLOWED_ACTIONS:
+            continue
+        if enforcer is not None and not enforcer.check_tool(spec.name):
+            continue
+        commands.append(spec.to_dict())
     return {
         "commands": commands,
         "apps": _available_apps(config_path),

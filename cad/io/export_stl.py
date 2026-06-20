@@ -120,10 +120,12 @@ def _write_sphere_stl(sph: Sphere, lines: list[str]) -> None:
     for i in range(seg):
         for j in range(seg):
             a = i * seg + j
-            b = a + seg
-            n = (seg)
-            _facet(0, 0, 1, [verts[a], verts[b], verts[b+1]], lines)
-            _facet(0, 0, 1, [verts[a], verts[b+1], verts[a+1]], lines)
+            b = (i + 1) * seg + j
+            c = i * seg + (j + 1) % seg
+            d = (i + 1) * seg + (j + 1) % seg
+            lst = [verts[a], verts[b], verts[d]]
+            _facet(0, 0, 1, lst, lines)
+            _facet(0, 0, 1, [verts[a], verts[d], verts[c]], lines)
 
 
 import math  # noqa: E402

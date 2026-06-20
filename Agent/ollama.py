@@ -16,11 +16,27 @@ class OllamaError(RuntimeError):
     """Raised when Fiona cannot talk to the Ollama local server."""
 
 
+# Sentinel used to detect when *system_prompt* is not explicitly passed
+# to ``ask()`` so we can fall back to the personality's default.
+_ASK_SENTINEL = object()
+
+
 @dataclass(frozen=True)
 class OllamaClient:
     base_url: str = DEFAULT_OLLAMA_BASE_URL
     model: str = "qwen2:1.5b"
     timeout_seconds: float = 60.0
+    personality: Any | None = None  # Agent.personality.Personality | None
+
+    def __post_init__(self) -> None:
+        """Apply personality overrides after initialisation.
+
+        When a personality with a *model_override* is provided, the client's
+        *model* field is updated accordingly.
+        """
+        if self.personality is not None:
+            if self.personality.model_override is not None:
+                object.__setattr__(self, "model", self.personality.model_override)
 
     def health(self) -> dict[str, Any]:
         return self._request("GET", "/tags")
@@ -29,11 +45,18 @@ class OllamaClient:
         self,
         prompt: str,
         *,
-        system_prompt: str = "You are Fiona, a local workstation control assistant.",
+        system_prompt: Any = _ASK_SENTINEL,  # str — sentinel detects "not passed"
         image_path: str | Path | None = None,
         temperature: float = 0.3,
         max_tokens: int = 512,
     ) -> str:
+        # Resolve system prompt from personality when caller didn't pass one.
+        if system_prompt is _ASK_SENTINEL:
+            if self.personality is not None:
+                system_prompt = self.personality.system_prompt
+            else:
+                system_prompt = "You are Fiona, a local workstation control assistant."
+
         messages = []
         # Ollama /api/chat doesn't always handle 'system' role the same way across all models,
         # but for LLaVA/Moondream it's usually better to just prepended to the prompt if needed,

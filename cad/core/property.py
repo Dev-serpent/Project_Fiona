@@ -35,6 +35,8 @@ class Property:
         readonly: bool = False,
         visible: bool = True,
         choices: list[tuple[str, Any]] | None = None,
+        *,
+        category: str = "General",
     ) -> None:
         self.uid = uuid.uuid4()
         self.name = name
@@ -46,6 +48,7 @@ class Property:
         self.readonly = readonly
         self.visible = visible
         self.choices = choices or []
+        self.category = category
         self._listeners: list[Callable[[str, Any, Any], None]] = []
 
     @property
@@ -80,6 +83,7 @@ class Property:
             "unit": self.unit,
             "readonly": self.readonly,
             "visible": self.visible,
+            "category": self.category,
         }
 
     @staticmethod

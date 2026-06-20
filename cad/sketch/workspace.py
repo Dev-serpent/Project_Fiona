@@ -100,7 +100,7 @@ class Sketch(CADObject):
         pt = Point2D(name)
         pt.set_property("x", x)
         pt.set_property("y", y)
-        return self.add_entity(SketchEntity.__init__(pt.__class__, pt)) or pt
+        return self.add_entity(pt) or pt
 
     def add_line(self, name: str, x1: float = 0.0, y1: float = 0.0,
                  x2: float = 10.0, y2: float = 10.0) -> Line:

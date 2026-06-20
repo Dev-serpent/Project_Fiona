@@ -25,6 +25,7 @@ class Document:
             "created": None,
             "modified": None,
         }
+        self._modified: bool = False
 
     # ── Object Management ─────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ class Document:
         self._objects[uid_str] = obj
         self._objects_by_name[obj.name] = obj
         obj._document = self
+        self._modified = True
         return obj
 
     def remove_object(self, obj: CADObject) -> None:
@@ -48,6 +50,7 @@ class Document:
                 other._dependencies.remove(uid_str)
             if uid_str in other._dependents:
                 other._dependents.remove(uid_str)
+        self._modified = True
 
     def get_object(self, uid_or_name: str) -> CADObject | None:
         if uid_or_name in self._objects:
@@ -104,6 +107,17 @@ class Document:
                 for obj in self._objects.values()
                 if obj.get_property(property_name) is not None}
 
+    # ── Modified Flag ────────────────────────────────────────────────
+
+    @property
+    def is_modified(self) -> bool:
+        """Whether the document has unsaved changes."""
+        return self._modified
+
+    @is_modified.setter
+    def is_modified(self, value: bool) -> None:
+        self._modified = value
+
     # ── Serialization ────────────────────────────────────────────────
 
     def to_dict(self) -> dict[str, Any]:
@@ -113,6 +127,78 @@ class Document:
             "metadata": self._metadata,
             "objects": [obj.to_dict() for obj in self._objects.values()],
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Document:
+        """Reconstruct a Document from a serialized dictionary.
+
+        This is the inverse of to_dict(). Used for undo/restore and loading.
+        Unknown object types are skipped gracefully.
+        The resulting document will have is_modified == False.
+        """
+        doc = cls(data.get("name", "Untitled"))
+
+        # Restore UID if present (preserves identity across snapshots)
+        if "uid" in data:
+            doc.uid = uuid.UUID(data["uid"])
+
+        doc._metadata = dict(data.get("metadata", {}))
+
+        # Type map — maps type name strings to classes
+        # Import here to avoid circular imports
+        from cad.geometry.primitives import Box, Cylinder, Sphere, Cone, Torus  # noqa: F401
+        from cad.sketch.workspace import Sketch  # noqa: F401
+        from cad.assembly.assembly import Assembly, PartInstance  # noqa: F401
+        from cad.part.features import Pad, Pocket, Revolve  # noqa: F401
+
+        TYPE_MAP: dict[str, type] = {
+            "Box": Box,
+            "Cylinder": Cylinder,
+            "Sphere": Sphere,
+            "Cone": Cone,
+            "Torus": Torus,
+            "Sketch": Sketch,
+            "Assembly": Assembly,
+            "PartInstance": PartInstance,
+            "Pad": Pad,
+            "Pocket": Pocket,
+            "Revolve": Revolve,
+        }
+
+        for obj_data in data.get("objects", []):
+            obj_type = obj_data.get("type", "")
+            obj_name = obj_data.get("name", "Unknown")
+            cls_type = TYPE_MAP.get(obj_type)
+            if cls_type is None:
+                # Skip unknown types gracefully
+                continue
+
+            # Create object (this calls _define_properties which sets defaults)
+            obj = cls_type(obj_name)
+
+            # Restore label if present
+            if "label" in obj_data:
+                obj.label = obj_data["label"]
+
+            # Restore UID (preserve identity across snapshots for undo/redo)
+            if "uid" in obj_data:
+                obj.uid = uuid.UUID(obj_data["uid"])
+
+            # Restore properties (use _value directly to avoid triggering change events)
+            for prop_name, prop_data in obj_data.get("properties", {}).items():
+                prop = obj.get_property(prop_name)
+                if prop is not None:
+                    prop._value = prop_data.get("value", prop._default)
+
+            # Restore dependencies
+            if "dependencies" in obj_data:
+                obj._dependencies = list(obj_data["dependencies"])
+
+            doc.add_object(obj)
+
+        # Loading from dict is not a modification
+        doc._modified = False
+        return doc
 
     def clear(self) -> None:
         self._objects.clear()

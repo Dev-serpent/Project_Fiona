@@ -48,7 +48,7 @@ class Camera:
             return m
 
     def orbit(self, delta_azimuth: float, delta_elevation: float) -> None:
-        direction = self.target - self.position
+        direction = self.position - self.target
         distance = direction.length()
         azimuth = math.atan2(direction.y, direction.x)
         elevation = math.asin(direction.z / max(distance, 1e-10))
@@ -60,6 +60,57 @@ class Camera:
             distance * math.sin(elevation),
         )
 
+    def get_azimuth(self) -> float:
+        """Return the azimuth angle (radians) of the camera around the target.
+
+        Uses the direction FROM target TO camera so that azimuth increases
+        as the camera rotates counter-clockwise around the target. Returns
+        0.0 when position == target.
+        """
+        direction = self.position - self.target
+        return math.atan2(direction.y, direction.x)
+
+    def get_elevation(self) -> float:
+        """Return the elevation angle (radians) above/below the XY plane.
+
+        Uses the direction FROM target TO camera so that positive elevation
+        means the camera is above the target. Uses the same guard as
+        orbit() to avoid division by zero.
+        """
+        direction = self.position - self.target
+        distance = direction.length()
+        return math.asin(direction.z / max(distance, 1e-10))
+
+    def set_azimuth(self, value: float) -> None:
+        """Set the camera azimuth angle (radians), preserving elevation and distance.
+
+        The camera orbits around the target so that the direction FROM target
+        TO camera has the given azimuth.
+        """
+        direction = self.position - self.target
+        distance = direction.length()
+        current_elevation = math.asin(direction.z / max(distance, 1e-10))
+        self.position = self.target + Vector3(
+            distance * math.cos(current_elevation) * math.cos(value),
+            distance * math.cos(current_elevation) * math.sin(value),
+            distance * math.sin(current_elevation),
+        )
+
+    def set_elevation(self, value: float) -> None:
+        """Set the camera elevation angle (radians), preserving azimuth and distance.
+
+        Clamped to (-pi/2+0.01, pi/2-0.01) to avoid gimbal lock.
+        """
+        value = max(-math.pi / 2 + 0.01, min(math.pi / 2 - 0.01, value))
+        direction = self.position - self.target
+        distance = direction.length()
+        current_azimuth = math.atan2(direction.y, direction.x)
+        self.position = self.target + Vector3(
+            distance * math.cos(value) * math.cos(current_azimuth),
+            distance * math.cos(value) * math.sin(current_azimuth),
+            distance * math.sin(value),
+        )
+
     def zoom(self, factor: float) -> None:
         direction = self.target - self.position
         distance = direction.length()
@@ -67,6 +118,7 @@ class Camera:
         self.position = self.target - direction.normalized() * new_distance
 
     def pan(self, delta_x: float, delta_y: float) -> None:
+        """Pan the camera in its local XY plane (right x up)."""
         forward = (self.target - self.position).normalized()
         right = forward.cross(self.up).normalized()
         up = right.cross(forward)
@@ -95,6 +147,11 @@ class ViewportBackend(ABC):
     @abstractmethod
     def draw_text(self, x: float, y: float, text: str,
                   color: str = "#ffffff") -> None: ...
+    @abstractmethod
+    def draw_polygon(self, points: list[tuple[float, float]],
+                     fill_color: str = "#aaaaaa",
+                     outline_color: str | None = None,
+                     outline_width: float = 1.0) -> None: ...
     @abstractmethod
     def present(self) -> None: ...
 

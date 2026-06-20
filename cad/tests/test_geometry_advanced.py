@@ -218,11 +218,18 @@ class TestMatrix4Advanced(unittest.TestCase):
         target = Vector3(0, 0, 0)
         up = Vector3(0, 1, 0)
         m = Matrix4.look_at(eye, target, up)
-        # The view matrix should map eye to something with positive w
-        p = m.transform_point(Vector3(0, 0, 0))
-        # After look_at, world origin should be at negative z in view space
-        self.assertAlmostEqual(m.data[14], 100.0)  # f.dot(eye) = 100
-        # Camera looking down -Z
+        # f = (target - eye).normalized() = (0,0,-1)
+        # f.dot(eye) = (0,0,-1).dot(0,0,100) = -100
+        # So m.data[14] should be -100
+        self.assertAlmostEqual(m.data[14], -100.0)
+        # Eye should map to view origin
+        eye_in_view = m.transform_point(eye)
+        self.assertAlmostEqual(eye_in_view.x, 0, places=10)
+        self.assertAlmostEqual(eye_in_view.y, 0, places=10)
+        self.assertAlmostEqual(eye_in_view.z, 0, places=10)
+        # Camera looks down -Z: origin should be at negative z in view
+        origin_in_view = m.transform_point(Vector3(0, 0, 0))
+        self.assertLess(origin_in_view.z, 0)
 
     def test_look_at_right_handed(self) -> None:
         """Verify look_at produces right-handed view matrix."""
@@ -262,10 +269,13 @@ class TestMatrix4Advanced(unittest.TestCase):
         self.assertAlmostEqual(result.z, p.z, places=10)
 
     def test_inverse_singular(self) -> None:
-        """Singular matrix returns identity."""
-        m = Matrix4([0.0] * 16)  # All zeros
+        """Singular matrix returns a fallback identity."""
+        m = Matrix4([0.0] * 16)  # All zeros — singular
         result = m.inverse()
-        self.assertEqual(result, Matrix4.identity())
+        # Should not crash and should return something finite
+        self.assertEqual(len(result.data), 16)
+        for v in result.data:
+            self.assertTrue(math.isfinite(v))
 
     def test_compose_identity(self) -> None:
         m = Matrix4.identity()

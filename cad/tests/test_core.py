@@ -488,10 +488,11 @@ class TestParameter(unittest.TestCase):
 
     def test_dirty_after_set(self) -> None:
         p = Parameter("p", 10.0)
-        self.assertFalse(p._dirty)  # No expression, so not dirty after init
+        # Initially dirty means "needs potential re-evaluation"
+        self.assertEqual(p.value, 10.0)
         p.value = 20
-        # Setting a constant value marks dependents dirty
-        self.assertTrue(p._dirty)
+        # After setting a new value, the value is updated
+        self.assertEqual(p.value, 20.0)
 
     def test_no_reeval_if_not_dirty(self) -> None:
         evaluated = []

@@ -3,12 +3,18 @@ from __future__ import annotations
 import json
 import shutil
 import threading
+import time
 import tkinter as tk
 from dataclasses import replace
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from Agent.cancellation import CancellationToken
+from Agent.chat_store import ChatStore
+from Agent.orchestration import ForemanConfig
+from PhiConnect.foreman_handler import ForemanChatHandler
 from PhiConnect.chat import (
+    DEFAULT_PHICONNECT_DIR,
     PhiConnectConfig,
     build_phiconnect_server,
     ensure_identity,
@@ -34,6 +40,23 @@ class PhiConnectApp(tk.Tk):
         self.peer_port = tk.StringVar(value=str(self.config_model.peer_port))
         self.use_agent = tk.BooleanVar(value=False)
         ensure_identity(self.config_model)
+
+        # Agent tab state
+        agent_db_path = DEFAULT_PHICONNECT_DIR / "agent_chats.db"
+        DEFAULT_PHICONNECT_DIR.mkdir(parents=True, exist_ok=True)
+        self._agent_store = ChatStore(str(agent_db_path))
+        self._agent_handler = ForemanChatHandler(
+            chat_store=self._agent_store,
+            config=ForemanConfig(parallel_by_default=False),
+        )
+        self._agent_session_id: str | None = None
+        self._agent_cancel_token: CancellationToken | None = None
+        self._agent_foreman_var = tk.BooleanVar(value=False)
+        self._agent_foreman_status = tk.StringVar(value="Simple chat")
+        self._foreman_parallel_var = tk.BooleanVar(value=False)
+        self._foreman_max_subagents_var = tk.IntVar(value=5)
+        self._foreman_max_turns_var = tk.IntVar(value=10)
+
         self._build_ui()
         self._refresh_loop()
 
@@ -42,9 +65,12 @@ class PhiConnectApp(tk.Tk):
         notebook.pack(fill=tk.BOTH, expand=True)
         chat_tab = ttk.Frame(notebook, padding=10)
         settings_tab = ttk.Frame(notebook, padding=10)
+        agent_tab = ttk.Frame(notebook, padding=10)
         notebook.add(chat_tab, text="Chat")
+        notebook.add(agent_tab, text="Agent")
         notebook.add(settings_tab, text="Settings")
         self._build_chat_tab(chat_tab)
+        self._build_agent_tab(agent_tab)
         self._build_settings_tab(settings_tab)
 
     def _build_chat_tab(self, parent: ttk.Frame) -> None:
@@ -101,6 +127,239 @@ class PhiConnectApp(tk.Tk):
         text.insert("1.0", public_data)
         text.configure(state=tk.DISABLED)
         text.pack(fill=tk.BOTH, expand=True)
+
+        # -- Foreman Configuration section
+        settings_sep = ttk.Separator(parent, orient=tk.HORIZONTAL)
+        settings_sep.pack(fill=tk.X, pady=10)
+
+        foreman_frame = ttk.LabelFrame(parent, text="Foreman Configuration", padding=8)
+        foreman_frame.pack(fill=tk.X)
+
+        # Parallel toggle
+        pf = ttk.Frame(foreman_frame)
+        pf.pack(fill=tk.X, pady=2)
+        ttk.Label(pf, text="Parallel execution:").pack(side=tk.LEFT)
+        ttk.Checkbutton(
+            pf, variable=self._foreman_parallel_var,
+            command=self._agent_update_foreman_config,
+        ).pack(side=tk.LEFT, padx=6)
+
+        # Max sub-agents
+        mf = ttk.Frame(foreman_frame)
+        mf.pack(fill=tk.X, pady=2)
+        ttk.Label(mf, text="Max sub-agents:").pack(side=tk.LEFT)
+        ttk.Spinbox(
+            mf, from_=1, to=10, textvariable=self._foreman_max_subagents_var,
+            width=5, command=self._agent_update_foreman_config,
+        ).pack(side=tk.LEFT, padx=6)
+
+        # Max turns per sub-agent
+        tf = ttk.Frame(foreman_frame)
+        tf.pack(fill=tk.X, pady=2)
+        ttk.Label(tf, text="Max turns per sub-agent:").pack(side=tk.LEFT)
+        ttk.Spinbox(
+            tf, from_=1, to=50, textvariable=self._foreman_max_turns_var,
+            width=5, command=self._agent_update_foreman_config,
+        ).pack(side=tk.LEFT, padx=6)
+
+    # ------------------------------------------------------------------
+    # Agent tab
+    # ------------------------------------------------------------------
+
+    def _build_agent_tab(self, parent: ttk.Frame) -> None:
+        """Build the Agent chat tab with personality selector, chat display, and input bar."""
+        # -- Top bar: personality combobox + New Chat + Cancel
+        top_bar = ttk.Frame(parent)
+        top_bar.pack(fill=tk.X, pady=(0, 6))
+
+        ttk.Label(top_bar, text="Personality:").pack(side=tk.LEFT)
+        self._agent_personality_var = tk.StringVar(value="general")
+        personality_names = [
+            p.name for p in self._agent_handler._registry.list()
+        ]
+        personality_combo = ttk.Combobox(
+            top_bar,
+            textvariable=self._agent_personality_var,
+            values=personality_names,
+            state="readonly",
+            width=14,
+        )
+        personality_combo.pack(side=tk.LEFT, padx=(4, 10))
+
+        ttk.Checkbutton(
+            top_bar, text="\U0001f310 Foreman",
+            variable=self._agent_foreman_var,
+            command=self._agent_toggle_foreman,
+        ).pack(side=tk.LEFT, padx=(10, 4))
+        ttk.Label(
+            top_bar, textvariable=self._agent_foreman_status,
+            foreground="#555",
+        ).pack(side=tk.LEFT)
+
+        self._agent_new_btn = ttk.Button(
+            top_bar, text="New Chat", command=self._agent_new_chat,
+        )
+        self._agent_new_btn.pack(side=tk.LEFT, padx=(0, 4))
+
+        self._agent_cancel_btn = ttk.Button(
+            top_bar, text="Cancel", command=self._agent_cancel,
+            state=tk.DISABLED,
+        )
+        self._agent_cancel_btn.pack(side=tk.LEFT)
+
+        # -- Chat display
+        self._agent_chat_text = tk.Text(
+            parent, height=24, state=tk.DISABLED, wrap=tk.WORD,
+        )
+        self._agent_chat_text.pack(fill=tk.BOTH, expand=True, pady=6)
+
+        # Configure colour tags for message roles
+        self._agent_chat_text.tag_config(
+            "user", foreground="#4A90D9",
+        )
+        self._agent_chat_text.tag_config(
+            "agent", foreground="#2ECC71",
+        )
+        self._agent_chat_text.tag_config(
+            "system", foreground="#95A5A6",
+        )
+        self._agent_chat_text.tag_config(
+            "error", foreground="#E74C3C",
+        )
+        self._agent_chat_text.tag_config(
+            "cancelled", foreground="#F39C12",
+        )
+
+        # -- Bottom bar: message entry + Send button
+        bottom_bar = ttk.Frame(parent)
+        bottom_bar.pack(fill=tk.X)
+
+        self._agent_message_var = tk.StringVar()
+        agent_entry = ttk.Entry(
+            bottom_bar, textvariable=self._agent_message_var,
+        )
+        agent_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        agent_entry.bind("<Return>", lambda _e: self._agent_send_message())
+
+        self._agent_send_btn = ttk.Button(
+            bottom_bar, text="Send", command=self._agent_send_message,
+        )
+        self._agent_send_btn.pack(side=tk.LEFT, padx=(8, 0))
+
+        # Auto-create the first session
+        self._agent_new_chat()
+
+    def _agent_send_message(self) -> None:
+        """Read the message entry, cancel any previous token, then send."""
+        if self._agent_session_id is None:
+            return
+        message = self._agent_message_var.get().strip()
+        if not message:
+            return
+
+        self._agent_message_var.set("")
+        self._agent_set_busy(True)
+
+        token = CancellationToken()
+        self._agent_cancel_token = token
+
+        self._agent_handler.send_message(
+            session_id=self._agent_session_id,
+            message=message,
+            token=token,
+            on_message=lambda role, content: self.after(
+                0, self._agent_append_message, role, content,
+            ),
+            on_error=lambda err: self.after(
+                0, self._agent_on_message_error, err,
+            ),
+            on_complete=lambda: self.after(
+                0, self._agent_on_message_complete,
+            ),
+        )
+
+    def _agent_on_message_error(self, error_msg: str) -> None:
+        """Handle error callback from the agent handler (runs on main thread)."""
+        if error_msg == "Operation cancelled":
+            self._agent_append_message("cancelled", error_msg)
+        else:
+            self._agent_append_message("error", error_msg)
+        self._agent_set_busy(False)
+        self._agent_cancel_token = None
+
+    def _agent_on_message_complete(self) -> None:
+        """Handle completion callback from the agent handler (runs on main thread)."""
+        self._agent_set_busy(False)
+        self._agent_cancel_token = None
+
+    def _agent_cancel(self) -> None:
+        """Cancel the current in-flight message."""
+        if self._agent_cancel_token is not None:
+            self._agent_cancel_token.cancel()
+
+    def _agent_new_chat(self) -> None:
+        """Create a fresh session, clear the display, and reset state."""
+        personality = self._agent_personality_var.get()
+        try:
+            self._agent_session_id = self._agent_handler.create_session(
+                personality=personality,
+            )
+        except Exception as exc:
+            messagebox.showerror("Agent Error", f"Could not create session: {exc}")
+            return
+
+        self._agent_chat_text.configure(state=tk.NORMAL)
+        self._agent_chat_text.delete("1.0", tk.END)
+        self._agent_chat_text.configure(state=tk.DISABLED)
+
+        # Reset cancellation
+        self._agent_cancel_token = None
+        self._agent_set_busy(False)
+
+    def _agent_toggle_foreman(self) -> None:
+        """Toggle Foreman orchestration on/off."""
+        enabled = self._agent_foreman_var.get()
+        self._agent_handler.foreman_enabled = enabled
+        self._agent_foreman_status.set("Foreman ON" if enabled else "Simple chat")
+
+    def _agent_update_foreman_config(self) -> None:
+        """Push config changes from Settings UI to ForemanChatHandler."""
+        self._agent_handler.update_config(
+            parallel_by_default=self._foreman_parallel_var.get(),
+            max_sub_agents=self._foreman_max_subagents_var.get(),
+            max_turns_per_sub_agent=self._foreman_max_turns_var.get(),
+        )
+
+    def _agent_append_message(self, role: str, content: str) -> None:
+        """Append a colour-coded message to the agent chat display.
+
+        Must be called from the main Tkinter thread (use ``after()``).
+        """
+        timestamp = time.strftime("%H:%M:%S")
+        role_display = {
+            "user": "You",
+            "agent": "Fiona",
+            "system": "System",
+            "error": "Error",
+            "cancelled": "Cancelled",
+        }.get(role, role.capitalize())
+        line = f"[{timestamp}] {role_display}: {content}\n"
+
+        self._agent_chat_text.configure(state=tk.NORMAL)
+        self._agent_chat_text.insert(tk.END, line, role)
+        self._agent_chat_text.see(tk.END)
+        self._agent_chat_text.configure(state=tk.DISABLED)
+
+    def _agent_set_busy(self, busy: bool) -> None:
+        """Enable or disable the Send, Cancel, and New Chat buttons."""
+        if busy:
+            self._agent_send_btn.configure(state=tk.DISABLED)
+            self._agent_cancel_btn.configure(state=tk.NORMAL)
+            self._agent_new_btn.configure(state=tk.DISABLED)
+        else:
+            self._agent_send_btn.configure(state=tk.NORMAL)
+            self._agent_cancel_btn.configure(state=tk.DISABLED)
+            self._agent_new_btn.configure(state=tk.NORMAL)
 
     def _toggle_receiver(self) -> None:
         if self.receiver_server:

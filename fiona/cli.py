@@ -173,6 +173,10 @@ def main() -> None:
         _run_vsee(args)
         return
 
+    if args.layer in {"ficad", "cad"}:
+        _run_ficad(args)
+        return
+
     if args.layer == "phiconnect":
         _run_phiconnect(args)
         return
@@ -206,6 +210,7 @@ def _build_parser() -> argparse.ArgumentParser:
   fiona cli              Sliding Fiona terminal command center
   fiona seeondesk ...    Desktop awareness and active-window identification
   fiona vsee             Standalone Vsee Holography app
+  fiona ficad            Fiona CAD (ficad) parametric 3D modeler GUI
   fiona phiconnect       Standalone encrypted PhiConnect chat app
 
 Shortcuts:
@@ -416,6 +421,18 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     vsee = subparsers.add_parser("vsee", help="Open the standalone Vsee Holography window.")
     vsee.add_argument("--points", type=Path, default=None)
     vsee.add_argument("--edges", type=Path, default=None)
+
+    ficad = subparsers.add_parser(
+        "ficad",
+        aliases=["cad"],
+        help="Open the Fiona CAD (ficad) parametric 3D modeler GUI.",
+    )
+    ficad.add_argument("--doc", type=Path, default=None,
+                       help="Load a .cad document on startup")
+    ficad.add_argument("--headless", action="store_true",
+                       help="Run a CLI command instead of launching the GUI")
+    ficad.add_argument("cmd", nargs=argparse.REMAINDER,
+                       help="Headless command to execute (e.g. create_box --width 10)")
 
     subparsers.add_parser("phiconnect", help="Open the standalone PhiConnect encrypted chat window.")
 
@@ -1169,6 +1186,37 @@ def _run_vsee(args: argparse.Namespace) -> None:
     from Vsee.gui import launch_holography
 
     launch_holography(points_path=args.points, edges_path=args.edges)
+
+
+def _run_ficad(args: argparse.Namespace) -> None:
+    """Launch the Fiona CAD (ficad) GUI or run a headless command."""
+    if args.headless or args.cmd:
+        # Delegate to CLI
+        from cad.cli.main import main as cadcli_main
+
+        cli_args = ["cadcli"]
+        if args.doc:
+            cli_args.extend(["--doc", str(args.doc)])
+        cli_args.extend(args.cmd)
+        try:
+            cadcli_main(cli_args[1:])
+        except SystemExit:
+            pass
+        return
+
+    # Launch GUI
+    from cad.gui.main_window import CadMainWindow
+
+    app = CadMainWindow()
+    if args.doc:
+        from pathlib import Path
+        from cad.io.native_format import CadSerializer
+
+        doc_path = Path(args.doc)
+        if doc_path.exists():
+            doc = CadSerializer.deserialize_from_file(str(doc_path))
+            app.document = doc
+    app.run()
 
 
 def _run_phiconnect(_args: argparse.Namespace) -> None:

@@ -10,8 +10,8 @@ class Feature(CADObject):
     """Base class for all part design features."""
 
     def __init__(self, name: str, base: CADObject | None = None) -> None:
-        super().__init__(name)
         self._base = base
+        super().__init__(name)
         if base:
             self.add_dependency(base)
 
@@ -27,9 +27,9 @@ class Pad(Feature):
     def __init__(self, name: str, sketch: Sketch, height: float = 10.0,
                  reverse: bool = False) -> None:
         self._sketch = sketch
-        super().__init__(name, sketch)
         self._height = height
         self._reverse = reverse
+        super().__init__(name, sketch)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -46,8 +46,8 @@ class Pocket(Feature):
 
     def __init__(self, name: str, sketch: Sketch, depth: float = 10.0) -> None:
         self._sketch = sketch
-        super().__init__(name, sketch)
         self._depth = depth
+        super().__init__(name, sketch)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -63,9 +63,9 @@ class Revolve(Feature):
     def __init__(self, name: str, sketch: Sketch, angle: float = 360.0,
                  axis: str = "z") -> None:
         self._sketch = sketch
-        super().__init__(name, sketch)
         self._angle = angle
         self._axis = axis
+        super().__init__(name, sketch)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -81,7 +81,8 @@ class Loft(Feature):
 
     def __init__(self, name: str, sketches: list[Sketch]) -> None:
         self._sketches = sketches
-        super().__init__(name, sketches[0] if sketches else None)
+        base = sketches[0] if sketches else None
+        super().__init__(name, base)
         for s in sketches[1:]:
             self.add_dependency(s)
 
@@ -114,9 +115,9 @@ class Fillet(Feature):
 
     def __init__(self, name: str, base: CADObject, radius: float = 5.0,
                  edges: list[int] | None = None) -> None:
-        super().__init__(name, base)
         self._radius = radius
         self._edges = edges or []
+        super().__init__(name, base)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -132,9 +133,9 @@ class Chamfer(Feature):
 
     def __init__(self, name: str, base: CADObject, size: float = 5.0,
                  edges: list[int] | None = None) -> None:
-        super().__init__(name, base)
         self._size = size
         self._edges = edges or []
+        super().__init__(name, base)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -148,8 +149,8 @@ class Shell(Feature):
     """Hollow out a solid with a wall thickness."""
 
     def __init__(self, name: str, base: CADObject, thickness: float = 2.0) -> None:
-        super().__init__(name, base)
         self._thickness = thickness
+        super().__init__(name, base)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -165,12 +166,12 @@ class LinearPattern(Feature):
     def __init__(self, name: str, feature: Feature,
                  count_x: int = 3, count_y: int = 1,
                  spacing_x: float = 20.0, spacing_y: float = 20.0) -> None:
-        super().__init__(name, feature)
         self._feature = feature
         self._count_x = count_x
         self._count_y = count_y
         self._spacing_x = spacing_x
         self._spacing_y = spacing_y
+        super().__init__(name, feature)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -188,10 +189,10 @@ class CircularPattern(Feature):
 
     def __init__(self, name: str, feature: Feature,
                  count: int = 6, angle: float = 360.0) -> None:
-        super().__init__(name, feature)
         self._feature = feature
         self._count = count
         self._angle = angle
+        super().__init__(name, feature)
 
     def _define_properties(self) -> None:
         super()._define_properties()
@@ -207,9 +208,9 @@ class MirrorFeature(Feature):
 
     def __init__(self, name: str, feature: Feature,
                  mirror_plane: str = "xz") -> None:
-        super().__init__(name, feature)
         self._feature = feature
         self._mirror_plane = mirror_plane
+        super().__init__(name, feature)
 
     def _define_properties(self) -> None:
         super()._define_properties()

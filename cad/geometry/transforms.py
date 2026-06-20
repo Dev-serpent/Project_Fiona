@@ -51,5 +51,5 @@ def compose(*matrices: Matrix4) -> Matrix4:
     """Compose multiple transforms: result = m1 @ m2 @ m3 ..."""
     result = Matrix4.identity()
     for m in matrices:
-        result = m @ result
+        result = result @ m
     return result

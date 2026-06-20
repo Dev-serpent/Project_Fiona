@@ -21,6 +21,20 @@ Current file structure:
 ```text
 Fiona/
 ├── fiona/                  umbrella package and CLI entrypoint
+├── cad/                    CAD platform (parametric 3D modeling)
+│   ├── core/               Document, Object, Property system
+│   ├── geometry/            Primitives, math, transforms, modifiers
+│   ├── constraints/         Constraint types and solver
+│   ├── sketch/              2D sketch workspace
+│   ├── part/                Part features (Pad, Pocket, Revolve, etc.)
+│   ├── assembly/            Assembly hierarchy and constraints
+│   ├── commands/            Command registry and built-in commands
+│   ├── scripting/           Python scripting console
+│   ├── rendering/           Viewport, camera, projection
+│   ├── plugins/             Plugin manager
+│   ├── io/                  STL, OBJ, SVG exporters
+│   ├── tests/               18 test files, 446 tests
+│   └── serialization/       JSON serializer
 ├── QuikTieper/             local access layer implementation
 ├── CamComs/                communication/encryption layer implementation
 │   └── esp32payload/       ESP32 sender payload template
@@ -31,7 +45,7 @@ Fiona/
 ├── DataClient/             research/data collection app
 ├── EyeControl/             optional eye-controlled mouse tracker integration
 ├── TerminalAssist/         fAT terminal dashboard and Zellij layout generation
-├── tests/                  Python tests
+├── tests/                  Python tests (legacy)
 ├── scripts/                local launch wrappers
 ├── .backups/               timestamped backup snapshots
 ├── backup-20260430-185502/ older backup snapshot
@@ -42,6 +56,9 @@ Fiona/
 ├── README.md
 ├── DEVELOPERNOTE.md
 ├── pyproject.toml
+├── devlog.md
+├── dependencies.md
+├── logo.svg
 └── .gitignore
 ```
 
@@ -123,6 +140,9 @@ fiona fat status
 fiona fat tui
 fiona fat layout --print
 fiona fat run
+fiona ficad
+fiona ficad --headless --doc my_doc --create-box 10 20 30
+fiona ficad --gui
 ```
 
 ## Missing Issues
@@ -140,6 +160,19 @@ These are known project gaps that still need implementation. Manual GUI/workflow
 - On 2026-06-03, hardware-ready crypto logic was refined in `CamComs/esp32payload/esp32payload.ino`.
 - **Verified via Simulation**: Created `tests/test_esp32_firmware_sim.py` which mocks the exact C++ implementation of canonicalization and encoding to ensure 100% compatibility with the host's `CamComs` module.
 - The ESP32 path still needs hardware validation and a robust pairing/provisioning UI.
+- On 2026-06-20, the **CAD platform** (`cad/`) was added to `main` from the `windows-ide` branch. It is a FreeCAD-inspired parametric 3D modeling system with:
+  - Geometry primitives (Box, Cylinder, Cone, Sphere, Torus, Line, Circle, Arc, etc.)
+  - 2D Sketch workspace with entities, constraints, and constraint solver
+  - Part features (Pad, Pocket, Revolve, Loft, Sweep, Fillet, Chamfer, Shell)
+  - Assembly hierarchy with parts, subassemblies, and assembly constraints
+  - Command system with registry, aliases, and built-in commands
+  - Python scripting console for interactive CAD automation
+  - Plugin manager for extensibility
+  - 3D viewport with Camera, projection, and render backend abstraction
+  - STL/OBJ/SVG export
+  - 6 production bugs fixed (init ordering, console doc reference, sketch add_point, sphere STL indexing, SVG viewBox formatting)
+  - **446 tests, all passing** (up from 38)
+  - New CLI command: `fiona ficad` with `--headless`, `--doc`, and GUI launch modes
 - Voice, speech output, desktop tray/background status, and rich desktop notifications are still not implemented.
 - SeeOnDesk does not yet have screen recording or an ML classifier; the current implementation uses desktop/window metadata.
 
@@ -470,15 +503,19 @@ Run all current tests:
 python -m unittest discover -s tests -v
 ```
 
-Latest result, run on 2026-05-26:
+Latest result, run on 2026-06-20:
 
 ```text
-Ran 99 tests in 0.481s
-
-OK
+446 passed, 5 subtests passed in 0.41s
 ```
 
-Note: `python -m unittest discover -v` from the repository root currently discovers 0 tests in this layout. Use `python -m unittest discover -s tests -v`.
+CAD platform tests can also be run independently:
+
+```bash
+python -m pytest cad/tests/ --tb=short -q
+```
+
+Note: Legacy `tests/` tests use `unittest discover`. CAD tests use `pytest` for modern fixture support. Both test suites pass.
 
 Direct host-service CLI smoke checks, run on 2026-05-05:
 
@@ -543,6 +580,68 @@ These logs may contain:
 - active window detection results
 - pointer backend success / failure
 - shell command launch events
+
+## Agent Personalities & Orchestration System
+
+Added 2026-06-20 as part of the agent expansion milestone.
+
+### New Subsystems
+
+#### Personality System (`Agent/personality.py`)
+- `Personality` frozen dataclass with name, description, system_prompt, allowed_tools, model_override
+- `PersonalityRegistry` thread-safe singleton with 5 built-in personalities:
+  - `general`: All tools, general-purpose assistant
+  - `planner`: Read-only analysis tools, strategic planning
+  - `engineer`: Automation and execution tools
+  - `analyst`: Research and memory tools
+  - `security`: Read-only security audit tools
+- `PermissionEnforcer` (`Agent/permission.py`) — runtime tool authorization gate
+- `SafeActionRouter` (`Agent/permission.py`) — wraps ActionRouter with personality-based permission checks
+
+#### SQLite Chat Persistence (`Agent/chat_store.py`)
+- `ChatStore` — thread-safe SQLite-backed chat storage with WAL mode
+- Schema: `sessions` + `messages` tables with indexes
+- Context window builder with token-aware truncation
+- JSONL import for migration from legacy formats
+
+#### Cancellation System (`Agent/cancellation.py`)
+- `CancellationToken` — threading.Event-based cooperative cancellation
+- `CancelledError` — raised when operation is cancelled
+- Used across all layers from GUI to LLM calls
+
+#### Orchestration Engine (`Agent/orchestration.py`)
+- `ComplexityAssessor` — LLM-based goal complexity classification
+- `TaskPlan` — validated goal decomposition with retry logic
+- `SubAgent` — personality-wrapped ReAct agent with SafeActionRouter
+- `ForemanAgent` — top-level orchestrator: assess → decompose → execute → synthesize
+- `ForemanConfig` — configuration dataclass (parallel default off, configurable limits)
+
+#### PhiConnect Agent Tab (`PhiConnect/gui.py` — Agent tab)
+- New "Agent" tab in PhiConnect notebook
+- Personality selector dropdown (5 personalities)
+- Color-coded chat display (blue user, green agent, grey system, red error, orange cancelled)
+- Cancel button with full cancellation propagation
+- Foreman toggle for advanced orchestration
+- Foreman configuration in Settings tab
+
+### Backward Compatibility
+All existing Agent APIs remain unchanged:
+- `AgentOrchestrator`, `AgentTurn`, `CommandSpec`, `OllamaClient`, `command_registry()`, `run_agent_goal()`
+- PhiConnect Chat and Settings tabs are untouched
+
+### New Dependencies
+None. All new code uses Python 3.11+ stdlib only.
+
+### Test Coverage
+- `tests/test_agent_personalities.py` — 59 tests
+- `tests/test_agent_chat_store.py` — 54 tests
+- `tests/test_agent_chat_handler.py` — 34 tests
+- `tests/test_agent_orchestration.py` — 66 tests
+- `tests/test_agent_foreman_handler.py` — 59 tests
+- `tests/test_agent_stress.py` — 28 tests
+- `tests/test_agent_backward_compat.py` — 12 tests
+
+Total new tests: ~312
 
 ## Permission Notes
 

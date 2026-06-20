@@ -49,8 +49,10 @@ class CADObject:
         readonly: bool = False,
         visible: bool = True,
         choices: list[tuple[str, Any]] | None = None,
+        *,
+        category: str = "General",
     ) -> Property:
-        prop = Property(name, type_, value, default, description, unit, readonly, visible, choices)
+        prop = Property(name, type_, value, default, description, unit, readonly, visible, choices, category=category)
         self._properties[name] = prop
         prop.on_change(lambda n, o, new: self._on_property_changed(n, o, new))
         return prop

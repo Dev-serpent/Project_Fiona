@@ -18,6 +18,9 @@ eyecontrol = [
   "opencv-python>=4.9.0",
   "pyautogui>=0.9.54",
 ]
+test = [
+  "pytest>=8.0.0",
+]
 
 [project.scripts]
 fiona = "fiona.cli:main"
@@ -27,7 +30,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl", "TerminalAssist", "FionaCore", "CmdTrace", "RecallVault", "Voice"]
+packages = ["fiona", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl", "TerminalAssist", "FionaCore", "CmdTrace", "RecallVault", "Voice", "cad",
+            "cad.core", "cad.geometry", "cad.constraints", "cad.sketch", "cad.part", "cad.assembly",
+            "cad.commands", "cad.scripting", "cad.io", "cad.plugins", "cad.rendering", "cad.gui", "cad.cli", "cad.tests"]
 
 [tool.setuptools.package-data]
 CamComs = ["esp32payload/*"]

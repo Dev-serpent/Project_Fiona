@@ -223,12 +223,24 @@ class Diameter(Constraint):
 
 
 class Fix(Constraint):
-    """Fix a point's position in place."""
+    """Fix a point's position in place.
+
+    Marks the point's x and/or y properties as readonly so the constraint
+    solver's direct methods will not move them. The evaluate() method
+    returns error based on the target position.
+    """
 
     def __init__(self, name: str, point: CADObject, x: float | None = None, y: float | None = None) -> None:
         super().__init__(name, ConstraintKind.FIX, [point])
-        self._fix_x = x
-        self._fix_y = y
+        self._fix_x = x if x is not None else point.get_property_value("x")
+        self._fix_y = y if y is not None else point.get_property_value("y")
+        # Mark properties as readonly so direct solvers skip them
+        prop_x = point.get_property("x")
+        if prop_x is not None:
+            prop_x.readonly = True
+        prop_y = point.get_property("y")
+        if prop_y is not None:
+            prop_y.readonly = True
 
     def evaluate(self, solver) -> float:
         pt = self.entities[0]

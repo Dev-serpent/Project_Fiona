@@ -84,7 +84,11 @@ def _direct_solve_coincident(constraint: Coincident) -> bool:
 
 
 def _direct_solve_distance(constraint: Distance) -> bool:
-    """Directly solve a distance constraint by moving points along the line."""
+    """Directly solve a distance constraint by moving points along the line.
+
+    Respects Fix constraints: if a point has readonly properties, only the
+    non-fixed point(s) are moved to satisfy the target distance.
+    """
     p1 = constraint.entities[0]
     p2 = constraint.entities[1]
     x1 = p1.get_property_value("x")
@@ -97,15 +101,42 @@ def _direct_solve_distance(constraint: Distance) -> bool:
     if current < 1e-10:
         return False
     target = constraint.target_value
-    scale = target / current
-    mid_x = (x1 + x2) * 0.5
-    mid_y = (y1 + y2) * 0.5
-    half_dx = dx * scale * 0.5
-    half_dy = dy * scale * 0.5
-    _solve_single_dof(p1, "x", mid_x - half_dx, 1.0)
-    _solve_single_dof(p1, "y", mid_y - half_dy, 1.0)
-    _solve_single_dof(p2, "x", mid_x + half_dx, 1.0)
-    _solve_single_dof(p2, "y", mid_y + half_dy, 1.0)
+
+    # Normalize direction vector
+    nx = dx / current
+    ny = dy / current
+
+    # Determine which properties are movable
+    p1_x_ro = p1.get_property("x") is not None and p1.get_property("x").readonly
+    p1_y_ro = p1.get_property("y") is not None and p1.get_property("y").readonly
+    p2_x_ro = p2.get_property("x") is not None and p2.get_property("x").readonly
+    p2_y_ro = p2.get_property("y") is not None and p2.get_property("y").readonly
+
+    p1_movable = not p1_x_ro and not p1_y_ro
+    p2_movable = not p2_x_ro and not p2_y_ro
+
+    if not p1_movable and not p2_movable:
+        # Neither point can move — cannot satisfy
+        return False
+
+    if p1_movable and p2_movable:
+        # Both movable: move symmetrically toward/away from midpoint
+        mid_x = (x1 + x2) * 0.5
+        mid_y = (y1 + y2) * 0.5
+        half_dx = nx * target * 0.5
+        half_dy = ny * target * 0.5
+        _solve_single_dof(p1, "x", mid_x - half_dx, 1.0)
+        _solve_single_dof(p1, "y", mid_y - half_dy, 1.0)
+        _solve_single_dof(p2, "x", mid_x + half_dx, 1.0)
+        _solve_single_dof(p2, "y", mid_y + half_dy, 1.0)
+    elif p1_movable:
+        # Only p1 moves: place it at target distance along the line
+        _solve_single_dof(p1, "x", x2 - nx * target, 1.0)
+        _solve_single_dof(p1, "y", y2 - ny * target, 1.0)
+    else:
+        # Only p2 moves: place it at target distance along the line
+        _solve_single_dof(p2, "x", x1 + nx * target, 1.0)
+        _solve_single_dof(p2, "y", y1 + ny * target, 1.0)
     return True
 
 

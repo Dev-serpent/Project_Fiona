@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from cad.commands.registry import Command, CommandRegistry
 from cad.core.document import Document
+from cad.core.object import CADObject
 from cad.geometry.primitives import (
     Point2D, Point3D, Line, Circle, Arc, Ellipse,
     Box, Cylinder, Cone, Sphere, Torus, Polygon,
@@ -303,6 +305,40 @@ class AddPartToAssembly(Command):
 
 
 # ══════════════════════════════════════════════════════════════════════
+# Duplicate Command
+# ══════════════════════════════════════════════════════════════════════
+
+class DuplicateObject(Command):
+    name = "duplicate"
+    aliases = ["dup", "copy"]
+    description = "Duplicate an object with optional position offset"
+
+    def execute(self, doc: Document, **kwargs: Any) -> CADObject:
+        import copy
+        obj_name = kwargs.get("name", "")
+        obj = doc.find_by_name(obj_name)
+        if obj is None:
+            raise ValueError(f"Object not found: {obj_name}")
+
+        new_obj = copy.deepcopy(obj)
+        new_obj.name = kwargs.get("new_name", f"{obj.name}_copy")
+        new_obj.uid = uuid.uuid4()
+
+        # Apply position offset
+        offset = kwargs.get("offset", 10.0)
+        for prop_name in ("x", "y", "z"):
+            prop = new_obj.get_property(prop_name)
+            if prop is not None and not prop.readonly:
+                try:
+                    new_obj.set_property(prop_name, prop.value + offset)
+                except (TypeError, ValueError):
+                    pass
+
+        doc.add_object(new_obj)
+        return new_obj
+
+
+# ══════════════════════════════════════════════════════════════════════
 # Registration
 # ══════════════════════════════════════════════════════════════════════
 
@@ -327,6 +363,7 @@ def register_builtin_commands(registry: CommandRegistry) -> None:
         AddConstraint(),
         CreateAssembly(),
         AddPartToAssembly(),
+        DuplicateObject(),
     ]
     for cmd in commands:
         registry.register(cmd)
