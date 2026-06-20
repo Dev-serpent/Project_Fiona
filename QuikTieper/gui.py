@@ -48,7 +48,7 @@ from QuikTieper.bindings import parse_bindings
 from QuikTieper.config import DEFAULT_CONFIG_PATH, load_config, save_config
 from QuikTieper.system_tray import SystemTrayIcon, TrayState
 from QuikTieper.launcher import get_mouse_location
-from Vsee import DEFAULT_EDGES_TEXT, DEFAULT_POINTS_TEXT, HologramModel, VseeModelError
+
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -179,11 +179,9 @@ class ConfigEditorApp:
         camcoms_tab = ttk.Frame(self.notebook, padding=12)
         pairing_tab = ttk.Frame(self.notebook, padding=12)
         host_tab = ttk.Frame(self.notebook, padding=12)
-        vsee_tab = ttk.Frame(self.notebook, padding=12)
         voice_tab = ttk.Frame(self.notebook, padding=12)
         debug_tab = ttk.Frame(self.notebook, padding=12)
         self.notebook.add(camcoms_tab, text="CamComs")
-        self.notebook.add(vsee_tab, text="Vsee")
         self.notebook.add(bindings_tab, text="Bindings")
         self.notebook.add(json_tab, text="Raw Json")
         self.notebook.add(debug_tab, text="Debug")
@@ -196,7 +194,6 @@ class ConfigEditorApp:
         self._build_camcoms_tab(camcoms_tab)
         self._build_pairing_tab(pairing_tab)
         self._build_host_tab(host_tab)
-        self._build_vsee_tab(vsee_tab)
         self._build_voice_tab(voice_tab)
         self._build_debug_tab(debug_tab)
 
@@ -1039,75 +1036,6 @@ class ConfigEditorApp:
         # Start polling
         self._poll_service_state()
         self._poll_seeondesk()
-
-    def _build_vsee_tab(self, parent: ttk.Frame) -> None:
-        parent.columnconfigure(0, weight=1)
-        parent.columnconfigure(1, weight=2)
-        parent.rowconfigure(0, weight=1)
-
-        controls = ttk.Frame(parent)
-        controls.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        controls.columnconfigure(0, weight=1)
-        controls.rowconfigure(1, weight=1)
-        controls.rowconfigure(3, weight=1)
-
-        ttk.Label(controls, text="Points").grid(row=0, column=0, sticky="w")
-        self.vsee_points_text = tk.Text(controls, wrap="none", height=9)
-        self.vsee_points_text.grid(row=1, column=0, sticky="nsew", pady=(4, 10))
-
-        ttk.Label(controls, text="Edges").grid(row=2, column=0, sticky="w")
-        self.vsee_edges_text = tk.Text(controls, wrap="none", height=9)
-        self.vsee_edges_text.grid(row=3, column=0, sticky="nsew", pady=(4, 10))
-
-        sliders = ttk.Frame(controls)
-        sliders.grid(row=4, column=0, sticky="ew")
-        sliders.columnconfigure(1, weight=1)
-
-        self.vsee_rotation_x_var = tk.DoubleVar(value=20.0)
-        self.vsee_rotation_y_var = tk.DoubleVar(value=-30.0)
-        self.vsee_scale_var = tk.DoubleVar(value=130.0)
-        self._add_vsee_slider(sliders, 0, "Rotate X", self.vsee_rotation_x_var, -180.0, 180.0)
-        self._add_vsee_slider(sliders, 1, "Rotate Y", self.vsee_rotation_y_var, -180.0, 180.0)
-        self._add_vsee_slider(sliders, 2, "Scale", self.vsee_scale_var, 40.0, 260.0)
-
-        actions = ttk.Frame(controls)
-        actions.grid(row=5, column=0, sticky="ew", pady=(10, 0))
-        actions.columnconfigure(0, weight=1)
-        actions.columnconfigure(1, weight=1)
-        ttk.Button(actions, text="Render", command=self.vsee_render).grid(row=0, column=0, sticky="ew", padx=(0, 6))
-        ttk.Button(actions, text="Load Cube", command=self.vsee_load_sample).grid(
-            row=0, column=1, sticky="ew", padx=(6, 0)
-        )
-
-        viewer = ttk.Frame(parent)
-        viewer.grid(row=0, column=1, sticky="nsew")
-        viewer.columnconfigure(0, weight=1)
-        viewer.rowconfigure(0, weight=1)
-
-        self.vsee_canvas = tk.Canvas(viewer, background="#05070a", highlightthickness=0)
-        self.vsee_canvas.grid(row=0, column=0, sticky="nsew")
-        self.vsee_canvas.bind("<Configure>", self.vsee_render_event)
-
-        self.vsee_load_sample()
-
-    def _add_vsee_slider(
-        self,
-        parent: ttk.Frame,
-        row: int,
-        label: str,
-        variable: tk.DoubleVar,
-        from_value: float,
-        to_value: float,
-    ) -> None:
-        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=4)
-        slider = ttk.Scale(
-            parent,
-            from_=from_value,
-            to=to_value,
-            variable=variable,
-            command=lambda _value: self.vsee_render(),
-        )
-        slider.grid(row=row, column=1, sticky="ew", padx=(8, 0), pady=4)
 
     def _build_voice_tab(self, parent: ttk.Frame) -> None:
         """Build the Voice Control tab with wake word, push-to-talk, and feedback controls."""
@@ -2109,61 +2037,6 @@ class ConfigEditorApp:
         except subprocess.TimeoutExpired:
             self._set_host_output("journalctl — timed out after 10 s")
             self.status_var.set("journalctl timed out")
-
-    def vsee_load_sample(self) -> None:
-        self._set_text(self.vsee_points_text, DEFAULT_POINTS_TEXT)
-        self._set_text(self.vsee_edges_text, DEFAULT_EDGES_TEXT)
-        self.vsee_render()
-
-    def vsee_render_event(self, _event: object) -> None:
-        self.vsee_render()
-
-    def vsee_render(self) -> None:
-        try:
-            model = HologramModel.from_text(
-                self._get_text(self.vsee_points_text),
-                self._get_text(self.vsee_edges_text),
-            )
-            width = max(self.vsee_canvas.winfo_width(), 320)
-            height = max(self.vsee_canvas.winfo_height(), 260)
-            projected = model.projected(
-                width=width,
-                height=height,
-                rotation_x_degrees=self.vsee_rotation_x_var.get(),
-                rotation_y_degrees=self.vsee_rotation_y_var.get(),
-                scale=self.vsee_scale_var.get(),
-            )
-        except VseeModelError as exc:
-            self.status_var.set(f"Vsee model error: {exc}")
-            return
-        except tk.TclError:
-            return
-
-        self.vsee_canvas.delete("all")
-        self._draw_vsee_grid(width, height)
-        points = projected["points"]
-        edges = projected["edges"]
-        for source, target in edges:
-            x1, y1, z1 = points[source]
-            x2, y2, z2 = points[target]
-            depth = (z1 + z2) / 2
-            color = "#2fffd3" if depth >= 0 else "#35a7ff"
-            self.vsee_canvas.create_line(x1, y1, x2, y2, fill=color, width=2)
-        for point_id, (x_pos, y_pos, _z_pos) in points.items():
-            self.vsee_canvas.create_oval(x_pos - 4, y_pos - 4, x_pos + 4, y_pos + 4, fill="#ffffff", outline="#9fffe8")
-            self.vsee_canvas.create_text(x_pos + 10, y_pos - 10, text=point_id, fill="#d8fff8", anchor="w")
-        self.status_var.set(f"Rendered Vsee hologram: {len(points)} points, {len(edges)} edges")
-
-    def _draw_vsee_grid(self, width: int, height: int) -> None:
-        center_x = width / 2
-        center_y = height / 2
-        spacing = 40
-        for x_pos in range(0, width + spacing, spacing):
-            color = "#1b2730" if abs(x_pos - center_x) > 2 else "#34515b"
-            self.vsee_canvas.create_line(x_pos, 0, x_pos, height, fill=color)
-        for y_pos in range(0, height + spacing, spacing):
-            color = "#1b2730" if abs(y_pos - center_y) > 2 else "#34515b"
-            self.vsee_canvas.create_line(0, y_pos, width, y_pos, fill=color)
 
     def _set_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", tk.END)
