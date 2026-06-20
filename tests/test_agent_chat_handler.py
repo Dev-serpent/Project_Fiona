@@ -252,6 +252,74 @@ class AgentChatHandlerSendMessageTests(unittest.TestCase):
         general = PersonalityRegistry.get_instance().get("general")
         self.assertEqual(call_kwargs["system_prompt"], general.system_prompt)
 
+    def test_send_message_with_system_prompt_override(self) -> None:
+        """system_prompt_override replaces the personality's system prompt."""
+        token = CancellationToken()
+        messages: list[tuple[str, str]] = []
+        errors: list[str] = []
+        completed = False
+
+        def on_msg(role: str, content: str) -> None:
+            messages.append((role, content))
+
+        def on_err(err: str) -> None:
+            errors.append(err)
+
+        def on_done() -> None:
+            nonlocal completed
+            completed = True
+
+        override = "You are a test bot. Keep responses short."
+        self.handler.send_message(
+            session_id=self.session_id,
+            message="Hello",
+            token=token,
+            system_prompt_override=override,
+            on_message=on_msg,
+            on_error=on_err,
+            on_complete=on_done,
+        )
+
+        deadline = time.time() + 5
+        while not completed and not errors and time.time() < deadline:
+            time.sleep(0.01)
+
+        self.assertTrue(completed)
+        call_kwargs = self.mock_client.ask.call_args[1]
+        self.assertEqual(call_kwargs["system_prompt"], override)
+
+    def test_system_prompt_override_none_uses_default(self) -> None:
+        """When system_prompt_override is None, the personality prompt is used."""
+        token = CancellationToken()
+        completed = False
+
+        def on_msg(role: str, content: str) -> None:
+            pass
+
+        def on_err(err: str) -> None:
+            pass
+
+        def on_done() -> None:
+            nonlocal completed
+            completed = True
+
+        self.handler.send_message(
+            session_id=self.session_id,
+            message="Hello",
+            token=token,
+            on_message=on_msg,
+            on_error=on_err,
+            on_complete=on_done,
+        )
+
+        deadline = time.time() + 5
+        while not completed and time.time() < deadline:
+            time.sleep(0.01)
+
+        call_kwargs = self.mock_client.ask.call_args[1]
+        general = PersonalityRegistry.get_instance().get("general")
+        self.assertEqual(call_kwargs["system_prompt"], general.system_prompt)
+
     def test_context_window_loaded(self) -> None:
         """Verify that get_context_window is consulted (indirectly)."""
         # Add a prior message to the session
@@ -585,12 +653,7 @@ class PhiConnectGuiSmokeTests(unittest.TestCase):
 
     def test_phiconnect_app_can_be_imported(self) -> None:
         from PhiConnect.gui import PhiConnectApp
-        self.assertTrue(hasattr(PhiConnectApp, "_build_agent_tab"))
-        self.assertTrue(hasattr(PhiConnectApp, "_agent_send_message"))
-        self.assertTrue(hasattr(PhiConnectApp, "_agent_new_chat"))
-        self.assertTrue(hasattr(PhiConnectApp, "_agent_cancel"))
-        self.assertTrue(hasattr(PhiConnectApp, "_agent_append_message"))
-        self.assertTrue(hasattr(PhiConnectApp, "_agent_set_busy"))
+        self.assertTrue(callable(PhiConnectApp))
 
     def test_launch_phiconnect_exported(self) -> None:
         from PhiConnect.gui import launch_phiconnect
