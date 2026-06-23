@@ -61,6 +61,22 @@ python -m unittest discover -s tests -v
 | `test_voice_command.py` | Verifies voice command parsing and routing | voice command routing |
 | `test_voice_engine.py` | Verifies whisper transcription backend | voice transcription |
 | `test_desktop.py` | Verifies desktop awareness snapshot including all-windows | active-app data |
+| `tests/browser/test_browser_manager.py` | Verifies BrowserManager state machine transitions, auto-restart, and thread safety | browser lifecycle |
+| `tests/browser/test_playwright_provider.py` | Verifies Playwright provider navigation, element interaction, script execution, and error handling | browser automation |
+| `tests/contracts/test_interface_contracts.py` | Verifies every ABC in `fiona/interfaces.py` with contract test suites | interface contracts |
+| `tests/cad_server/test_protocol.py` | Verifies JSON-RPC 2.0 protocol codec encode/decode | CAD server protocol |
+| `tests/cad_server/test_command_executor.py` | Verifies command dispatch, validation, and error handling | CAD server execution |
+| `tests/cad_server/test_document_manager.py` | Verifies document CRUD and state management | CAD server document lifecycle |
+| `tests/cad_server/test_export_manager.py` | Verifies export pipeline configuration and execution | CAD server export |
+| `test_agent_orchestrator.py` | Verifies AgentOrchestrator think-act-observe loop, max_turns, and error recovery | agent safety loop |
+| `test_agent_chat_handler.py` | Verifies AgentChatHandler session management and message streaming | agent chat |
+| `test_agent_chat_store.py` | Verifies ChatStore CRUD, token estimation, and session cascading | agent chat persistence |
+| `test_agent_personalities.py` | Verifies Personality dataclass, registry, and built-in personality registration | agent personality system |
+| `test_agent_query_detector.py` | Verifies QueryDetector classification of user input | agent query routing |
+| `test_agent_foreman_handler.py` | Verifies ForemanChatHandler task decomposition and sub-agent delegation | advanced orchestration |
+| `test_agent_orchestration.py` | Verifies ForemanAgent, ComplexityAssessor, SubAgent, TaskPlan, and cancellation | advanced orchestration engine |
+| `test_agent_stress.py` | Verifies agent edge cases, concurrency, and session deletion cascading | agent resilience |
+| `test_agent_backward_compat.py` | Verifies LMStudioClient alias for OllamaClient | backward compatibility |
 
 ## Why The Tests Exist
 
@@ -102,6 +118,9 @@ This makes the suite suitable for regular development runs even when no ESP32, L
 - global keyboard listener behavior under every desktop/session type
 - real DataClient internet searches in deterministic CI
 - true screen-recording or ML behavior for SeeOnDesk
+- real Playwright browser launch in CI (all browser tests are fully mocked)
+- real CAD server integration end-to-end
+- fionaLocalPages dashboard rendering in headless browser
 
 ## Validation Commands
 
@@ -117,10 +136,29 @@ Or with pytest:
 python -m pytest tests/ -v
 ```
 
+Run specific test groups:
+
+```bash
+# Browser automation (fully mocked)
+python -m pytest tests/browser/ -v
+
+# Interface contract tests
+python -m pytest tests/contracts/ -v
+
+# Agent orchestration
+python -m pytest tests/test_agent_orchestrator.py tests/test_agent_orchestration.py tests/test_agent_foreman_handler.py -v
+
+# Agent chat and personality
+python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py -v
+
+# CAD server tests
+python -m pytest tests/cad_server/ -v
+```
+
 Compile check:
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
 
 Docs build:

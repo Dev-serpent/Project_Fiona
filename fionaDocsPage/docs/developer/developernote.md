@@ -32,6 +32,7 @@ pip install -e .
 - `numpy`
 - `pandas`
 - `requests`
+- `aiohttp` — async HTTP server/client for fionaLocalPages and WebSocket/SSE support
 
 ## Optional Runtime Packages
 
@@ -39,6 +40,8 @@ pip install -e .
 - `snowboy` — alternative wake word detection
 - `pystray` + `Pillow` — system tray icon
 - `opencv-python` + `mediapipe` + `pyautogui` — EyeControl camera tracker (via `.[eyecontrol]`)
+- `playwright` — browser automation subsystem (BrowserAutomation); install via `playwright install` after pip
+- `fionaLocalPages` — web SPA frontend dashboard (requires aiohttp)
 
 ## Useful System Tools
 

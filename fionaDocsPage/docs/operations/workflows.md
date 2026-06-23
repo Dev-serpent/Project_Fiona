@@ -225,7 +225,7 @@ fiona --discover-actions
   -> categorized action list
 ```
 
-**Process Tracking** (added in roadmap):
+**Process Tracking**:
 
 ```text
 ProcessTracker
@@ -235,7 +235,7 @@ ProcessTracker
   -> no psutil dependency required
 ```
 
-**Workspace Awareness** (added in roadmap):
+**Workspace Awareness**:
 
 ```text
 WorkspaceWatcher
@@ -245,7 +245,23 @@ WorkspaceWatcher
   -> tracks current workspace ID
 ```
 
-The current implementation is metadata-based. Screen recording and ML classification are future work.
+**Screen Capture**:
+
+```text
+capture_screen()
+  -> spectacle on KDE (preferred)
+  -> grim on generic Wayland
+  -> scrot/gnome-screenshot on X11
+  -> writes PNG to output path
+
+capture_window(window_id)
+  -> kdotool activate target window
+  -> scrot -u / gnome-screenshot -w
+  -> focused window capture
+
+analyze_screen(prompt)
+  -> capture_screen() -> Ollama vision model -> text response
+```
 
 ## Macro Engine Workflow
 
@@ -364,6 +380,278 @@ fiona agent ask
 ```
 
 The current Agent layer performs inference only. It does not train models, fine-tune models, execute actions automatically, or decide command permissions.
+
+## Browser Automation Workflow
+
+Goal: control a web browser programmatically via Playwright for automation tasks.
+
+```text
+fiona browser start
+  -> asyncio event loop
+  -> Playwright browser launch (chromium/firefox/webkit)
+  -> BrowserManager state machine: STOPPED → STARTING → RUNNING
+  -> module-level default manager created via get_browser_manager()
+  -> optional EventBus publishes BrowserLaunched event
+
+fiona browser navigate <url>
+  -> BrowserManager.navigate(url)
+  -> default context required
+  -> NavigationCompleted event published with status code and final URL
+
+fiona browser click <selector>
+  -> BrowserManager.click_element(selector)
+  -> timeout-based element wait
+
+fiona browser type <selector> <text>
+  -> BrowserManager.type_text(selector, text)
+  -> configurable keystroke delay
+
+fiona browser screenshot [--output <path>]
+  -> BrowserManager.capture_screenshot(path=path)
+  -> returns raw bytes if no path given
+
+fiona browser stop
+  -> browser manager closes all contexts
+  -> Playwright browser instance closed
+  -> state returns to STOPPED
+```
+
+### State Machine
+
+```text
+                    start()
+  STOPPED ──────────────────► STARTING ──────────────► RUNNING
+    ▲                            │                        │
+    │                            │ (failure)              │ (crash)
+    │                            ▼                        ▼
+    │                          ERROR ◄───────────────── DEGRADED
+    │                            │
+    └────────────────────────────┘
+         restart() / stop()
+```
+
+Valid state transitions:
+
+| Transition | Method | Notes |
+|------------|--------|-------|
+| STOPPED → STARTING → RUNNING | `start()` | Normal startup sequence |
+| RUNNING → STOPPED | `stop()` | Clean shutdown, idempotent |
+| RUNNING → ERROR → RUNNING | `restart()` | Auto-restart on crash |
+| RUNNING → DEGRADED | (internal) | Reduced-capability state |
+
+### Context Management
+
+Isolated browser contexts can be created for multi-session workflows:
+
+```text
+create_context(**kwargs)
+  -> IBrowserContext with unique context_id
+  -> separate cookies/storage/state
+  -> tracks all contexts by ID
+  -> published BrowserContextCreated event
+
+close_context(context_id)
+  -> removes context from manager
+  -> closes browser context
+```
+
+### Error Handling
+
+Errors fall into typed exception classes:
+
+| Error | Cause |
+|-------|-------|
+| `BrowserLaunchError` | Browser process failed to start |
+| `BrowserShutdownError` | Browser failed to close cleanly |
+| `BrowserNotRunning` | Operation attempted while browser is stopped |
+| `BrowserCrashError` | Browser process crashed unexpectedly |
+| `ElementNotFound` | CSS selector did not match any element |
+| `NavigationTimeout` | Page load exceeded timeout |
+| `BrowserTimeout` | Generic operation timeout |
+
+Automatic restart: when a crash is detected during an operation, the manager attempts one auto-restart (`_AUTO_RESTART_ATTEMPTS = 1`). If the restart succeeds, the state transitions back to RUNNING. If it fails, the state stays at ERROR.
+
+## Agent Orchestration Workflow
+
+Goal: have the local LLM plan and execute multi-step tasks with human oversight.
+
+### Think-Act-Observe Loop (AgentOrchestrator)
+
+```text
+user goal
+  -> AgentOrchestrator.run_goal(goal)
+  -> Phase 1: Think / Plan
+     -> LLM generates plan steps with action + parameters
+     -> each step becomes a PlannedStep with risk assessment
+     -> loop until LLM signals done or max_turns reached
+  -> Phase 2: Submit for Approval
+     -> ApprovalManager.submit_plan() -> plan_id
+     -> PlanStatus set to PENDING
+     -> human must approve via GUI/API
+  -> Phase 3: Wait for Decision
+     -> wait_for_approval(timeout=300)
+     -> returns 'approved', 'denied', 'cancelled', or 'timeout'
+  -> Phase 4: Execute
+     -> ApprovalManager.mark_executing(plan_id)
+     -> SafeActionRouter checks personality permissions
+     -> each action executed via ActionRouter
+     -> observation collected for each step
+     -> ApprovalManager.mark_completed(plan_id, summary)
+  -> result returned to user
+```
+
+### ForemanAgent Flow (Complex Tasks)
+
+For tasks that require decomposition into sub-goals:
+
+```text
+user goal
+  -> ComplexityAssessor classifies complexity
+  -> Simple query: single SubAgent directly (no planning overhead)
+  -> Moderate/complex task:
+     -> TaskPlan.from_llm() decomposes into sub-goals
+     -> sub-goals executed in topological order
+     -> parallel sub-goals run concurrently when possible
+     -> each sub-goal is a self-contained unit with its own SubAgent
+     -> results synthesized into a final response
+```
+
+The foreman flow is accessible via:
+
+```bash
+fiona agent ask --model <model-id> "complex multi-step request"
+```
+
+Or programmatically:
+
+```python
+from Agent.orchestration import ForemanAgent
+
+foreman = ForemanAgent(client, registry, chat_store)
+response = foreman.execute(goal="Research topic and save results")
+```
+
+### Permission Gating
+
+Every action executed by the agent passes through `PermissionEnforcer`, which checks the action name against the active personality's `allowed_tools`. If the personality has restricted tool access, disallowed actions raise `AgentPermissionError` before execution.
+
+```text
+action name + personality
+  -> PermissionEnforcer.assert_tool_allowed()
+  -> SafeActionRouter.run()
+  -> ActionRouter.run()
+  -> result
+```
+
+## Web UI Dashboard Workflow
+
+Goal: provide a browser-based SPA dashboard for monitoring and controlling Fiona.
+
+### Architecture
+
+```text
+browser SPA (React/Vue/Svelte)
+  -> HTTP requests to aiohttp server (port 8765)
+  -> WebSocket connection at /ws
+  -> SSE stream at /api/v1/stream
+
+aiohttp server (fionaLocalPages/server/app.py)
+  -> REST API at /api/v1/
+  -> WebSocket manager for real-time push
+  -> SSE endpoint for server-sent events
+  -> static file server with SPA fallback for client-side routing
+```
+
+### REST API
+
+```text
+/api/v1/
+  ├── health              GET    -> server health check
+  ├── system/
+  │   ├── status          GET    -> full system status
+  │   └── metrics         GET    -> CPU/memory/disk metrics
+  ├── agent/
+  │   ├── ask             POST   -> query the LLM
+  │   ├── goal            POST   -> run agent goal
+  │   ├── status          GET    -> Ollama health
+  │   └── commands        GET    -> agent-accessible commands
+  ├── actions/
+  │   ├── list            GET    -> registered actions
+  │   ├── run             POST   -> execute an action
+  │   └── history         GET    -> action trace log
+  ├── voice/
+  │   ├── parse           POST   -> parse voice command
+  │   └── transcribe      POST   -> transcribe audio
+  ├── terminal/
+  │   ├── exec            POST   -> run terminal command
+  │   └── status          GET    -> terminal availability
+  ├── files/
+  │   ├── list            GET    -> list files
+  │   ├── read            GET    -> read file content
+  │   ├── write           POST   -> write to file
+  │   └── info            GET    -> file metadata
+  ├── config/
+  │   ├── ...             GET    -> list configs
+  │   ├── {name}          GET    -> read config
+  │   └── {name}          PUT    -> update config
+  ├── browser/
+  │   ├── start           POST   -> start browser
+  │   ├── stop            POST   -> stop browser
+  │   ├── status          GET    -> browser state
+  │   ├── navigate        POST   -> navigate to URL
+  │   ├── click           POST   -> click element
+  │   └── screenshot      POST   -> capture screenshot
+  ├── desktop/
+  │   ├── active          GET    -> active window info
+  │   └── snapshot        GET    -> full desktop snapshot
+  ├── recall/
+  │   ├── search          GET    -> search memory store
+  │   ├── remember        POST   -> save to memory
+  │   └── forget/{key}    DELETE -> remove from memory
+  ├── macros/
+  │   ├── ...             GET    -> list macros
+  │   └── run             POST   -> execute macro
+  └── camcoms/
+      ├── status          GET    -> CamComs status
+      └── identity        GET    -> CamComs identity
+```
+
+### WebSocket Real-Time Push
+
+```text
+SPA connects to /ws
+  -> WebSocketManager.register(ws) -> peer_id
+  -> periodic heartbeat (30s interval) detects stale connections
+  
+Server pushes:
+  -> system:metrics every 2 seconds (CPU, memory, disk, load, uptime)
+  -> browser events (BrowserLaunched, NavigationCompleted, BrowserCrashed)
+  
+Client sends:
+  -> JSON-RPC 2.0 method calls
+  -> ping/pong heartbeats
+```
+
+### SSE (Server-Sent Events)
+
+```text
+SPA connects to /api/v1/stream
+  -> Content-Type: text/event-stream
+  -> 30-second heartbeat keepalive
+  -> lightweight alternative to WebSocket for one-way updates
+```
+
+### Data Flow
+
+```text
+SPA user action
+  -> HTTP POST /api/v1/{resource}/{action}
+  -> aiohttp handler imports Fiona Python module
+  -> operation executed against real subsystem
+  -> JSON response returned to SPA
+  -> WebSocket push broadcasts state changes to all connected peers
+  -> SPA re-renders with updated data
+```
 
 ## Debugging Workflow
 

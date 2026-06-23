@@ -9,7 +9,7 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - standalone `Vsee Holography` GUI
 - standalone `PhiConnect` encrypted chat GUI
 - standalone DataClient research GUI
-- SeeOnDesk desktop-awareness CLI with process tracking and workspace awareness
+- SeeOnDesk desktop-awareness CLI with process tracking, workspace awareness, and screen capture
 - EyeControl optional camera tracker CLI
 - fAT high-density terminal dashboard with live CPU, GPU, Memory, Disk, Network, Power, and Security metrics
 - Real-time sliding TUI command center with live search and non-blocking auto-refresh
@@ -23,6 +23,9 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - host service config/status/run commands with GUI controls
 - user systemd service unit generation with live GUI state polling
 - Ollama local inference bridge (replaced LM Studio)
+- Agent orchestration with think-act-observe loop, chat, command registry, permissions, personality, and query detection
+- FionaCore approval system for agent action plans (pending/approve/deny with reason)
+- PhiConnect foreman_handler integration for multi-agent orchestration
 - DataClient quick mining and bounded deep research CSV export
 - encrypted computer-to-computer chat through PhiConnect
 - Vsee point/edge hologram viewer
@@ -36,24 +39,33 @@ Fiona is currently a working local-control foundation, not a full JARVIS-style a
 - key rotation CLI and GUI
 - system tray icon with state indicators and `--tray-only` mode
 - voice wake-word detection, push-to-talk, and feedback engine
-- Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, and system tray paths
+- BrowserAutomation module with Playwright lifecycle manager (start, stop, navigate, click, type, screenshot)
+- fionaLocalPages SPA web frontend with REST API + WebSocket + SSE real-time updates
+- Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, system tray, and browser automation paths
 
 ## Still Incomplete
 
-- no full AI planner/tool loop yet
+- no full AI planner/tool loop yet (Agent has think-act-observe but no long-term planning)
 - no screen-recording or ML classifier layer for SeeOnDesk yet
 - no Fiona training/fine-tuning pipeline yet
 - ESP32 firmware crypto adapter is still a template, not hardware-verified
 - Vsee is currently a wireframe coordinate viewer, not true optical holography
+- Web UI still evolving — some pages and workflows are partial
+- BrowserAutomation has basic lifecycle but no advanced interaction patterns (forms, frames, wait strategies)
+- Agent orchestration maturity — multi-agent coordination, tool-use reliability, and error recovery still being hardened
 
 ## Latest Known Validation
 
 The latest recorded project validation is:
 
 ```text
-Ran 740 tests in 26.48s
-OK (17 pre-existing environment failures unrelated to roadmap)
-compileall OK
+1598 tests across Python and JavaScript:
+  Python:   1413 passed (pytest)
+  CAD JS:    87 passed (vitest)
+  CAD Srv:   98 passed (pytest)
+  compileall OK
+
+14 pre-existing environment failures unrelated to roadmap
 ```
 
 Use the Validation page for the exact commands.

@@ -31,6 +31,7 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona camcoms ...` / `fiona cc ...` | CamComs | Crypto, transport, receiver, trust, audit, pairing, key rotation | mixed |
 | `fiona host ...` | CamComs HostService | Unified service config/lifecycle/logs | mixed |
 | `fiona agent ...` | Agent | Ollama bridge and command registry | one-shot |
+| `fiona browser ...` | BrowserAutomation | Playwright-based browser automation | mixed |
 | `fiona dataclient ...` / `fiona data ...` | DataClient | Research mining, conversion, GUI | mixed |
 | `fiona eyecontrol ...` / `fiona eye ...` | EyeControl | Optional camera-based eye-controlled mouse tracker | mixed |
 | `fiona fat ...` / `fiona terminal-assist ...` | TerminalAssist | btop-style dashboard and Zellij layout helper | mixed |
@@ -42,12 +43,11 @@ This preserves backward compatibility with the original launcher commands while 
 | `fiona seeondesk ...` / `fiona sod ...` | SeeOnDesk | Active desktop/window identification, process tracking, workspace awareness | one-shot |
 | `fiona vsee` | Vsee | Standalone holography viewer | foreground GUI |
 | `fiona phiconnect` | PhiConnect | Standalone encrypted chat | foreground GUI |
+| `fiona voice ...` | Voice | Wake word detection, feedback testing, and command parsing | one-shot |
 | `fiona --run-macro <name>` | FionaCore | Execute a named macro with the extended engine | one-shot |
 | `fiona --list-macros` | FionaCore | List all macros and step counts | one-shot |
 | `fiona --discover-actions` | SeeOnDesk | Discover available actions from system state | one-shot |
 | `fiona --tray-only` | QuikTieper | Run system tray icon only (no GUI window) | foreground service |
-| `fiona voice wake-test` | Voice | Test wake word detection | one-shot |
-| `fiona voice feedback-test` | Voice | Test audio/notification feedback | one-shot |
 
 ## QuikTieper Delegated Commands
 
@@ -185,6 +185,60 @@ Mechanics:
 - `ask` constructs a chat-completions request with system prompt, temperature, max tokens, and model id.
 - `commands` exposes an agent-readable registry of Fiona actions and available QuikTieper apps.
 
+## Browser Commands
+
+Playwright-based browser automation subsystem.
+
+```bash
+fiona browser start            # Start the browser automation engine
+fiona browser stop             # Stop the browser automation engine
+fiona browser status           # Show current browser state
+fiona browser navigate <url>   # Navigate default context to a URL
+fiona browser click <selector> # Click an element matched by CSS selector
+fiona browser type <selector> <text>  # Type text into an element
+fiona browser screenshot       # Capture a screenshot of the current page
+```
+
+Startup flow:
+
+```text
+fiona browser start
+  -> BrowserManager state: STOPPED -> STARTING -> RUNNING
+  -> module-level default manager created
+  -> Playwright provider launches browser (chromium by default)
+  -> optional EventBus publishes BrowserLaunched event
+  -> isolated contexts can be created for multi-session workflows
+```
+
+Subcommand details:
+
+| Subcommand | Arguments | Effect |
+| --- | --- | --- |
+| `start` | — | Launch browser engine, transition to RUNNING |
+| `stop` | — | Close all contexts and browser instance, transition to STOPPED |
+| `status` | — | Print current state (stopped/starting/running/degraded/error) |
+| `navigate` | `url`, `--timeout` (30.0s) | Navigate default context to URL |
+| `click` | `selector`, `--timeout` (5.0s) | Click element by CSS selector |
+| `type` | `selector`, `text`, `--delay` (0.01s), `--timeout` (5.0s) | Type text into element |
+| `screenshot` | `--output <path>` | Capture page screenshot to file or stdout |
+
+State machine transitions:
+
+```text
+STOPPED → STARTING → RUNNING  (normal start)
+RUNNING → STOPPED             (clean stop, idempotent)
+RUNNING → ERROR → RUNNING     (auto-restart on crash, 1 attempt)
+```
+
+Error handling uses typed exception classes:
+
+- `BrowserLaunchError`: browser process failed to start
+- `BrowserShutdownError`: browser failed to close cleanly
+- `BrowserNotRunning`: operation attempted while browser is stopped
+- `BrowserCrashError`: browser process crashed unexpectedly
+- `ElementNotFound`: CSS selector did not match
+- `NavigationTimeout`: page load exceeded timeout
+
 ## DataClient Commands
 
 ```bash
@@ -231,6 +285,11 @@ Prints all discoverable actions grouped by category (process, workspace, window)
 fiona voice wake-test      # Test wake word detection availability
 fiona voice feedback-test  # Test audio and notification feedback
 ```
+
+Mechanics:
+
+- `wake-test` checks for available wake word detection libraries (pvporcupine, snowboy, mycroft_precise) and reports which backend would be used.
+- `feedback-test` plays the wake sound and shows a desktop notification to verify that audio and visual feedback channels work.
 
 ## Macro Engine Commands
 
@@ -329,3 +388,6 @@ Mechanics:
 | Shell command blocked | FionaCore shell safety | check if the command matches a destructive pattern; use safe alternatives |
 | Pairing server won't start | port conflict | verify port 8090 is available or stop the existing pairing server |
 | Macro not found | macro config | run `fiona --list-macros` to verify the macro name |
+| Browser cannot start | Playwright/browser missing | run `playwright install` to install browser binaries |
+| Browser navigate times out | network/page load | verify URL is reachable; increase `--timeout` |
+| Browser element not found | selector/page state | verify CSS selector matches an element on the current page |

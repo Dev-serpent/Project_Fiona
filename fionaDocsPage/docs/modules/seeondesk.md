@@ -2,7 +2,7 @@
 
 SeeOnDesk is Fiona's first desktop-awareness subsystem. It identifies the active app/window from desktop metadata.
 
-It does not yet train or run a screen-recording machine-learning model.
+Screen capture is implemented. Visual recognition via an ML classifier is not yet integrated.
 
 ## Commands
 
@@ -48,12 +48,43 @@ Depending on the backend and session permissions, output can include:
 - session type
 - current desktop name
 
-## Future Direction
+## Process Tracking
+
+ProcessTracker iterates `/proc/*/comm` to find processes by name substring, with no `psutil` dependency required. It registers and triggers watcher callbacks when matching processes are detected.
+
+```bash
+fiona seeondesk status  # includes process tracking output
+```
+
+## Workspace Awareness
+
+WorkspaceWatcher polls workspace state via `kdotool` (with `wmctrl` fallback), detects active workspace changes, fires change callbacks, and tracks the current workspace ID.
+
+## Action Discovery
+
+Discover available actions from system state:
+
+```bash
+fiona --discover-actions
+```
+
+Prints a categorized list of actions grouped by process, workspace, and window context, with action name, description, and confirmation requirements.
+
+## Screen Capture
+
+The `vision.py` module captures the full screen or a specific window to disk. It prioritizes KDE's `spectacle` on Wayland, falls back to `grim` for generic Wayland, and uses `scrot` or `gnome-screenshot` on X11. Screen captures are used by the Agent's `seeondesk_analyze` action for vision-based QA via the local Ollama model.
+
+```python
+from SeeOnDesk.vision import capture_screen, capture_window, analyze_screen
+
+capture_screen("/tmp/screenshot.png")
+analyze_screen("What application is visible?")
+```
+
+## Remaining Work
 
 SeeOnDesk is the base for richer context:
 
-- screen capture
-- visual recognition
-- workspace/session state
-- app-specific available actions
-- command context for the future Fiona agent
+- ML classifier for visual recognition
+- app-specific action contexts
+- agent integration

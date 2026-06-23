@@ -60,10 +60,44 @@ python -m pytest tests/test_voice.py -v
 python -m pytest tests/test_system_tray.py -v
 ```
 
+## Module-Specific Test Commands
+
+### Browser Automation
+
+```bash
+python -m pytest tests/browser/ -v
+```
+
+This covers the `BrowserManager` state machine and the `PlaywrightBrowserProvider` with fully mocked Playwright imports.
+
+### Agent Orchestration
+
+```bash
+python -m pytest tests/test_agent_orchestration.py tests/test_agent_orchestrator.py tests/test_agent_foreman_handler.py -v
+```
+
+This covers the think-act-observe loop, ForemanAgent task decomposition, sub-agent management, and plan synthesis.
+
+### Contract Tests
+
+```bash
+python -m pytest tests/contracts/ -v
+```
+
+Validates every abstract interface defined in `fiona/interfaces.py` against contract test suites that verify method signatures, error conditions, and data type invariants.
+
+### Additional Agent Tests
+
+```bash
+python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py tests/test_agent_command_registry.py tests/test_agent_stress.py tests/test_agent_backward_compat.py -v
+```
+
+Covers chat session management, token estimation, personality detection, query classification, command discovery, stress/edge cases, and backward compatibility.
+
 ## Compile Check
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
 
 ## CamComs Focused Tests

@@ -35,8 +35,10 @@ nav:
       - RecallVault: modules/recallvault.md
       - CmdTrace: modules/cmdtrace.md
       - Agent: modules/agent.md
+      - BrowserAutomation: modules/browserautomation.md
   - Current State: current-state.md
   - Roadmap: roadmap.md
+  - Prototypes: prototypes.md
   - Developer:
       - Build Order: developer/build-order.md
       - Security: developer/security.md

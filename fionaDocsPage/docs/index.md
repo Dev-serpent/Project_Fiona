@@ -63,6 +63,18 @@
     <strong>Agent</strong>
     <span>Ollama bridge for local OpenAI-compatible inference with tool-use planning loop.</span>
   </a>
+  <a class="fiona-card" href="modules/cmdtrace/">
+    <strong>CmdTrace</strong>
+    <span>JSONL-based observability and audit logging for routed actions.</span>
+  </a>
+  <a class="fiona-card" href="modules/recallvault/">
+    <strong>RecallVault</strong>
+    <span>Persistent key-value remembrance store for categorized memory.</span>
+  </a>
+  <a class="fiona-card" href="modules/browserautomation/">
+    <strong>BrowserAutomation</strong>
+    <span>Browser automation via Playwright with session management, state machine, and error handling.</span>
+  </a>
 </div>
 
 ## Main Commands
@@ -86,5 +98,5 @@ After editable installation, `fiona ...` can be used instead of `python3 -m fion
 - Install from [Installation](installation.md).
 - Understand package layout in [Architecture](architecture.md).
 - Deep-dive into [CLI Mechanics](operations/cli.md), [GUI Mechanics](operations/gui.md), and [System Workflows](operations/workflows.md).
-- Read each subsystem under [Modules](modules/quiktieper.md).
+- Read each of the 14 subsystems under [Modules](modules/quiktieper.md).
 - Track implementation status in [Current State](current-state.md), [Roadmap](roadmap.md), and [Test Suites](developer/test-suites.md).

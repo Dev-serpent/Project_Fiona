@@ -25,3 +25,17 @@ This is the current implementation order from the developer notes.
 21. Done: trust store expiry with auto-prune and backward-compatible format.
 22. Done: key rotation with atomic writes and confirmation prompt.
 23. Done: system tray icon with color-coded state and right-click menu.
+24. Done: Agent migration from LM Studio to Ollama with backward-compatible LMStudioClient alias.
+25. Done: FionaCore action routing and approval system (ActionRouter, ApprovalManager).
+26. Done: Agent orchestration system with think-act-observe loop (AgentOrchestrator, AgentTurn, max_turns).
+27. Done: Agent chat system (AgentChatHandler, ChatStore with token estimation).
+28. Done: Agent command registry exposing 20+ Fiona actions (CommandSpec, DEFAULT_COMMANDS).
+29. Done: Agent personality/permission/query detection systems (Personality, PermissionEnforcer, QueryDetector).
+30. Done: Cancellation token infrastructure for long-running agent turns.
+31. Done: ForemanAgent advanced orchestration with task decomposition, sub-agents, and plan synthesis.
+32. Done: BrowserAutomation with Playwright lifecycle manager, state machine, config, and error handling.
+33. Done: fionaLocalPages web SPA frontend with aiohttp REST API, WebSocket, SSE, and 20+ dashboard pages.
+34. Done: Project-wide interface contracts (fiona/interfaces.py ABCs for all subsystems).
+35. Done: Tracing and metrics infrastructure (fiona/tracing.py, fiona/metrics.py).
+36. Done: Dependency injection container (fiona/di.py).
+37. Done: Fiona plugin system (fiona/plugin_system.py).

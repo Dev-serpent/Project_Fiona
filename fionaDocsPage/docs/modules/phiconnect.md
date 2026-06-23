@@ -53,3 +53,45 @@ On each computer:
 - Missing peer public key: outbound encryption has no recipient key yet.
 - Connection refused: no PhiConnect receiver is listening on the target host/port.
 - Signature/trust failure: the inbound sender public key is not trusted or does not match the sender identity.
+
+## Agent Bridge
+
+PhiConnect provides two optional agent integration modules under `PhiConnect/`:
+
+### ForemanChatHandler
+
+`foreman_handler.py` defines `ForemanChatHandler`, a GUI-facing handler that wraps `ForemanAgent` for multi-agent orchestration. It provides a toggle (`foreman_enabled`) to switch between simple single-agent chat (`AgentChatHandler`) and full orchestration via `ForemanAgent`.
+
+When the **Agent bridge** checkbox in the PhiConnect GUI is enabled, chat messages sent through the GUI are forwarded to the local Ollama agent for processing. The `ForemanChatHandler` class handles the orchestration pipeline:
+
+- Simple queries (greetings, chit-chat) are routed through the lightweight `AgentChatHandler` to avoid unnecessary token usage.
+- Complex tasks are decomposed and executed by `ForemanAgent` using a multi-step orchestration pipeline with planning, sub-agent delegation, and result synthesis.
+- A `CancellationToken` is passed throughout to support cancellation.
+
+```python
+from PhiConnect.foreman_handler import ForemanChatHandler
+
+handler = ForemanChatHandler(chat_store=store)
+handler.foreman_enabled = True
+handler.send_message(
+    session_id="...",
+    message="What is the capital of France?",
+    token=CancellationToken(),
+    on_message=lambda role, content: print(role, content),
+    on_error=lambda err: print("Error:", err),
+    on_complete=lambda: print("Done"),
+)
+```
+
+### PhiConnectAgentBridge
+
+`bridge.py` defines `PhiConnectAgentBridge`, a lightweight bridge that intercepts inbound chat messages and automatically replies via the local Ollama agent. When the bridge is active, every inbound message (that does not already start with `[Fiona]`) is forwarded to the Ollama client, and the agent's response is sent back as a chat reply.
+
+```python
+from PhiConnect.bridge import PhiConnectAgentBridge
+
+bridge = PhiConnectAgentBridge(config)
+bridge.handle_message(event)  # forwards to Ollama and sends reply
+```
+
+Both modules require the Agent subsystem and an active Ollama instance on `http://localhost:11434`.

@@ -137,6 +137,119 @@ The pairing HTTP server (`PairingHttpServer`) runs on a dedicated port (8090) an
 - Never add a new shell execution point without wrapping it in `safe_os_system` or `safe_popen_shell`.
 - Key rotation must use atomic writes (temp file + rename).
 
+## Agent Permission System
+
+The `Agent.permission` module provides personality-scoped tool access control on top of the `FionaCore.ActionRouter`.
+
+### Personality.permits()
+
+`Personality` (defined in `Agent/personality.py`) is an immutable dataclass that defines an agent personality's identity, system prompt, and tool permissions. Each personality carries an `allowed_tools` field — an optional `frozenset[str]` of tool names it is permitted to invoke. When `allowed_tools` is `None`, all tools are permitted:
+
+```python
+@dataclass(frozen=True)
+class Personality:
+    name: str
+    allowed_tools: frozenset[str] | None = None
+
+    def permits(self, tool_name: str) -> bool:
+        """True if allowed_tools is None or tool_name is in the set."""
+        return self.allowed_tools is None or tool_name in self.allowed_tools
+```
+
+Six built-in personalities are registered in `PersonalityRegistry`:
+- **general** — full tool access (`allowed_tools=None`)
+- **planner** — read-only tools (desktop awareness, status, recall)
+- **engineer** — automation tools (press, click, move, text, macro)
+- **analyst** — research tools (dataclient, recall, seeondesk analyze)
+- **security** — read-only audit tools (status, recall search)
+- **controller** — full tool access (orchestration personality)
+
+### PermissionEnforcer
+
+`PermissionEnforcer` wraps a `Personality` and provides runtime gate checks:
+
+- `check_tool(tool_name) → bool` — returns whether the tool is permitted
+- `assert_tool_allowed(tool_name)` — raises `AgentPermissionError` if the tool is not permitted
+
+```python
+enforcer = PermissionEnforcer(personality)
+enforcer.assert_tool_allowed("rm_disk")  # raises AgentPermissionError for non-general personalities
+```
+
+### SafeActionRouter
+
+`SafeActionRouter` wraps `FionaCore.ActionRouter` with personality-based permission checks. Every `run()` call goes through `PermissionEnforcer.assert_tool_allowed()` before reaching the underlying router:
+
+```python
+router = SafeActionRouter(enforcer, action_router)
+result = router.run("press", source="agent")
+# raises AgentPermissionError if the active personality does not have "press" in allowed_tools
+```
+
+Key methods:
+- `run()` — check permission, then delegate to `ActionRouter.run()`
+- `run_with_fallback()` — same as `run()`, but falls back to `fiona.cli` subprocess if the action is not registered in `ActionRouter`
+- `list_allowed_actions()` — returns the intersection of `ActionRouter.list_actions()` and the personality's `allowed_tools`
+
+## Browser Automation Security
+
+The `BrowserAutomation` subsystem (based on Playwright) includes several security mechanisms to isolate browser activity from the host system.
+
+### Headless Mode
+
+By default, the browser runs with `headless=False` (visible window). For automated or untrusted workloads, headless mode can be enabled via `BrowserConfig`:
+
+```python
+from fiona.interfaces import BrowserConfig
+
+config = BrowserConfig(
+    browser_type="chromium",
+    headless=True,              # no visible window
+    viewport_width=1280,
+    viewport_height=720,
+)
+```
+
+Headless mode ensures no graphical output reaches the user's display, making it suitable for background automation tasks.
+
+### Proxy Configuration
+
+All browser traffic can be routed through a configurable HTTP/S proxy:
+
+```python
+config = BrowserConfig(
+    proxy="http://127.0.0.1:8080",  # route all traffic through proxy
+)
+```
+
+When `proxy` is `None` (the default), the browser connects directly. Setting a proxy is recommended when browser automation operates in a sensitive network context.
+
+### Context Isolation
+
+The `BrowserManager` creates isolated browser contexts (via `IBrowserContext`) that are sandboxed from each other:
+
+- Each context has its own cookies, localStorage, and session data
+- Contexts are ephemeral by default (`data_dir=None`) — no profile data persists on disk
+- Persistent profiles can be specified via `data_dir` for authenticated sessions
+- The state machine (`BrowserManagerState`) tracks the browser lifecycle and prevents operations on stopped or errored browsers
+
+### Error Classification
+
+Browser automation errors are classified into distinct exception types for secure error handling:
+
+| Exception | Triggered When |
+|-----------|---------------|
+| `BrowserLaunchError` | Browser process fails to start |
+| `BrowserNotRunning` | Operation attempted on a stopped browser |
+| `BrowserShutdownError` | Clean shutdown fails |
+| `BrowserCrashError` | Unexpected process termination |
+| `NavigationTimeout` | Page load exceeds timeout |
+| `ScriptExecutionError` | JavaScript execution throws or returns unexpected type |
+| `SelectorTimeout` | Element not found within timeout |
+| `ElementNotInteractable` | Element exists but cannot be clicked/typed |
+
+All errors inherit from `BrowserError`, ensuring callers can catch a single base type for safe error handling.
+
 ## Remaining Security Work
 
 - replay cache cleanup policy
