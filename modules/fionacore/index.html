@@ -130,6 +130,10 @@
 <li>
     <a href="../agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -257,6 +264,46 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#approvalmanager" class="nav-link">ApprovalManager</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#planstatus" class="nav-link">PlanStatus</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#plannedstep" class="nav-link">PlannedStep</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#approvalmanager-api" class="nav-link">ApprovalManager API</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#permissions" class="nav-link">Permissions</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#permissionprofile" class="nav-link">PermissionProfile</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#permissionenforcer" class="nav-link">PermissionEnforcer</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#voice-integration" class="nav-link">Voice Integration</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#voicecommand" class="nav-link">VoiceCommand</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#whisperengine" class="nav-link">WhisperEngine</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -265,7 +312,7 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="fionacore">FionaCore</h1>
-<p>FionaCore provides shared primitives used across all Fiona subsystems: action routing, security policies, macro execution, shell safety, verification prompts, notifications, and speech synthesis.</p>
+<p>FionaCore provides shared primitives used across all Fiona subsystems: action routing, security policies, macro execution, shell safety, verification prompts, notifications, speech synthesis, approval management, permissions, and voice integration.</p>
 <h2 id="action-router">Action Router</h2>
 <p>The central action dispatch system. Routes named actions to registered handler functions with ACL checking, verification prompts, and trace logging.</p>
 <pre><code class="language-python">from FionaCore.actions import ActionRouter, ActionResult
@@ -406,7 +453,222 @@ speak(&quot;Task complete&quot;)  # Uses espeak or festival
 <li>Prefers <code>espeak</code> (fast, widely available)</li>
 <li>Falls back to <code>festival</code></li>
 <li>Silent if no TTS engine is installed</li>
-</ul></div>
+</ul>
+<h2 id="approvalmanager">ApprovalManager</h2>
+<p>Human-in-the-loop plan approval system used by the Agent orchestrator. Agent threads submit plans and block on <code>wait_for_approval()</code> while server threads call <code>approve_plan()</code> / <code>deny_plan()</code> in response to human action.</p>
+<h3 id="planstatus">PlanStatus</h3>
+<pre><code class="language-python">from FionaCore.approval import PlanStatus
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PENDING</code></td>
+<td>Awaiting human approval</td>
+</tr>
+<tr>
+<td><code>APPROVED</code></td>
+<td>Human approved, ready to execute</td>
+</tr>
+<tr>
+<td><code>DENIED</code></td>
+<td>Human denied</td>
+</tr>
+<tr>
+<td><code>EXECUTING</code></td>
+<td>Currently being executed by agent</td>
+</tr>
+<tr>
+<td><code>COMPLETED</code></td>
+<td>All steps done</td>
+</tr>
+<tr>
+<td><code>FAILED</code></td>
+<td>Execution failed</td>
+</tr>
+<tr>
+<td><code>CANCELLED</code></td>
+<td>Human cancelled during execution</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plannedstep">PlannedStep</h3>
+<pre><code class="language-python">from FionaCore.approval import PlannedStep
+
+step = PlannedStep(
+    step_number=1,
+    action=&quot;browser_navigate&quot;,
+    params={&quot;url&quot;: &quot;https://example.com&quot;},
+    reasoning=&quot;Navigate to the target URL&quot;,
+    risk=&quot;medium&quot;,
+    requires_approval=False,
+)
+</code></pre>
+<h3 id="approvalmanager-api">ApprovalManager API</h3>
+<pre><code class="language-python">from FionaCore.approval import ApprovalManager, get_approval_manager
+
+manager = get_approval_manager()  # Module-level singleton
+
+# Agent side: submit a plan and wait for human decision
+plan_id = manager.submit_plan(
+    goal=&quot;Open the browser to example.com&quot;,
+    steps=[step],
+    agent_id=&quot;fiona-agent&quot;,
+)
+status = manager.wait_for_approval(plan_id, timeout=300)  # 'approved' | 'denied' | 'timeout'
+
+# Server/GUI side: approve or deny
+manager.approve_plan(plan_id)
+manager.deny_plan(plan_id, reason=&quot;Not now&quot;)
+
+# Lifecycle management
+manager.mark_executing(plan_id)
+manager.mark_completed(plan_id, summary=&quot;All steps done&quot;)
+manager.mark_failed(plan_id, error=&quot;Navigation timed out&quot;)
+manager.cancel_plan(plan_id, reason=&quot;User interrupted&quot;)
+</code></pre>
+<p>The <code>on_change</code> callback notifies subscribers when any plan status changes:</p>
+<pre><code class="language-python">def on_plan_change(plan_id: str) -&gt; None:
+    plan = manager.get_plan(plan_id)
+    print(f&quot;Plan {plan_id} is now {plan['status']}&quot;)
+
+manager.on_change(on_plan_change)
+</code></pre>
+<h2 id="permissions">Permissions</h2>
+<p>Two permission systems work together to control what agents and senders can do.</p>
+<h3 id="permissionprofile">PermissionProfile</h3>
+<p><code>FionaCore.permissions</code> defines risk-gated permission profiles.</p>
+<pre><code class="language-python">from FionaCore.permissions import PermissionProfile, permission_allows, permission_profile
+</code></pre>
+<p>Built-in profiles:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Max Risk</th>
+<th>Permissions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>local</code></td>
+<td>high</td>
+<td>read, control, service, network, gui</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>medium</td>
+<td>read, control, network</td>
+</tr>
+<tr>
+<td><code>remote_safe</code></td>
+<td>low</td>
+<td>read</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python"># Check if a given profile allows an operation
+allowed = permission_allows(
+    profile=&quot;agent&quot;,
+    risk=&quot;medium&quot;,
+    permission=&quot;network&quot;,
+)
+</code></pre>
+<h3 id="permissionenforcer">PermissionEnforcer</h3>
+<p><code>Agent.permission</code> provides <code>PermissionEnforcer</code> and <code>SafeActionRouter</code> for runtime tool-access gating within the Agent subsystem. The enforcer checks whether a specific tool name is permitted by the active personality, and <code>SafeActionRouter</code> wraps <code>FionaCore.ActionRouter</code> with these checks.</p>
+<pre><code class="language-python">from Agent.permission import PermissionEnforcer, SafeActionRouter
+
+enforcer = PermissionEnforcer(personality)
+enforcer.assert_tool_allowed(&quot;browser_navigate&quot;)  # Raises AgentPermissionError if denied
+
+safe_router = SafeActionRouter(enforcer=enforcer, router=action_router)
+result = safe_router.run(&quot;browser_navigate&quot;, url=&quot;https://example.com&quot;)
+</code></pre>
+<p>Key points:</p>
+<ul>
+<li><code>PermissionEnforcer</code> is optional — backward compatibility is preserved.</li>
+<li><code>SafeActionRouter.run()</code> checks permission before delegating to <code>ActionRouter.run()</code>.</li>
+<li><code>SafeActionRouter.run_with_fallback()</code> attempts CLI fallback if the action is not registered.</li>
+<li><code>list_allowed_actions()</code> returns the intersection of registered actions and the personality's allowed tools.</li>
+</ul>
+<h2 id="voice-integration">Voice Integration</h2>
+<p>Voice command parsing and speech-to-text transcription.</p>
+<h3 id="voicecommand">VoiceCommand</h3>
+<pre><code class="language-python">from FionaCore.voice import VoiceCommand, parse_voice_command
+</code></pre>
+<p><code>parse_voice_command()</code> matches spoken text against registered patterns and returns a <code>VoiceCommand</code> with the recognized action:</p>
+<pre><code class="language-python">cmd = parse_voice_command(&quot;Show host status&quot;)
+# VoiceCommand(text=&quot;Show host status&quot;, action=&quot;host.status&quot;, confidence=0.9)
+
+cmd = parse_voice_command(&quot;What is open on the desktop?&quot;)
+# VoiceCommand(text=&quot;What is open on the desktop?&quot;, action=&quot;seeondesk.status&quot;, confidence=0.9)
+</code></pre>
+<p>Supported voice commands:</p>
+<table>
+<thead>
+<tr>
+<th>Speech Pattern</th>
+<th>Mapped Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"show/open the host status"</td>
+<td><code>host.status</code></td>
+</tr>
+<tr>
+<td>"show/open the fat" / "terminal dashboard"</td>
+<td><code>fat.status</code></td>
+</tr>
+<tr>
+<td>"camcoms smoke/test" / "encryption test"</td>
+<td><code>camcoms.smoke</code></td>
+</tr>
+<tr>
+<td>"show/open camcoms paths"</td>
+<td><code>camcoms.paths</code></td>
+</tr>
+<tr>
+<td>"show/list bindings/shortcuts"</td>
+<td><code>quiktieper.list</code></td>
+</tr>
+<tr>
+<td>"desktop status" / "what is open"</td>
+<td><code>seeondesk.status</code></td>
+</tr>
+<tr>
+<td>"eye control status"</td>
+<td><code>eyecontrol.status</code></td>
+</tr>
+<tr>
+<td>"agent status" / "lm studio status"</td>
+<td><code>agent.status</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="whisperengine">WhisperEngine</h3>
+<pre><code class="language-python">from FionaCore.voice_engine import WhisperEngine, quick_transcribe
+</code></pre>
+<p><code>WhisperEngine</code> wraps <code>faster-whisper</code> for local speech-to-text transcription:</p>
+<pre><code class="language-python">engine = WhisperEngine(model_size=&quot;tiny&quot;, device=&quot;cpu&quot;, compute_type=&quot;int8&quot;)
+
+# Transcribe from a numpy audio buffer
+text = engine.transcribe_audio_buffer(audio_data, sample_rate=16000)
+
+# Record and transcribe in one call
+text = engine.listen_and_transcribe(duration_seconds=5.0)
+</code></pre>
+<p><code>quick_transcribe()</code> provides a one-shot convenience wrapper:</p>
+<pre><code class="language-python">from FionaCore.voice_engine import quick_transcribe
+
+text = quick_transcribe(phrase_seconds=3.0)  # Records and returns transcribed text
+</code></pre>
+<p>Optional dependencies: <code>faster-whisper</code>, <code>sounddevice</code>, <code>numpy</code>.</p></div>
             </div>
         </div>
 

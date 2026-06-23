@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -238,6 +245,10 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#agent-commands" class="nav-link">Agent Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#browser-commands" class="nav-link">Browser Commands</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -361,6 +372,12 @@
 <td>one-shot</td>
 </tr>
 <tr>
+<td><code>fiona browser ...</code></td>
+<td>BrowserAutomation</td>
+<td>Playwright-based browser automation</td>
+<td>mixed</td>
+</tr>
+<tr>
 <td><code>fiona dataclient ...</code> / <code>fiona data ...</code></td>
 <td>DataClient</td>
 <td>Research mining, conversion, GUI</td>
@@ -427,6 +444,12 @@
 <td>foreground GUI</td>
 </tr>
 <tr>
+<td><code>fiona voice ...</code></td>
+<td>Voice</td>
+<td>Wake word detection, feedback testing, and command parsing</td>
+<td>one-shot</td>
+</tr>
+<tr>
 <td><code>fiona --run-macro &lt;name&gt;</code></td>
 <td>FionaCore</td>
 <td>Execute a named macro with the extended engine</td>
@@ -449,18 +472,6 @@
 <td>QuikTieper</td>
 <td>Run system tray icon only (no GUI window)</td>
 <td>foreground service</td>
-</tr>
-<tr>
-<td><code>fiona voice wake-test</code></td>
-<td>Voice</td>
-<td>Test wake word detection</td>
-<td>one-shot</td>
-</tr>
-<tr>
-<td><code>fiona voice feedback-test</code></td>
-<td>Voice</td>
-<td>Test audio/notification feedback</td>
-<td>one-shot</td>
 </tr>
 </tbody>
 </table>
@@ -660,6 +671,85 @@ fiona agent commands
 <li><code>ask</code> constructs a chat-completions request with system prompt, temperature, max tokens, and model id.</li>
 <li><code>commands</code> exposes an agent-readable registry of Fiona actions and available QuikTieper apps.</li>
 </ul>
+<h2 id="browser-commands">Browser Commands</h2>
+<p>Playwright-based browser automation subsystem.</p>
+<pre><code class="language-bash">fiona browser start            # Start the browser automation engine
+fiona browser stop             # Stop the browser automation engine
+fiona browser status           # Show current browser state
+fiona browser navigate &lt;url&gt;   # Navigate default context to a URL
+fiona browser click &lt;selector&gt; # Click an element matched by CSS selector
+fiona browser type &lt;selector&gt; &lt;text&gt;  # Type text into an element
+fiona browser screenshot       # Capture a screenshot of the current page
+</code></pre>
+<p>Startup flow:</p>
+<pre><code class="language-text">fiona browser start
+  -&gt; BrowserManager state: STOPPED -&gt; STARTING -&gt; RUNNING
+  -&gt; module-level default manager created
+  -&gt; Playwright provider launches browser (chromium by default)
+  -&gt; optional EventBus publishes BrowserLaunched event
+  -&gt; isolated contexts can be created for multi-session workflows
+</code></pre>
+<p>Subcommand details:</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Arguments</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start</code></td>
+<td>—</td>
+<td>Launch browser engine, transition to RUNNING</td>
+</tr>
+<tr>
+<td><code>stop</code></td>
+<td>—</td>
+<td>Close all contexts and browser instance, transition to STOPPED</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>—</td>
+<td>Print current state (stopped/starting/running/degraded/error)</td>
+</tr>
+<tr>
+<td><code>navigate</code></td>
+<td><code>url</code>, <code>--timeout</code> (30.0s)</td>
+<td>Navigate default context to URL</td>
+</tr>
+<tr>
+<td><code>click</code></td>
+<td><code>selector</code>, <code>--timeout</code> (5.0s)</td>
+<td>Click element by CSS selector</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>selector</code>, <code>text</code>, <code>--delay</code> (0.01s), <code>--timeout</code> (5.0s)</td>
+<td>Type text into element</td>
+</tr>
+<tr>
+<td><code>screenshot</code></td>
+<td><code>--output &lt;path&gt;</code></td>
+<td>Capture page screenshot to file or stdout</td>
+</tr>
+</tbody>
+</table>
+<p>State machine transitions:</p>
+<pre><code class="language-text">STOPPED → STARTING → RUNNING  (normal start)
+RUNNING → STOPPED             (clean stop, idempotent)
+RUNNING → ERROR → RUNNING     (auto-restart on crash, 1 attempt)
+</code></pre>
+<p>Error handling uses typed exception classes:</p>
+<ul>
+<li><code>BrowserLaunchError</code>: browser process failed to start</li>
+<li><code>BrowserShutdownError</code>: browser failed to close cleanly</li>
+<li><code>BrowserNotRunning</code>: operation attempted while browser is stopped</li>
+<li><code>BrowserCrashError</code>: browser process crashed unexpectedly</li>
+<li><code>ElementNotFound</code>: CSS selector did not match</li>
+<li><code>NavigationTimeout</code>: page load exceeded timeout</li>
+</ul>
 <h2 id="dataclient-commands">DataClient Commands</h2>
 <pre><code class="language-bash">fiona dataclient
 fiona dataclient gui
@@ -694,6 +784,11 @@ fiona seeondesk status
 <pre><code class="language-bash">fiona voice wake-test      # Test wake word detection availability
 fiona voice feedback-test  # Test audio and notification feedback
 </code></pre>
+<p>Mechanics:</p>
+<ul>
+<li><code>wake-test</code> checks for available wake word detection libraries (pvporcupine, snowboy, mycroft_precise) and reports which backend would be used.</li>
+<li><code>feedback-test</code> plays the wake sound and shows a desktop notification to verify that audio and visual feedback channels work.</li>
+</ul>
 <h2 id="macro-engine-commands">Macro Engine Commands</h2>
 <pre><code class="language-bash">fiona --run-macro &lt;name&gt;   # Execute a named macro with the extended engine
 fiona --list-macros        # Print all macros and step counts
@@ -821,6 +916,21 @@ fiona action clear
 <td>Macro not found</td>
 <td>macro config</td>
 <td>run <code>fiona --list-macros</code> to verify the macro name</td>
+</tr>
+<tr>
+<td>Browser cannot start</td>
+<td>Playwright/browser missing</td>
+<td>run <code>playwright install</code> to install browser binaries</td>
+</tr>
+<tr>
+<td>Browser navigate times out</td>
+<td>network/page load</td>
+<td>verify URL is reachable; increase <code>--timeout</code></td>
+</tr>
+<tr>
+<td>Browser element not found</td>
+<td>selector/page state</td>
+<td>verify CSS selector matches an element on the current page</td>
 </tr>
 </tbody>
 </table></div>

@@ -130,6 +130,10 @@
 <li>
     <a href="../agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -225,6 +232,18 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-bridge" class="nav-link">Agent Bridge</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#foremanchathandler" class="nav-link">ForemanChatHandler</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#phiconnectagentbridge" class="nav-link">PhiConnectAgentBridge</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -276,7 +295,38 @@
 <li>Missing peer public key: outbound encryption has no recipient key yet.</li>
 <li>Connection refused: no PhiConnect receiver is listening on the target host/port.</li>
 <li>Signature/trust failure: the inbound sender public key is not trusted or does not match the sender identity.</li>
-</ul></div>
+</ul>
+<h2 id="agent-bridge">Agent Bridge</h2>
+<p>PhiConnect provides two optional agent integration modules under <code>PhiConnect/</code>:</p>
+<h3 id="foremanchathandler">ForemanChatHandler</h3>
+<p><code>foreman_handler.py</code> defines <code>ForemanChatHandler</code>, a GUI-facing handler that wraps <code>ForemanAgent</code> for multi-agent orchestration. It provides a toggle (<code>foreman_enabled</code>) to switch between simple single-agent chat (<code>AgentChatHandler</code>) and full orchestration via <code>ForemanAgent</code>.</p>
+<p>When the <strong>Agent bridge</strong> checkbox in the PhiConnect GUI is enabled, chat messages sent through the GUI are forwarded to the local Ollama agent for processing. The <code>ForemanChatHandler</code> class handles the orchestration pipeline:</p>
+<ul>
+<li>Simple queries (greetings, chit-chat) are routed through the lightweight <code>AgentChatHandler</code> to avoid unnecessary token usage.</li>
+<li>Complex tasks are decomposed and executed by <code>ForemanAgent</code> using a multi-step orchestration pipeline with planning, sub-agent delegation, and result synthesis.</li>
+<li>A <code>CancellationToken</code> is passed throughout to support cancellation.</li>
+</ul>
+<pre><code class="language-python">from PhiConnect.foreman_handler import ForemanChatHandler
+
+handler = ForemanChatHandler(chat_store=store)
+handler.foreman_enabled = True
+handler.send_message(
+    session_id=&quot;...&quot;,
+    message=&quot;What is the capital of France?&quot;,
+    token=CancellationToken(),
+    on_message=lambda role, content: print(role, content),
+    on_error=lambda err: print(&quot;Error:&quot;, err),
+    on_complete=lambda: print(&quot;Done&quot;),
+)
+</code></pre>
+<h3 id="phiconnectagentbridge">PhiConnectAgentBridge</h3>
+<p><code>bridge.py</code> defines <code>PhiConnectAgentBridge</code>, a lightweight bridge that intercepts inbound chat messages and automatically replies via the local Ollama agent. When the bridge is active, every inbound message (that does not already start with <code>[Fiona]</code>) is forwarded to the Ollama client, and the agent's response is sent back as a chat reply.</p>
+<pre><code class="language-python">from PhiConnect.bridge import PhiConnectAgentBridge
+
+bridge = PhiConnectAgentBridge(config)
+bridge.handle_message(event)  # forwards to Ollama and sends reply
+</code></pre>
+<p>Both modules require the Agent subsystem and an active Ollama instance on <code>http://localhost:11434</code>.</p></div>
             </div>
         </div>
 

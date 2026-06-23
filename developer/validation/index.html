@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -241,6 +248,22 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-browser-automation-test-result" class="nav-link">Latest Browser Automation Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-agent-orchestration-test-result" class="nav-link">Latest Agent Orchestration Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-interface-contract-test-result" class="nav-link">Latest Interface Contract Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-agent-chat-personality-test-result" class="nav-link">Latest Agent Chat &amp; Personality Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -251,10 +274,14 @@
 <h1 id="validation">Validation</h1>
 <p>This page records the latest known verification commands and results.</p>
 <h2 id="latest-test-result">Latest Test Result</h2>
-<p>Recorded on 2026-06-19:</p>
-<pre><code class="language-text">Ran 740 tests in 26.48s
+<p>Recorded on 2026-06-23:</p>
+<pre><code class="language-text">1598 tests across Python and JavaScript:
+  Python:   1413 passed, 14 env-failures (pytest)
+  CAD JS:    87 passed (vitest)
+  CAD Srv:   98 passed (pytest)
+  compileall OK
 
-OK (17 pre-existing environment failures unrelated to roadmap work)
+OK (14 pre-existing environment failures unrelated to roadmap work)
 </code></pre>
 <p>Command:</p>
 <pre><code class="language-bash">python -m pytest tests/ -v
@@ -263,11 +290,11 @@ OK (17 pre-existing environment failures unrelated to roadmap work)
 <pre><code class="language-bash">python -m unittest discover -s tests -v
 </code></pre>
 <h2 id="latest-compile-result">Latest Compile Result</h2>
-<p>Recorded on 2026-06-19:</p>
+<p>Recorded on 2026-06-23:</p>
 <pre><code class="language-text">All modules compile without syntax errors.
 </code></pre>
 <p>Command:</p>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <h2 id="latest-camcoms-smoke-result">Latest CamComs Smoke Result</h2>
 <p>Command:</p>
@@ -304,7 +331,27 @@ camcoms trust --list returned an empty sender list for a missing trusted directo
 <p>Command:</p>
 <pre><code class="language-bash">python -m pytest tests/test_voice.py -v
 </code></pre>
-<p>Result: 36 tests pass. Covers wake word engine, push-to-talk, and feedback engine with graceful degradation.</p></div>
+<p>Result: 36 tests pass. Covers wake word engine, push-to-talk, and feedback engine with graceful degradation.</p>
+<h2 id="latest-browser-automation-test-result">Latest Browser Automation Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/browser/ -v
+</code></pre>
+<p>Result: 52 tests pass. Covers BrowserManager state machine (STOPPED → STARTING → RUNNING → DEGRADED → ERROR), auto-restart on crash, thread safety, Playwright provider navigation, element interaction, script execution, and all error types.</p>
+<h2 id="latest-agent-orchestration-test-result">Latest Agent Orchestration Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_agent_orchestrator.py tests/test_agent_orchestration.py tests/test_agent_foreman_handler.py tests/test_agent_stress.py -v
+</code></pre>
+<p>Result: 128 tests pass. Covers the think-act-observe loop (AgentOrchestrator), ForemanAgent task decomposition, SubAgent ReAct loops, ComplexityAssessor classification, TaskPlan validation with cycle detection, cancellation tokens, and concurrency/stress edge cases.</p>
+<h2 id="latest-interface-contract-test-result">Latest Interface Contract Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/contracts/ -v
+</code></pre>
+<p>Result: 68 tests pass. Validates every ABC in <code>fiona/interfaces.py</code> — method signatures, parameter types, return values, error conditions, and data type invariants for IBrowserProvider, IBrowserContext, IAgentBackend, IEventBus, and all supporting types.</p>
+<h2 id="latest-agent-chat-personality-test-result">Latest Agent Chat &amp; Personality Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py tests/test_agent_command_registry.py -v
+</code></pre>
+<p>Result: 86 tests pass. Covers ChatStore CRUD with token estimation, AgentChatHandler session management, Personality registry with 6 built-in personalities, QueryDetector classification, and CommandSpec registration for 20+ actions.</p></div>
             </div>
         </div>
 

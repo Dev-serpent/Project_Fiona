@@ -130,6 +130,10 @@
 <li>
     <a href="../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -221,7 +228,15 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#web-frontend" class="nav-link">Web Frontend</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#console-script" class="nav-link">Console Script</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#usage-examples" class="nav-link">Usage Examples</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -263,7 +278,13 @@ pip install -e .
 <li><code>pandas</code></li>
 <li><code>requests</code></li>
 </ul>
-<p>LM Studio is optional. Fiona talks to LM Studio only when the Agent bridge is used.</p>
+<p>LM Studio has been removed from the project — Fiona's Agent bridge now uses <strong>Ollama</strong> for local inference. Support for LM Studio was replaced in favor of the Ollama OpenAI-compatible API.</p>
+<p><strong>Optional extras:</strong></p>
+<ul>
+<li><code>playwright</code> for browser automation via the BrowserAutomation module: install with <code>pip install -e ".[browser]"</code>.</li>
+<li><code>aiohttp</code> for the web frontend (<code>fionaLocalPages/</code> server). Install manually if not resolved by the main dependencies.</li>
+<li>EyeControl dependencies (<code>mediapipe</code>, <code>opencv-python</code>, <code>pyautogui</code>): install with <code>pip install -e ".[eyecontrol]"</code>.</li>
+</ul>
 <h2 id="system-tools">System Tools</h2>
 <p>Runtime tools used by local control:</p>
 <ul>
@@ -273,12 +294,38 @@ pip install -e .
 <li><code>xdotool</code> and <code>xprop</code> as fallback/legacy paths</li>
 <li><code>tk</code> / <code>tkinter</code> for GUI windows</li>
 </ul>
+<p>If you plan to use browser automation, also install Playwright browsers:</p>
+<pre><code class="language-bash">playwright install
+</code></pre>
+<h2 id="web-frontend">Web Frontend</h2>
+<p>The <code>fionaLocalPages/</code> SPA web dashboard has no additional build step — it is served as static files by an aiohttp Python server.</p>
+<p>Ensure <code>aiohttp</code> is installed:</p>
+<pre><code class="language-bash">pip install aiohttp
+</code></pre>
+<p>Start the web frontend:</p>
+<pre><code class="language-bash">python3 fionaLocalPages/server/app.py
+</code></pre>
+<p>Open <a href="http://localhost:8765">http://localhost:8765</a> in your browser.</p>
+<p>Optional flags:</p>
+<pre><code class="language-bash">python3 fionaLocalPages/server/app.py --port 8080 --host 0.0.0.0 --debug
+</code></pre>
 <h2 id="console-script">Console Script</h2>
 <p>After installation, this should work:</p>
 <pre><code class="language-bash">fiona --help
 </code></pre>
 <p>If <code>fiona</code> prints <code>command not found</code>, use the module form from the repository root:</p>
 <pre><code class="language-bash">python3 -m fiona.cli --help
+</code></pre>
+<h2 id="usage-examples">Usage Examples</h2>
+<p>Once installed, try these commands:</p>
+<pre><code class="language-bash">fiona action list                # List all registered actions
+fiona action run my-action       # Run a specific action
+fiona browser start              # Start the Playwright browser automation
+fiona browser navigate --url https://example.com
+fiona voice parse &quot;open browser&quot; # Parse a voice phrase into an action
+fiona voice listen               # Listen to microphone and execute detected action
+fiona camcoms smoke-test         # Run the encryption smoke test
+fiona recall remember my-key my-value --category notes
 </code></pre></div>
             </div>
         </div>

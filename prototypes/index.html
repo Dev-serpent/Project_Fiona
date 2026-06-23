@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Architecture - Fiona</title>
+        <title>Prototypes - Fiona</title>
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/fontawesome.min.css" rel="stylesheet">
         <link href="../css/brands.min.css" rel="stylesheet">
@@ -52,7 +52,7 @@
                                 </ul>
                             </li>
                             <li class="nav-item">
-                                <a href="./" class="nav-link active" aria-current="page">Architecture</a>
+                                <a href="../architecture/" class="nav-link">Architecture</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
@@ -143,7 +143,7 @@
                                 <a href="../roadmap/" class="nav-link">Roadmap</a>
                             </li>
                             <li class="nav-item">
-                                <a href="../prototypes/" class="nav-link">Prototypes</a>
+                                <a href="./" class="nav-link active" aria-current="page">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -183,12 +183,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../installation/" class="nav-link">
+                                <a rel="prev" href="../roadmap/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../operations/cli/" class="nav-link">
+                                <a rel="next" href="../developer/build-order/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -210,25 +210,21 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#architecture" class="nav-link">Architecture</a>
+            <li class="nav-item" data-bs-level="1"><a href="#prototypes" class="nav-link">Prototypes</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#subsystems" class="nav-link">Subsystems</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#web-frontend-fionalocalpages" class="nav-link">Web Frontend (fionaLocalPages)</a>
+            <li class="nav-item" data-bs-level="2"><a href="#cad-ficad" class="nav-link">CAD (ficad)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#project-layout" class="nav-link">Project Layout</a>
+            <li class="nav-item" data-bs-level="2"><a href="#fionalocalpages-web-dashboard" class="nav-link">fionaLocalPages (Web Dashboard)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#communication-shape" class="nav-link">Communication Shape</a>
+            <li class="nav-item" data-bs-level="2"><a href="#vsee" class="nav-link">Vsee</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#cli-shape" class="nav-link">CLI Shape</a>
+            <li class="nav-item" data-bs-level="2"><a href="#eyecontrol" class="nav-link">EyeControl</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -239,98 +235,31 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="architecture">Architecture</h1>
-<p>Fiona is the umbrella package. It exposes 14 sibling subsystems and one web frontend.</p>
-<h2 id="subsystems">Subsystems</h2>
+<h1 id="prototypes">Prototypes</h1>
+<p>Fiona contains several prototype and experimental subsystems that are functional but not yet production-ready. These projects explore specific capabilities and may evolve independently from the main platform.</p>
+<h2 id="cad-ficad">CAD (ficad)</h2>
+<p>The CAD subsystem (<code>cad/</code>) is an experimental parametric 3D modeler with:</p>
 <ul>
-<li><code>FionaCore</code>: shared primitives — action routing, ACL enforcement, shell safety (30+ destructive patterns blocked), macro engine with branching/conditions/variable interpolation, verification prompts, desktop notifications, and speech/voice engine integration.</li>
-<li><code>QuikTieper</code>: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.</li>
-<li><code>CamComs</code>: communication layer for encoded/encrypted messages, trusted sender lifecycle, host receiver behavior, pairing flow, key rotation, and audit logging.</li>
-<li><code>Voice</code>: wake-word detection (pvporcupine, snowboy, mycroft_precise), push-to-talk, and audio/visual feedback engine.</li>
-<li><code>Vsee</code>: 3D coordinate hologram viewer for point/edge wireframe shapes.</li>
-<li><code>Agent</code>: Ollama bridge with orchestration, chat, permissions, personality, query detection, and think-act-observe agent loop. Replaced the previous LM Studio bridge.</li>
-<li><code>PhiConnect</code>: standalone encrypted computer-to-computer chat using CamComs crypto.</li>
-<li><code>SeeOnDesk</code>: desktop-awareness layer for identifying the current session, focused app/window, process tracking, workspace awareness, and screen capture.</li>
-<li><code>DataClient</code>: standalone research/data collection app, MiniExcel, conversion tools, and CSV export.</li>
-<li><code>EyeControl</code>: optional camera-based eye-controlled mouse tracker.</li>
-<li><code>TerminalAssist</code>: btop-style terminal dashboard (fAT), sliding TUI command center, and Zellij workspace helper.</li>
-<li><code>CmdTrace</code>: JSONL-based observability and audit logging for routed actions, with action filtering and high-performance trace reads.</li>
-<li><code>RecallVault</code>: persistent key-value remembrance store for categorized memory — search, categories, and lifecycle management.</li>
-<li><code>BrowserAutomation</code>: browser automation via Playwright with session management, state machine, navigation, clicking, typing, and screenshot capture.</li>
+<li><strong>Python backend</strong>: Document management, geometry primitives (Box, Cylinder, Sphere, Cone, Torus), boolean operations, constraints, sketches, assembly, undo/redo command stack, and STL/OBJ/SVG export.</li>
+<li><strong>Three.js frontend</strong>: Vite-bundled SPA with WebSocket JSON-RPC 2.0 communication, 3D viewport with OrbitControls, raycasting-based object selection, editable property grid, project tree, interactive console, and agent supervisor panel.</li>
+<li><strong>Architecture</strong>: Pure Python stdlib WebSocket server (no extra Python dependencies), standalone frontend using <code>three@^0.170.0</code>.</li>
 </ul>
-<h2 id="web-frontend-fionalocalpages">Web Frontend (fionaLocalPages)</h2>
-<p>The <code>fionaLocalPages/</code> directory contains a standalone aiohttp-based single-page application (SPA) that serves as a modern web dashboard for Fiona. It replaces the need for Tkinter GUIs for most operations.</p>
-<p><strong>Architecture highlights:</strong></p>
+<p>Status: Early prototype (v0.1.0). The geometry kernel and command system are functional; the frontend provides a basic 3D modeling UI. Not yet integrated with the main Fiona CLI or fionaLocalPages.</p>
+<p><strong>Tests</strong>: 98 Python server tests + 87 JavaScript frontend tests.</p>
+<h2 id="fionalocalpages-web-dashboard">fionaLocalPages (Web Dashboard)</h2>
+<p>The <code>fionaLocalPages/</code> web frontend is a modern single-page application (SPA) that serves as an operational dashboard for Fiona. It is a prototype for a browser-based control surface alongside the existing CLI and Tkinter GUI.</p>
 <ul>
-<li><strong>Backend</strong>: aiohttp Python server (<code>server/app.py</code>) that imports existing Fiona modules directly — no microservices, no containerization.</li>
-<li><strong>Frontend</strong>: vanilla HTML/CSS/JS (no build step, no framework) with hash-based SPA routing, pub/sub state management, and component-based UI.</li>
-<li><strong>Real-time communication</strong>: WebSocket endpoint at <code>/ws</code> and SSE at <code>/api/v1/stream</code> for live metrics, agent streaming, and event notifications.</li>
-<li><strong>REST API</strong>: routes under <code>/api/v1/</code> covering all major subsystems — agent, actions, browser, voice, terminal, files, config, desktop, recall, macros, camcoms.</li>
-<li><strong>Port</strong>: defaults to <code>8765</code> on <code>127.0.0.1</code>.</li>
+<li><strong>Backend</strong>: Python <code>aiohttp</code> HTTP server with REST API at <code>/api/v1/</code> (11 endpoint groups: system, agent, actions, voice, terminal, files, config, browser, desktop, recall, macros, camcoms), WebSocket at <code>/ws</code> for real-time push, and SSE at <code>/api/v1/stream</code>.</li>
+<li><strong>Frontend</strong>: Vanilla JavaScript SPA with hash-based routing (22 pages: dashboard, chat, agents, actions, bindings, phiconnect, macros, terminal, vsee, notifications, settings, performance, files, browser, tasks, plugins, logs, config, diagnostics, devtools, workspace), custom component system, and CSS theming.</li>
+<li><strong>Architecture</strong>: The Python server serves static SPA files and proxies API calls to Fiona subsystems. Communication is over REST + WebSocket for real-time updates.</li>
 </ul>
-<p><strong>What it provides:</strong>
-- Agent chat with streaming responses and personality selection
-- Action runner with search, filter, permissions, and dry-run
-- Browser automation controls (start, stop, navigate, click, screenshot)
-- File explorer (browse, read, write, info)
-- Terminal command execution and system status
-- Performance monitoring dashboard (CPU, memory, disk, network)
-- Settings panels (ACL, shell safety, voice, macros, general)
-- RecallVault search and management
-- Desktop awareness and CamComs status views</p>
-<h2 id="project-layout">Project Layout</h2>
-<pre><code class="language-text">fiona/                 umbrella package and CLI entrypoint
-QuikTieper/            local access/action layer
-CamComs/               communication/encryption/host service layer
-CamComs/esp32payload/  ESP32 sender payload template
-Vsee/                  3D point/edge hologram model
-Agent/                 local Ollama client and agent orchestrator
-PhiConnect/            encrypted computer-to-computer chat app
-SeeOnDesk/             desktop awareness and active-window identification
-DataClient/            research/data collection app
-EyeControl/            optional eye-controlled mouse tracker
-TerminalAssist/        terminal dashboard and Zellij layout helper
-FionaCore/             shared primitives: action routing, ACL, shell safety, macros, etc.
-CmdTrace/              JSONL observability and audit trace for actions
-RecallVault/           persistent key-value remembrance store
-Voice/                 wake-word detection, push-to-talk, and feedback engine
-BrowserAutomation/     Playwright-based browser automation with state machine
-fionaLocalPages/       aiohttp SPA web frontend (REST + WebSocket + SSE)
-scripts/               local launch wrappers
-tests/                 Python tests
-DEVELOPERNOTE.md       detailed project notes and verification log
-pyproject.toml         package metadata and Python dependencies
-</code></pre>
-<h2 id="communication-shape">Communication Shape</h2>
-<p>CamComs currently focuses on:</p>
-<pre><code class="language-text">ESP32 sender -&gt; encoded encrypted HTTP POST -&gt; Fiona host receiver
-</code></pre>
-<p>PhiConnect uses the same cryptographic primitives for computer-to-computer chat:</p>
-<pre><code class="language-text">Fiona peer -&gt; encrypted chat envelope -&gt; PhiConnect receiver
-</code></pre>
-<h2 id="cli-shape">CLI Shape</h2>
-<pre><code class="language-text">fiona quiktieper ...
-fiona host ...
-fiona camcoms ...
-fiona agent ...
-fiona seeondesk ...
-fiona dataclient ...
-fiona action ...
-fiona voice ...
-fiona macro ...
-fiona recall ...
-fiona eyecontrol ...
-fiona fat ...
-fiona vsee
-fiona phiconnect
-fiona browser ...
-fiona approval ...
-</code></pre>
-<p>Shortcuts also exist for QuikTieper:</p>
-<pre><code class="language-text">fiona edit
-fiona run
-fiona list
-</code></pre></div>
+<p>Status: Evolving prototype. Core pages (dashboard, chat, settings, terminal) are functional; some pages are stubs. Production concerns like authentication, theming, and full module coverage are still being addressed. Not the primary interface — the CLI and Tkinter GUI remain the main control surfaces.</p>
+<h2 id="vsee">Vsee</h2>
+<p>Vsee (<code>Vsee/</code>) is a 3D point and edge wireframe hologram viewer. It renders connected wireframe shapes from coordinate data. See the <a href="../modules/vsee/">Vsee module page</a> for details.</p>
+<p>Status: Basic wireframe viewer. True optical holography and richer primitives are future work.</p>
+<h2 id="eyecontrol">EyeControl</h2>
+<p>EyeControl (<code>EyeControl/</code>) is an optional camera-based eye-controlled mouse tracker using MediaPipe face mesh landmarks. See the <a href="../modules/eyecontrol/">EyeControl module page</a> for details.</p>
+<p>Status: Functional prototype. Requires a camera feed and optional dependencies (OpenCV, MediaPipe, PyAutoGUI).</p></div>
             </div>
         </div>
 

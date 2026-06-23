@@ -130,6 +130,10 @@
 <li>
     <a href="../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="./" class="nav-link active" aria-current="page">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -181,7 +188,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../developer/build-order/" class="nav-link">
+                                <a rel="next" href="../prototypes/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -229,6 +236,38 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#browser-automation" class="nav-link">Browser Automation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#web-ui" class="nav-link">Web UI</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-orchestration" class="nav-link">Agent Orchestration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#completed" class="nav-link">Completed</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#near-term_1" class="nav-link">Near Term</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#communication_1" class="nav-link">Communication</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#control-and-automation_1" class="nav-link">Control And Automation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#awareness-and-feedback_1" class="nav-link">Awareness And Feedback</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -240,36 +279,21 @@
 <p>This roadmap focuses on what Fiona still needs to become a JARVIS-style host, excluding the AI agent itself.</p>
 <h2 id="near-term">Near Term</h2>
 <ul>
-<li>[DONE] Service controls: add easier enable, disable, restart, and status wrappers around the generated user systemd service.</li>
-<li>[DONE] GUI Host controls: add live receiver start/stop, listener start/stop, connected-device state, last-message view, and service logs.</li>
-<li>[DONE] PhiConnect hardening: improve peer setup, key fingerprints, and visible encryption state.</li>
 <li>DataClient polish: improve table editing, export flows, and miner status reporting.</li>
-<li>[DONE] SeeOnDesk expansion: expose richer active-app data for command routing with process tracking and workspace awareness.</li>
 </ul>
 <h2 id="communication">Communication</h2>
 <ul>
-<li>[DONE] Implement the ESP32 crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url encoding.</li>
 <li>Add ESP32 hardware validation.</li>
 <li>Add Wi-Fi provisioning, retries, acknowledgements, reconnect behavior, and queueing.</li>
-<li>[DONE] Add a real pairing flow with fingerprint approval, trusted-key installation, host public-key provisioning, key rotation, and device removal UX.</li>
 <li>Add encrypted replies from the host back to trusted devices.</li>
 </ul>
 <h2 id="control-and-automation">Control And Automation</h2>
 <ul>
-<li>[DONE] Add sender-specific permissions (ACL system).</li>
-<li>[DONE] Add a named command registry.</li>
-<li>[DONE] Expand macros with waits, conditions, window targeting, branching, and per-step failure handling.</li>
-<li>[DONE] Add clearer success/failure result objects for remote actions.</li>
-<li>[DONE] Add safety prompts for risky actions (verification prompts).</li>
-<li>[DONE] Add shell command safety (block destructive commands).</li>
+<li>Add command history search.</li>
 </ul>
 <h2 id="awareness-and-feedback">Awareness And Feedback</h2>
 <ul>
-<li>[DONE] Add screen capture and visual recognition to SeeOnDesk.</li>
-<li>Add command history search.</li>
-<li>[DONE] Add desktop notifications, tray controls, and spoken responses.</li>
-<li>[DONE] Add voice input through push-to-talk or wake-word flow.</li>
-<li>[DONE] Add system tray icon with state indicators.</li>
+<li>(All items completed — see Completed section below.)</li>
 </ul>
 <h2 id="packaging">Packaging</h2>
 <ul>
@@ -285,6 +309,58 @@
 <li>Add camera presets and animation.</li>
 <li>Add live data binding.</li>
 <li>Investigate real projection or hologram output paths.</li>
+</ul>
+<h2 id="browser-automation">Browser Automation</h2>
+<ul>
+<li>Harden browser automation: advanced interaction patterns (forms, iframes, multi-tab), robust wait strategies, and error recovery.</li>
+<li>Add headless mode configuration and user-data-dir support.</li>
+<li>Add browser-level network intercept and request mocking.</li>
+<li>Add session recording and replay capabilities.</li>
+</ul>
+<h2 id="web-ui">Web UI</h2>
+<ul>
+<li>Production readiness for fionaLocalPages: error boundaries, loading states, offline degradation, and accessibility audit.</li>
+<li>Add remaining pages: Vsee viewer, PhiConnect chat, Macros editor, full Notifications center.</li>
+<li>Add user authentication (local-only token or PIN).</li>
+<li>Add theming support and customizable layouts.</li>
+</ul>
+<h2 id="agent-orchestration">Agent Orchestration</h2>
+<ul>
+<li>Improve think-act-observe loop reliability: better error recovery, tool-use retry, and context window management.</li>
+<li>Multi-agent coordination: parallel goals, agent handoff, and shared memory via RecallVault.</li>
+<li>Add plan persistence and interruption/resume capability.</li>
+<li>Tighten permission enforcement and approval workflow integration.</li>
+</ul>
+<h2 id="completed">Completed</h2>
+<p>These items have been implemented and are no longer pending:</p>
+<h3 id="near-term_1">Near Term</h3>
+<ul>
+<li>Service controls: add easier enable, disable, restart, and status wrappers around the generated user systemd service.</li>
+<li>GUI Host controls: add live receiver start/stop, listener start/stop, connected-device state, last-message view, and service logs.</li>
+<li>PhiConnect hardening: improve peer setup, key fingerprints, and visible encryption state.</li>
+<li>SeeOnDesk expansion: expose richer active-app data for command routing with process tracking and workspace awareness.</li>
+</ul>
+<h3 id="communication_1">Communication</h3>
+<ul>
+<li>Implement the ESP32 crypto adapter for X25519, HKDF-SHA256, AES-GCM, Ed25519, and base64url encoding.</li>
+<li>Add a real pairing flow with fingerprint approval, trusted-key installation, host public-key provisioning, key rotation, and device removal UX.</li>
+</ul>
+<h3 id="control-and-automation_1">Control And Automation</h3>
+<ul>
+<li>Add sender-specific permissions (ACL system).</li>
+<li>Add a named command registry.</li>
+<li>Expand macros with waits, conditions, window targeting, branching, and per-step failure handling.</li>
+<li>Add clearer success/failure result objects for remote actions.</li>
+<li>Add safety prompts for risky actions (verification prompts).</li>
+<li>Add shell command safety (block destructive commands).</li>
+</ul>
+<h3 id="awareness-and-feedback_1">Awareness And Feedback</h3>
+<ul>
+<li>Add screen capture and visual recognition to SeeOnDesk.</li>
+<li>Add desktop notifications, tray controls, and spoken responses.</li>
+<li>Add voice input through push-to-talk or wake-word flow.</li>
+<li>Add system tray icon with state indicators.</li>
+<li>Add command history search.</li>
 </ul></div>
             </div>
         </div>

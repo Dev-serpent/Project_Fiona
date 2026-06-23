@@ -130,6 +130,10 @@
 <li>
     <a href="../agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -217,7 +224,23 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#future-direction" class="nav-link">Future Direction</a>
+            <li class="nav-item" data-bs-level="2"><a href="#process-tracking" class="nav-link">Process Tracking</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#workspace-awareness" class="nav-link">Workspace Awareness</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#action-discovery" class="nav-link">Action Discovery</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#screen-capture" class="nav-link">Screen Capture</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#remaining-work" class="nav-link">Remaining Work</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -230,7 +253,7 @@
 
 <h1 id="seeondesk">SeeOnDesk</h1>
 <p>SeeOnDesk is Fiona's first desktop-awareness subsystem. It identifies the active app/window from desktop metadata.</p>
-<p>It does not yet train or run a screen-recording machine-learning model.</p>
+<p>Screen capture is implemented. Visual recognition via an ML classifier is not yet integrated.</p>
 <h2 id="commands">Commands</h2>
 <p>Show the currently focused app/window:</p>
 <pre><code class="language-bash">python3 -m fiona.cli seeondesk active
@@ -263,14 +286,30 @@ fiona seeondesk status
 <li>session type</li>
 <li>current desktop name</li>
 </ul>
-<h2 id="future-direction">Future Direction</h2>
+<h2 id="process-tracking">Process Tracking</h2>
+<p>ProcessTracker iterates <code>/proc/*/comm</code> to find processes by name substring, with no <code>psutil</code> dependency required. It registers and triggers watcher callbacks when matching processes are detected.</p>
+<pre><code class="language-bash">fiona seeondesk status  # includes process tracking output
+</code></pre>
+<h2 id="workspace-awareness">Workspace Awareness</h2>
+<p>WorkspaceWatcher polls workspace state via <code>kdotool</code> (with <code>wmctrl</code> fallback), detects active workspace changes, fires change callbacks, and tracks the current workspace ID.</p>
+<h2 id="action-discovery">Action Discovery</h2>
+<p>Discover available actions from system state:</p>
+<pre><code class="language-bash">fiona --discover-actions
+</code></pre>
+<p>Prints a categorized list of actions grouped by process, workspace, and window context, with action name, description, and confirmation requirements.</p>
+<h2 id="screen-capture">Screen Capture</h2>
+<p>The <code>vision.py</code> module captures the full screen or a specific window to disk. It prioritizes KDE's <code>spectacle</code> on Wayland, falls back to <code>grim</code> for generic Wayland, and uses <code>scrot</code> or <code>gnome-screenshot</code> on X11. Screen captures are used by the Agent's <code>seeondesk_analyze</code> action for vision-based QA via the local Ollama model.</p>
+<pre><code class="language-python">from SeeOnDesk.vision import capture_screen, capture_window, analyze_screen
+
+capture_screen(&quot;/tmp/screenshot.png&quot;)
+analyze_screen(&quot;What application is visible?&quot;)
+</code></pre>
+<h2 id="remaining-work">Remaining Work</h2>
 <p>SeeOnDesk is the base for richer context:</p>
 <ul>
-<li>screen capture</li>
-<li>visual recognition</li>
-<li>workspace/session state</li>
-<li>app-specific available actions</li>
-<li>command context for the future Fiona agent</li>
+<li>ML classifier for visual recognition</li>
+<li>app-specific action contexts</li>
+<li>agent integration</li>
 </ul></div>
             </div>
         </div>

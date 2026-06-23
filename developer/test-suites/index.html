@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -492,6 +499,86 @@
 <td>Verifies desktop awareness snapshot including all-windows</td>
 <td>active-app data</td>
 </tr>
+<tr>
+<td><code>tests/browser/test_browser_manager.py</code></td>
+<td>Verifies BrowserManager state machine transitions, auto-restart, and thread safety</td>
+<td>browser lifecycle</td>
+</tr>
+<tr>
+<td><code>tests/browser/test_playwright_provider.py</code></td>
+<td>Verifies Playwright provider navigation, element interaction, script execution, and error handling</td>
+<td>browser automation</td>
+</tr>
+<tr>
+<td><code>tests/contracts/test_interface_contracts.py</code></td>
+<td>Verifies every ABC in <code>fiona/interfaces.py</code> with contract test suites</td>
+<td>interface contracts</td>
+</tr>
+<tr>
+<td><code>tests/cad_server/test_protocol.py</code></td>
+<td>Verifies JSON-RPC 2.0 protocol codec encode/decode</td>
+<td>CAD server protocol</td>
+</tr>
+<tr>
+<td><code>tests/cad_server/test_command_executor.py</code></td>
+<td>Verifies command dispatch, validation, and error handling</td>
+<td>CAD server execution</td>
+</tr>
+<tr>
+<td><code>tests/cad_server/test_document_manager.py</code></td>
+<td>Verifies document CRUD and state management</td>
+<td>CAD server document lifecycle</td>
+</tr>
+<tr>
+<td><code>tests/cad_server/test_export_manager.py</code></td>
+<td>Verifies export pipeline configuration and execution</td>
+<td>CAD server export</td>
+</tr>
+<tr>
+<td><code>test_agent_orchestrator.py</code></td>
+<td>Verifies AgentOrchestrator think-act-observe loop, max_turns, and error recovery</td>
+<td>agent safety loop</td>
+</tr>
+<tr>
+<td><code>test_agent_chat_handler.py</code></td>
+<td>Verifies AgentChatHandler session management and message streaming</td>
+<td>agent chat</td>
+</tr>
+<tr>
+<td><code>test_agent_chat_store.py</code></td>
+<td>Verifies ChatStore CRUD, token estimation, and session cascading</td>
+<td>agent chat persistence</td>
+</tr>
+<tr>
+<td><code>test_agent_personalities.py</code></td>
+<td>Verifies Personality dataclass, registry, and built-in personality registration</td>
+<td>agent personality system</td>
+</tr>
+<tr>
+<td><code>test_agent_query_detector.py</code></td>
+<td>Verifies QueryDetector classification of user input</td>
+<td>agent query routing</td>
+</tr>
+<tr>
+<td><code>test_agent_foreman_handler.py</code></td>
+<td>Verifies ForemanChatHandler task decomposition and sub-agent delegation</td>
+<td>advanced orchestration</td>
+</tr>
+<tr>
+<td><code>test_agent_orchestration.py</code></td>
+<td>Verifies ForemanAgent, ComplexityAssessor, SubAgent, TaskPlan, and cancellation</td>
+<td>advanced orchestration engine</td>
+</tr>
+<tr>
+<td><code>test_agent_stress.py</code></td>
+<td>Verifies agent edge cases, concurrency, and session deletion cascading</td>
+<td>agent resilience</td>
+</tr>
+<tr>
+<td><code>test_agent_backward_compat.py</code></td>
+<td>Verifies LMStudioClient alias for OllamaClient</td>
+<td>backward compatibility</td>
+</tr>
 </tbody>
 </table>
 <h2 id="why-the-tests-exist">Why The Tests Exist</h2>
@@ -531,6 +618,9 @@
 <li>global keyboard listener behavior under every desktop/session type</li>
 <li>real DataClient internet searches in deterministic CI</li>
 <li>true screen-recording or ML behavior for SeeOnDesk</li>
+<li>real Playwright browser launch in CI (all browser tests are fully mocked)</li>
+<li>real CAD server integration end-to-end</li>
+<li>fionaLocalPages dashboard rendering in headless browser</li>
 </ul>
 <h2 id="validation-commands">Validation Commands</h2>
 <p>Full test suite:</p>
@@ -539,8 +629,24 @@
 <p>Or with pytest:</p>
 <pre><code class="language-bash">python -m pytest tests/ -v
 </code></pre>
+<p>Run specific test groups:</p>
+<pre><code class="language-bash"># Browser automation (fully mocked)
+python -m pytest tests/browser/ -v
+
+# Interface contract tests
+python -m pytest tests/contracts/ -v
+
+# Agent orchestration
+python -m pytest tests/test_agent_orchestrator.py tests/test_agent_orchestration.py tests/test_agent_foreman_handler.py -v
+
+# Agent chat and personality
+python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py -v
+
+# CAD server tests
+python -m pytest tests/cad_server/ -v
+</code></pre>
 <p>Compile check:</p>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <p>Docs build:</p>
 <pre><code class="language-bash">cd fionaDocsPage

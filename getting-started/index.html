@@ -130,6 +130,10 @@
 <li>
     <a href="../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -209,6 +216,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#web-dashboard" class="nav-link">Web Dashboard</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#standalone-apps" class="nav-link">Standalone Apps</a>
               <ul class="nav flex-column">
               </ul>
@@ -254,6 +265,28 @@ python3 -m fiona.cli dataclient
 <li><code>Raw Json</code>: edit the QuikTieper config directly.</li>
 <li><code>Debug</code>: restricted project file editor for <code>tests</code>, <code>scripts</code>, <code>QuikTieper</code>, and <code>CamComs</code>.</li>
 <li><code>Host</code>: inspect host config, trusted devices, key paths, and audit logs.</li>
+</ul>
+<h2 id="web-dashboard">Web Dashboard</h2>
+<p>The <code>fionaLocalPages/</code> directory provides a modern single-page application (SPA) web frontend for Fiona. It is built with vanilla JavaScript and uses the aiohttp Python library for the backend server.</p>
+<p>Start the web dashboard:</p>
+<pre><code class="language-bash">python3 fionaLocalPages/server/app.py
+</code></pre>
+<p>The dashboard is then available at:</p>
+<pre><code>http://localhost:8765
+</code></pre>
+<p>What the web dashboard provides:</p>
+<ul>
+<li><strong>Agent Chat</strong>: conversational interface with streaming responses, personality selection, and multi-session management.</li>
+<li><strong>Action Runner</strong>: list, search, filter, and execute Fiona actions with permission profiles and dry-run support.</li>
+<li><strong>Settings</strong>: configure ACL rules, shell safety, voice engine, macros, and general preferences.</li>
+<li><strong>Browser Automation</strong>: start/stop the Playwright engine, navigate, click, type, and capture screenshots.</li>
+<li><strong>File Explorer</strong>: browse, read, write, and inspect files on the local filesystem.</li>
+<li><strong>Terminal</strong>: execute shell commands and view the fAT system dashboard status.</li>
+<li><strong>Performance Monitoring</strong>: real-time CPU, memory, disk, network, and system metrics with live gauge widgets.</li>
+<li><strong>Real-Time Updates</strong>: WebSocket and SSE (Server-Sent Events) for live streaming of agent responses, system metrics, and event notifications.</li>
+<li><strong>RecallVault</strong>: search, store, and manage categorized remembrance entries.</li>
+<li><strong>Desktop Awareness</strong>: view active window and screen snapshot information.</li>
+<li><strong>CamComs</strong>: view encryption status and identity information.</li>
 </ul>
 <h2 id="standalone-apps">Standalone Apps</h2>
 <pre><code class="language-bash">python3 -m fiona.cli vsee

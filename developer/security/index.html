@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -255,6 +262,42 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#development-rules" class="nav-link">Development Rules</a>
               <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-permission-system" class="nav-link">Agent Permission System</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#personalitypermits" class="nav-link">Personality.permits()</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#permissionenforcer" class="nav-link">PermissionEnforcer</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#safeactionrouter" class="nav-link">SafeActionRouter</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#browser-automation-security" class="nav-link">Browser Automation Security</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#headless-mode" class="nav-link">Headless Mode</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#proxy-configuration" class="nav-link">Proxy Configuration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#context-isolation" class="nav-link">Context Isolation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#error-classification" class="nav-link">Error Classification</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#remaining-security-work" class="nav-link">Remaining Security Work</a>
@@ -427,6 +470,119 @@
 <li>Never add a new shell execution point without wrapping it in <code>safe_os_system</code> or <code>safe_popen_shell</code>.</li>
 <li>Key rotation must use atomic writes (temp file + rename).</li>
 </ul>
+<h2 id="agent-permission-system">Agent Permission System</h2>
+<p>The <code>Agent.permission</code> module provides personality-scoped tool access control on top of the <code>FionaCore.ActionRouter</code>.</p>
+<h3 id="personalitypermits">Personality.permits()</h3>
+<p><code>Personality</code> (defined in <code>Agent/personality.py</code>) is an immutable dataclass that defines an agent personality's identity, system prompt, and tool permissions. Each personality carries an <code>allowed_tools</code> field — an optional <code>frozenset[str]</code> of tool names it is permitted to invoke. When <code>allowed_tools</code> is <code>None</code>, all tools are permitted:</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class Personality:
+    name: str
+    allowed_tools: frozenset[str] | None = None
+
+    def permits(self, tool_name: str) -&gt; bool:
+        &quot;&quot;&quot;True if allowed_tools is None or tool_name is in the set.&quot;&quot;&quot;
+        return self.allowed_tools is None or tool_name in self.allowed_tools
+</code></pre>
+<p>Six built-in personalities are registered in <code>PersonalityRegistry</code>:
+- <strong>general</strong> — full tool access (<code>allowed_tools=None</code>)
+- <strong>planner</strong> — read-only tools (desktop awareness, status, recall)
+- <strong>engineer</strong> — automation tools (press, click, move, text, macro)
+- <strong>analyst</strong> — research tools (dataclient, recall, seeondesk analyze)
+- <strong>security</strong> — read-only audit tools (status, recall search)
+- <strong>controller</strong> — full tool access (orchestration personality)</p>
+<h3 id="permissionenforcer">PermissionEnforcer</h3>
+<p><code>PermissionEnforcer</code> wraps a <code>Personality</code> and provides runtime gate checks:</p>
+<ul>
+<li><code>check_tool(tool_name) → bool</code> — returns whether the tool is permitted</li>
+<li><code>assert_tool_allowed(tool_name)</code> — raises <code>AgentPermissionError</code> if the tool is not permitted</li>
+</ul>
+<pre><code class="language-python">enforcer = PermissionEnforcer(personality)
+enforcer.assert_tool_allowed(&quot;rm_disk&quot;)  # raises AgentPermissionError for non-general personalities
+</code></pre>
+<h3 id="safeactionrouter">SafeActionRouter</h3>
+<p><code>SafeActionRouter</code> wraps <code>FionaCore.ActionRouter</code> with personality-based permission checks. Every <code>run()</code> call goes through <code>PermissionEnforcer.assert_tool_allowed()</code> before reaching the underlying router:</p>
+<pre><code class="language-python">router = SafeActionRouter(enforcer, action_router)
+result = router.run(&quot;press&quot;, source=&quot;agent&quot;)
+# raises AgentPermissionError if the active personality does not have &quot;press&quot; in allowed_tools
+</code></pre>
+<p>Key methods:
+- <code>run()</code> — check permission, then delegate to <code>ActionRouter.run()</code>
+- <code>run_with_fallback()</code> — same as <code>run()</code>, but falls back to <code>fiona.cli</code> subprocess if the action is not registered in <code>ActionRouter</code>
+- <code>list_allowed_actions()</code> — returns the intersection of <code>ActionRouter.list_actions()</code> and the personality's <code>allowed_tools</code></p>
+<h2 id="browser-automation-security">Browser Automation Security</h2>
+<p>The <code>BrowserAutomation</code> subsystem (based on Playwright) includes several security mechanisms to isolate browser activity from the host system.</p>
+<h3 id="headless-mode">Headless Mode</h3>
+<p>By default, the browser runs with <code>headless=False</code> (visible window). For automated or untrusted workloads, headless mode can be enabled via <code>BrowserConfig</code>:</p>
+<pre><code class="language-python">from fiona.interfaces import BrowserConfig
+
+config = BrowserConfig(
+    browser_type=&quot;chromium&quot;,
+    headless=True,              # no visible window
+    viewport_width=1280,
+    viewport_height=720,
+)
+</code></pre>
+<p>Headless mode ensures no graphical output reaches the user's display, making it suitable for background automation tasks.</p>
+<h3 id="proxy-configuration">Proxy Configuration</h3>
+<p>All browser traffic can be routed through a configurable HTTP/S proxy:</p>
+<pre><code class="language-python">config = BrowserConfig(
+    proxy=&quot;http://127.0.0.1:8080&quot;,  # route all traffic through proxy
+)
+</code></pre>
+<p>When <code>proxy</code> is <code>None</code> (the default), the browser connects directly. Setting a proxy is recommended when browser automation operates in a sensitive network context.</p>
+<h3 id="context-isolation">Context Isolation</h3>
+<p>The <code>BrowserManager</code> creates isolated browser contexts (via <code>IBrowserContext</code>) that are sandboxed from each other:</p>
+<ul>
+<li>Each context has its own cookies, localStorage, and session data</li>
+<li>Contexts are ephemeral by default (<code>data_dir=None</code>) — no profile data persists on disk</li>
+<li>Persistent profiles can be specified via <code>data_dir</code> for authenticated sessions</li>
+<li>The state machine (<code>BrowserManagerState</code>) tracks the browser lifecycle and prevents operations on stopped or errored browsers</li>
+</ul>
+<h3 id="error-classification">Error Classification</h3>
+<p>Browser automation errors are classified into distinct exception types for secure error handling:</p>
+<table>
+<thead>
+<tr>
+<th>Exception</th>
+<th>Triggered When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BrowserLaunchError</code></td>
+<td>Browser process fails to start</td>
+</tr>
+<tr>
+<td><code>BrowserNotRunning</code></td>
+<td>Operation attempted on a stopped browser</td>
+</tr>
+<tr>
+<td><code>BrowserShutdownError</code></td>
+<td>Clean shutdown fails</td>
+</tr>
+<tr>
+<td><code>BrowserCrashError</code></td>
+<td>Unexpected process termination</td>
+</tr>
+<tr>
+<td><code>NavigationTimeout</code></td>
+<td>Page load exceeds timeout</td>
+</tr>
+<tr>
+<td><code>ScriptExecutionError</code></td>
+<td>JavaScript execution throws or returns unexpected type</td>
+</tr>
+<tr>
+<td><code>SelectorTimeout</code></td>
+<td>Element not found within timeout</td>
+</tr>
+<tr>
+<td><code>ElementNotInteractable</code></td>
+<td>Element exists but cannot be clicked/typed</td>
+</tr>
+</tbody>
+</table>
+<p>All errors inherit from <code>BrowserError</code>, ensuring callers can catch a single base type for safe error handling.</p>
 <h2 id="remaining-security-work">Remaining Security Work</h2>
 <ul>
 <li>replay cache cleanup policy</li>

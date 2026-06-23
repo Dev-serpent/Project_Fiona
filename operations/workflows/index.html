@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -255,6 +262,62 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#agent-workflow" class="nav-link">Agent Workflow</a>
               <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#browser-automation-workflow" class="nav-link">Browser Automation Workflow</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#state-machine" class="nav-link">State Machine</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#context-management" class="nav-link">Context Management</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#error-handling" class="nav-link">Error Handling</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-orchestration-workflow" class="nav-link">Agent Orchestration Workflow</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#think-act-observe-loop-agentorchestrator" class="nav-link">Think-Act-Observe Loop (AgentOrchestrator)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#foremanagent-flow-complex-tasks" class="nav-link">ForemanAgent Flow (Complex Tasks)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#permission-gating" class="nav-link">Permission Gating</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#web-ui-dashboard-workflow" class="nav-link">Web UI Dashboard Workflow</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#architecture" class="nav-link">Architecture</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#rest-api" class="nav-link">REST API</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#websocket-real-time-push" class="nav-link">WebSocket Real-Time Push</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#sse-server-sent-events" class="nav-link">SSE (Server-Sent Events)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#data-flow" class="nav-link">Data Flow</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#debugging-workflow" class="nav-link">Debugging Workflow</a>
@@ -438,21 +501,35 @@ fiona --discover-actions
   -&gt; discover_actions()
   -&gt; categorized action list
 </code></pre>
-<p><strong>Process Tracking</strong> (added in roadmap):</p>
+<p><strong>Process Tracking</strong>:</p>
 <pre><code class="language-text">ProcessTracker
   -&gt; iterates /proc/*/comm
   -&gt; finds processes by name substring
   -&gt; registers/triggers watcher callbacks
   -&gt; no psutil dependency required
 </code></pre>
-<p><strong>Workspace Awareness</strong> (added in roadmap):</p>
+<p><strong>Workspace Awareness</strong>:</p>
 <pre><code class="language-text">WorkspaceWatcher
   -&gt; polls workspace state via kdotool (or wmctrl fallback)
   -&gt; detects active workspace changes
   -&gt; fires change callbacks
   -&gt; tracks current workspace ID
 </code></pre>
-<p>The current implementation is metadata-based. Screen recording and ML classification are future work.</p>
+<p><strong>Screen Capture</strong>:</p>
+<pre><code class="language-text">capture_screen()
+  -&gt; spectacle on KDE (preferred)
+  -&gt; grim on generic Wayland
+  -&gt; scrot/gnome-screenshot on X11
+  -&gt; writes PNG to output path
+
+capture_window(window_id)
+  -&gt; kdotool activate target window
+  -&gt; scrot -u / gnome-screenshot -w
+  -&gt; focused window capture
+
+analyze_screen(prompt)
+  -&gt; capture_screen() -&gt; Ollama vision model -&gt; text response
+</code></pre>
 <h2 id="macro-engine-workflow">Macro Engine Workflow</h2>
 <p>Goal: execute multi-step automation with waits, conditions, and branching.</p>
 <pre><code class="language-text">macro steps
@@ -539,6 +616,279 @@ fiona agent ask
   -&gt; local model response
 </code></pre>
 <p>The current Agent layer performs inference only. It does not train models, fine-tune models, execute actions automatically, or decide command permissions.</p>
+<h2 id="browser-automation-workflow">Browser Automation Workflow</h2>
+<p>Goal: control a web browser programmatically via Playwright for automation tasks.</p>
+<pre><code class="language-text">fiona browser start
+  -&gt; asyncio event loop
+  -&gt; Playwright browser launch (chromium/firefox/webkit)
+  -&gt; BrowserManager state machine: STOPPED → STARTING → RUNNING
+  -&gt; module-level default manager created via get_browser_manager()
+  -&gt; optional EventBus publishes BrowserLaunched event
+
+fiona browser navigate &lt;url&gt;
+  -&gt; BrowserManager.navigate(url)
+  -&gt; default context required
+  -&gt; NavigationCompleted event published with status code and final URL
+
+fiona browser click &lt;selector&gt;
+  -&gt; BrowserManager.click_element(selector)
+  -&gt; timeout-based element wait
+
+fiona browser type &lt;selector&gt; &lt;text&gt;
+  -&gt; BrowserManager.type_text(selector, text)
+  -&gt; configurable keystroke delay
+
+fiona browser screenshot [--output &lt;path&gt;]
+  -&gt; BrowserManager.capture_screenshot(path=path)
+  -&gt; returns raw bytes if no path given
+
+fiona browser stop
+  -&gt; browser manager closes all contexts
+  -&gt; Playwright browser instance closed
+  -&gt; state returns to STOPPED
+</code></pre>
+<h3 id="state-machine">State Machine</h3>
+<pre><code class="language-text">                    start()
+  STOPPED ──────────────────► STARTING ──────────────► RUNNING
+    ▲                            │                        │
+    │                            │ (failure)              │ (crash)
+    │                            ▼                        ▼
+    │                          ERROR ◄───────────────── DEGRADED
+    │                            │
+    └────────────────────────────┘
+         restart() / stop()
+</code></pre>
+<p>Valid state transitions:</p>
+<table>
+<thead>
+<tr>
+<th>Transition</th>
+<th>Method</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STOPPED → STARTING → RUNNING</td>
+<td><code>start()</code></td>
+<td>Normal startup sequence</td>
+</tr>
+<tr>
+<td>RUNNING → STOPPED</td>
+<td><code>stop()</code></td>
+<td>Clean shutdown, idempotent</td>
+</tr>
+<tr>
+<td>RUNNING → ERROR → RUNNING</td>
+<td><code>restart()</code></td>
+<td>Auto-restart on crash</td>
+</tr>
+<tr>
+<td>RUNNING → DEGRADED</td>
+<td>(internal)</td>
+<td>Reduced-capability state</td>
+</tr>
+</tbody>
+</table>
+<h3 id="context-management">Context Management</h3>
+<p>Isolated browser contexts can be created for multi-session workflows:</p>
+<pre><code class="language-text">create_context(**kwargs)
+  -&gt; IBrowserContext with unique context_id
+  -&gt; separate cookies/storage/state
+  -&gt; tracks all contexts by ID
+  -&gt; published BrowserContextCreated event
+
+close_context(context_id)
+  -&gt; removes context from manager
+  -&gt; closes browser context
+</code></pre>
+<h3 id="error-handling">Error Handling</h3>
+<p>Errors fall into typed exception classes:</p>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BrowserLaunchError</code></td>
+<td>Browser process failed to start</td>
+</tr>
+<tr>
+<td><code>BrowserShutdownError</code></td>
+<td>Browser failed to close cleanly</td>
+</tr>
+<tr>
+<td><code>BrowserNotRunning</code></td>
+<td>Operation attempted while browser is stopped</td>
+</tr>
+<tr>
+<td><code>BrowserCrashError</code></td>
+<td>Browser process crashed unexpectedly</td>
+</tr>
+<tr>
+<td><code>ElementNotFound</code></td>
+<td>CSS selector did not match any element</td>
+</tr>
+<tr>
+<td><code>NavigationTimeout</code></td>
+<td>Page load exceeded timeout</td>
+</tr>
+<tr>
+<td><code>BrowserTimeout</code></td>
+<td>Generic operation timeout</td>
+</tr>
+</tbody>
+</table>
+<p>Automatic restart: when a crash is detected during an operation, the manager attempts one auto-restart (<code>_AUTO_RESTART_ATTEMPTS = 1</code>). If the restart succeeds, the state transitions back to RUNNING. If it fails, the state stays at ERROR.</p>
+<h2 id="agent-orchestration-workflow">Agent Orchestration Workflow</h2>
+<p>Goal: have the local LLM plan and execute multi-step tasks with human oversight.</p>
+<h3 id="think-act-observe-loop-agentorchestrator">Think-Act-Observe Loop (AgentOrchestrator)</h3>
+<pre><code class="language-text">user goal
+  -&gt; AgentOrchestrator.run_goal(goal)
+  -&gt; Phase 1: Think / Plan
+     -&gt; LLM generates plan steps with action + parameters
+     -&gt; each step becomes a PlannedStep with risk assessment
+     -&gt; loop until LLM signals done or max_turns reached
+  -&gt; Phase 2: Submit for Approval
+     -&gt; ApprovalManager.submit_plan() -&gt; plan_id
+     -&gt; PlanStatus set to PENDING
+     -&gt; human must approve via GUI/API
+  -&gt; Phase 3: Wait for Decision
+     -&gt; wait_for_approval(timeout=300)
+     -&gt; returns 'approved', 'denied', 'cancelled', or 'timeout'
+  -&gt; Phase 4: Execute
+     -&gt; ApprovalManager.mark_executing(plan_id)
+     -&gt; SafeActionRouter checks personality permissions
+     -&gt; each action executed via ActionRouter
+     -&gt; observation collected for each step
+     -&gt; ApprovalManager.mark_completed(plan_id, summary)
+  -&gt; result returned to user
+</code></pre>
+<h3 id="foremanagent-flow-complex-tasks">ForemanAgent Flow (Complex Tasks)</h3>
+<p>For tasks that require decomposition into sub-goals:</p>
+<pre><code class="language-text">user goal
+  -&gt; ComplexityAssessor classifies complexity
+  -&gt; Simple query: single SubAgent directly (no planning overhead)
+  -&gt; Moderate/complex task:
+     -&gt; TaskPlan.from_llm() decomposes into sub-goals
+     -&gt; sub-goals executed in topological order
+     -&gt; parallel sub-goals run concurrently when possible
+     -&gt; each sub-goal is a self-contained unit with its own SubAgent
+     -&gt; results synthesized into a final response
+</code></pre>
+<p>The foreman flow is accessible via:</p>
+<pre><code class="language-bash">fiona agent ask --model &lt;model-id&gt; &quot;complex multi-step request&quot;
+</code></pre>
+<p>Or programmatically:</p>
+<pre><code class="language-python">from Agent.orchestration import ForemanAgent
+
+foreman = ForemanAgent(client, registry, chat_store)
+response = foreman.execute(goal=&quot;Research topic and save results&quot;)
+</code></pre>
+<h3 id="permission-gating">Permission Gating</h3>
+<p>Every action executed by the agent passes through <code>PermissionEnforcer</code>, which checks the action name against the active personality's <code>allowed_tools</code>. If the personality has restricted tool access, disallowed actions raise <code>AgentPermissionError</code> before execution.</p>
+<pre><code class="language-text">action name + personality
+  -&gt; PermissionEnforcer.assert_tool_allowed()
+  -&gt; SafeActionRouter.run()
+  -&gt; ActionRouter.run()
+  -&gt; result
+</code></pre>
+<h2 id="web-ui-dashboard-workflow">Web UI Dashboard Workflow</h2>
+<p>Goal: provide a browser-based SPA dashboard for monitoring and controlling Fiona.</p>
+<h3 id="architecture">Architecture</h3>
+<pre><code class="language-text">browser SPA (React/Vue/Svelte)
+  -&gt; HTTP requests to aiohttp server (port 8765)
+  -&gt; WebSocket connection at /ws
+  -&gt; SSE stream at /api/v1/stream
+
+aiohttp server (fionaLocalPages/server/app.py)
+  -&gt; REST API at /api/v1/
+  -&gt; WebSocket manager for real-time push
+  -&gt; SSE endpoint for server-sent events
+  -&gt; static file server with SPA fallback for client-side routing
+</code></pre>
+<h3 id="rest-api">REST API</h3>
+<pre><code class="language-text">/api/v1/
+  ├── health              GET    -&gt; server health check
+  ├── system/
+  │   ├── status          GET    -&gt; full system status
+  │   └── metrics         GET    -&gt; CPU/memory/disk metrics
+  ├── agent/
+  │   ├── ask             POST   -&gt; query the LLM
+  │   ├── goal            POST   -&gt; run agent goal
+  │   ├── status          GET    -&gt; Ollama health
+  │   └── commands        GET    -&gt; agent-accessible commands
+  ├── actions/
+  │   ├── list            GET    -&gt; registered actions
+  │   ├── run             POST   -&gt; execute an action
+  │   └── history         GET    -&gt; action trace log
+  ├── voice/
+  │   ├── parse           POST   -&gt; parse voice command
+  │   └── transcribe      POST   -&gt; transcribe audio
+  ├── terminal/
+  │   ├── exec            POST   -&gt; run terminal command
+  │   └── status          GET    -&gt; terminal availability
+  ├── files/
+  │   ├── list            GET    -&gt; list files
+  │   ├── read            GET    -&gt; read file content
+  │   ├── write           POST   -&gt; write to file
+  │   └── info            GET    -&gt; file metadata
+  ├── config/
+  │   ├── ...             GET    -&gt; list configs
+  │   ├── {name}          GET    -&gt; read config
+  │   └── {name}          PUT    -&gt; update config
+  ├── browser/
+  │   ├── start           POST   -&gt; start browser
+  │   ├── stop            POST   -&gt; stop browser
+  │   ├── status          GET    -&gt; browser state
+  │   ├── navigate        POST   -&gt; navigate to URL
+  │   ├── click           POST   -&gt; click element
+  │   └── screenshot      POST   -&gt; capture screenshot
+  ├── desktop/
+  │   ├── active          GET    -&gt; active window info
+  │   └── snapshot        GET    -&gt; full desktop snapshot
+  ├── recall/
+  │   ├── search          GET    -&gt; search memory store
+  │   ├── remember        POST   -&gt; save to memory
+  │   └── forget/{key}    DELETE -&gt; remove from memory
+  ├── macros/
+  │   ├── ...             GET    -&gt; list macros
+  │   └── run             POST   -&gt; execute macro
+  └── camcoms/
+      ├── status          GET    -&gt; CamComs status
+      └── identity        GET    -&gt; CamComs identity
+</code></pre>
+<h3 id="websocket-real-time-push">WebSocket Real-Time Push</h3>
+<pre><code class="language-text">SPA connects to /ws
+  -&gt; WebSocketManager.register(ws) -&gt; peer_id
+  -&gt; periodic heartbeat (30s interval) detects stale connections
+
+Server pushes:
+  -&gt; system:metrics every 2 seconds (CPU, memory, disk, load, uptime)
+  -&gt; browser events (BrowserLaunched, NavigationCompleted, BrowserCrashed)
+
+Client sends:
+  -&gt; JSON-RPC 2.0 method calls
+  -&gt; ping/pong heartbeats
+</code></pre>
+<h3 id="sse-server-sent-events">SSE (Server-Sent Events)</h3>
+<pre><code class="language-text">SPA connects to /api/v1/stream
+  -&gt; Content-Type: text/event-stream
+  -&gt; 30-second heartbeat keepalive
+  -&gt; lightweight alternative to WebSocket for one-way updates
+</code></pre>
+<h3 id="data-flow">Data Flow</h3>
+<pre><code class="language-text">SPA user action
+  -&gt; HTTP POST /api/v1/{resource}/{action}
+  -&gt; aiohttp handler imports Fiona Python module
+  -&gt; operation executed against real subsystem
+  -&gt; JSON response returned to SPA
+  -&gt; WebSocket push broadcasts state changes to all connected peers
+  -&gt; SPA re-renders with updated data
+</code></pre>
 <h2 id="debugging-workflow">Debugging Workflow</h2>
 <p>When a system operation fails, identify the failing layer before changing code:</p>
 <ol>

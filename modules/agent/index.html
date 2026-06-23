@@ -130,6 +130,10 @@
 <li>
     <a href="./" class="dropdown-item active" aria-current="page">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -181,7 +188,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../../current-state/" class="nav-link">
+                                <a rel="next" href="../browserautomation/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -205,15 +212,135 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#agent" class="nav-link">Agent</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#lm-studio-endpoint" class="nav-link">LM Studio Endpoint</a>
+            <li class="nav-item" data-bs-level="2"><a href="#migration-lm-studio-ollama" class="nav-link">Migration: LM Studio → Ollama</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#commands" class="nav-link">Commands</a>
+            <li class="nav-item" data-bs-level="2"><a href="#ollama-client" class="nav-link">Ollama Client</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#important-boundary" class="nav-link">Important Boundary</a>
+            <li class="nav-item" data-bs-level="2"><a href="#chat-system" class="nav-link">Chat System</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#agentchathandler" class="nav-link">AgentChatHandler</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#chatstore" class="nav-link">ChatStore</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#command-registry" class="nav-link">Command Registry</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#default_commands" class="nav-link">DEFAULT_COMMANDS</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#command_registry-function" class="nav-link">command_registry() function</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#agent-orchestrator" class="nav-link">Agent Orchestrator</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#available-tools-in-the-orchestrator" class="nav-link">Available tools in the orchestrator</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#foremanagent-advanced-orchestration" class="nav-link">ForemanAgent (Advanced Orchestration)</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#complexityassessor" class="nav-link">ComplexityAssessor</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#taskplan-subgoalspec" class="nav-link">TaskPlan &amp; SubGoalSpec</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#subagent" class="nav-link">SubAgent</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#parallel-execution" class="nav-link">Parallel execution</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#result-synthesis" class="nav-link">Result synthesis</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#foremanconfig" class="nav-link">ForemanConfig</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#personality-system" class="nav-link">Personality System</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#built-in-personalities" class="nav-link">Built-in Personalities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#personalityregistry" class="nav-link">PersonalityRegistry</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#permission-system" class="nav-link">Permission System</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#permissionenforcer" class="nav-link">PermissionEnforcer</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#safeactionrouter" class="nav-link">SafeActionRouter</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#query-detection" class="nav-link">Query Detection</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#cancellation" class="nav-link">Cancellation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#cli-commands" class="nav-link">CLI Commands</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#agent-status" class="nav-link">agent status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#agent-ask" class="nav-link">agent ask</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#agent-run" class="nav-link">agent run</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#agent-commands" class="nav-link">agent commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#shared-cli-options" class="nav-link">Shared CLI options</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#architecture-overview" class="nav-link">Architecture Overview</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#package-exports" class="nav-link">Package Exports</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -225,35 +352,744 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="agent">Agent</h1>
-<p>Agent is Fiona's local LM Studio bridge. It is the first connection point for future reasoning, but it is not a full autonomous agent yet.</p>
-<h2 id="lm-studio-endpoint">LM Studio Endpoint</h2>
-<p>Agent talks to LM Studio's local OpenAI-compatible API.</p>
-<p>Default endpoint:</p>
-<pre><code class="language-text">http://localhost:1234/v1
+<p>Agent is Fiona's local AI orchestration layer. It connects to a running Ollama instance for local inference, manages conversational chat sessions, exposes a command registry for autonomous tool use, and provides a multi-agent orchestration pipeline for complex task decomposition.</p>
+<h2 id="migration-lm-studio-ollama">Migration: LM Studio → Ollama</h2>
+<p>The Agent was originally built against LM Studio's OpenAI-compatible endpoint. It has been fully migrated to Ollama's native API.</p>
+<table>
+<thead>
+<tr>
+<th>Legacy</th>
+<th>Current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LMStudioClient</code></td>
+<td><code>OllamaClient</code></td>
+</tr>
+<tr>
+<td><code>LMStudioError</code></td>
+<td><code>OllamaError</code></td>
+</tr>
+<tr>
+<td><code>http://localhost:1234/v1</code></td>
+<td><code>http://localhost:11434/api</code></td>
+</tr>
+</tbody>
+</table>
+<p>Backward-compatibility aliases exist at the package level:</p>
+<pre><code class="language-python">from Agent import LMStudioClient, LMStudioError
+# LMStudioClient is OllamaClient, LMStudioError is OllamaError
 </code></pre>
-<p>Start LM Studio's local server from the LM Studio Developer tab, or with:</p>
-<pre><code class="language-bash">lms server start
+<h2 id="ollama-client">Ollama Client</h2>
+<p>The <code>OllamaClient</code> class communicates with a local Ollama instance via its JSON API. It supports text generation, system prompts, and optional image attachment.</p>
+<p><strong>Default configuration:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_url</code></td>
+<td><code>http://localhost:11434/api</code></td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td><code>qwen3:8b-en</code></td>
+</tr>
+<tr>
+<td><code>timeout_seconds</code></td>
+<td><code>120.0</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key method:</strong> <code>ask(prompt, *, system_prompt, image_path, temperature, max_tokens) -&gt; str</code></p>
+<p>The <code>ask</code> method sends a message to the model and returns the text response. When a <code>Personality</code> is attached to the client, its <code>system_prompt</code> is used by default if the caller does not explicitly pass one.</p>
+<pre><code class="language-python">from Agent import OllamaClient
+
+client = OllamaClient()
+response = client.ask(&quot;What is the current system time?&quot;)
+print(response)
 </code></pre>
-<h2 id="commands">Commands</h2>
-<p>Check the server:</p>
-<pre><code class="language-bash">python3 -m fiona.cli agent status
+<p>Custom model and endpoint:</p>
+<pre><code class="language-python">client = OllamaClient(
+    base_url=&quot;http://localhost:11434/api&quot;,
+    model=&quot;llama3.2:3b&quot;,
+    timeout_seconds=60.0,
+)
+client.ask(&quot;Hello!&quot;, system_prompt=&quot;You are a helpful assistant.&quot;, temperature=0.7)
 </code></pre>
-<p>Ask a local model:</p>
-<pre><code class="language-bash">python3 -m fiona.cli agent ask --model &lt;model-id&gt; &quot;Summarize Fiona status.&quot;
+<h2 id="chat-system">Chat System</h2>
+<h3 id="agentchathandler">AgentChatHandler</h3>
+<p><code>AgentChatHandler</code> bridges a GUI or CLI frontend to the LLM for interactive chat sessions. All LLM calls run in daemon threads so they never block the caller. UI updates are delegated to callbacks that the caller can marshal onto the correct thread (e.g. via <code>widget.after()</code> in Tkinter).</p>
+<p><strong>Session management:</strong></p>
+<ul>
+<li><code>create_session(personality="general")</code> — create a new session, returns a UUID4 string</li>
+<li><code>list_sessions()</code> — list all sessions, newest-active first</li>
+<li><code>delete_session(session_id)</code> — delete a session and all its messages</li>
+</ul>
+<p><strong>Message sending:</strong></p>
+<p><code>send_message(session_id, message, token, on_message, on_error, on_complete, system_prompt_override=None)</code> launches a daemon thread that:</p>
+<ol>
+<li>Checks the <code>CancellationToken</code></li>
+<li>Stores the user message in the <code>ChatStore</code></li>
+<li>Calls <code>on_message("user", message)</code></li>
+<li>Builds a token-aware context window from the <code>ChatStore</code></li>
+<li>Looks up the session's <code>Personality</code></li>
+<li>Calls <code>OllamaClient.ask()</code> with the effective system prompt</li>
+<li>Stores the agent response</li>
+<li>Calls <code>on_message("agent", response)</code></li>
+<li>Calls <code>on_complete()</code></li>
+</ol>
+<p>On cancellation or error, the error is stored in the chat history with role <code>"cancelled"</code> or <code>"error"</code> and the <code>on_error</code> callback is invoked.</p>
+<pre><code class="language-python">from Agent import AgentChatHandler, ChatStore, CancellationToken
+
+store = ChatStore(&quot;chats.db&quot;)
+handler = AgentChatHandler(store)
+session_id = handler.create_session(personality=&quot;general&quot;)
+
+token = CancellationToken()
+
+def on_message(role, content):
+    print(f&quot;{role}: {content}&quot;)
+
+def on_error(msg):
+    print(f&quot;Error: {msg}&quot;)
+
+def on_complete():
+    print(&quot;Done!&quot;)
+
+handler.send_message(session_id, &quot;What can you do?&quot;, token, on_message, on_error, on_complete)
 </code></pre>
-<p>Use a custom endpoint:</p>
-<pre><code class="language-bash">python3 -m fiona.cli agent status --base-url http://localhost:1234/v1
+<h3 id="chatstore">ChatStore</h3>
+<p><code>ChatStore</code> is a thread-safe SQLite-backed persistence layer for chat history. It uses WAL mode and a <code>threading.Lock</code> to serialise all database access.</p>
+<pre><code class="language-python">from Agent import ChatStore
+
+with ChatStore(&quot;chats.db&quot;) as store:
+    sid = store.create_session(personality=&quot;engineer&quot;)
+    store.add_message(sid, &quot;user&quot;, &quot;Hello!&quot;)
+    store.add_message(sid, &quot;agent&quot;, &quot;Hi! How can I help?&quot;)
+    messages = store.get_context_window(sid, max_tokens=2048)
 </code></pre>
-<p>Customize generation settings:</p>
-<pre><code class="language-bash">python3 -m fiona.cli agent ask \
-  --system &quot;You are Fiona's local assistant.&quot; \
-  --temperature 0.3 \
+<p><strong>Key types:</strong></p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class ChatMessage:
+    id: int
+    session_id: str
+    role: str          # 'user' | 'agent' | 'system' | 'error' | 'cancelled'
+    content: str
+    personality: str
+    timestamp: float
+    token_count: int | None = None
+    model: str | None = None
+</code></pre>
+<p><strong>Token estimation:</strong></p>
+<p><code>estimate_tokens(text)</code> provides a rough estimate (1 token ≈ 4 characters, <code>len(text) // 4 + 1</code>). Used by <code>get_context_window()</code> to build token-budget-aware context when <code>token_count</code> is <code>NULL</code>.</p>
+<p><strong>Additional methods:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_messages(session_id, limit, offset)</code></td>
+<td>Retrieve messages oldest-first</td>
+</tr>
+<tr>
+<td><code>count_messages(session_id)</code></td>
+<td>Number of messages in a session</td>
+</tr>
+<tr>
+<td><code>search_messages(query, session_id, limit)</code></td>
+<td>Substring search across message content</td>
+</tr>
+<tr>
+<td><code>prune_sessions(older_than_days)</code></td>
+<td>Delete sessions inactive for N days</td>
+</tr>
+<tr>
+<td><code>import_jsonl(path)</code></td>
+<td>Import messages from a JSONL file</td>
+</tr>
+<tr>
+<td><code>vacuum()</code></td>
+<td>Reclaim unused SQLite space</td>
+</tr>
+</tbody>
+</table>
+<h2 id="command-registry">Command Registry</h2>
+<p>The command registry defines the set of tools an agent can invoke. Commands are categorised by function domain, each with an input schema that the LLM can use to construct valid calls.</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class CommandSpec:
+    name: str
+    category: str
+    description: str
+    input_schema: dict[str, Any]
+    requires_confirmation: bool = False
+</code></pre>
+<h3 id="default_commands">DEFAULT_COMMANDS</h3>
+<p>The full set of built-in commands, grouped by category:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>input</strong></td>
+<td><code>press</code>, <code>text</code></td>
+</tr>
+<tr>
+<td><strong>pointer</strong></td>
+<td><code>click</code>, <code>move</code></td>
+</tr>
+<tr>
+<td><strong>app</strong></td>
+<td><code>launch_binding</code></td>
+</tr>
+<tr>
+<td><strong>automation</strong></td>
+<td><code>macro</code></td>
+</tr>
+<tr>
+<td><strong>awareness</strong></td>
+<td><code>seeondesk_list</code>, <code>seeondesk_active</code></td>
+</tr>
+<tr>
+<td><strong>vision</strong></td>
+<td><code>seeondesk_analyze</code></td>
+</tr>
+<tr>
+<td><strong>research</strong></td>
+<td><code>dataclient_mine</code></td>
+</tr>
+<tr>
+<td><strong>memory</strong></td>
+<td><code>recall_remember</code>, <code>recall_search</code></td>
+</tr>
+<tr>
+<td><strong>system</strong></td>
+<td><code>fiona_status</code></td>
+</tr>
+<tr>
+<td><strong>browser</strong></td>
+<td><code>browser_status</code>, <code>browser_navigate</code>, <code>browser_click</code>, <code>browser_type</code>, <code>browser_screenshot</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="command_registry-function">command_registry() function</h3>
+<p><code>command_registry(config_path, enforcer=None)</code> returns a dictionary with two keys:</p>
+<ul>
+<li><code>"commands"</code> — list of command specs (filtered by <code>DEFAULT_ALLOWED_ACTIONS</code> and optionally by the <code>PermissionEnforcer</code>)</li>
+<li><code>"apps"</code> — available application bindings from the QuikTieper config file</li>
+</ul>
+<pre><code class="language-python">from Agent import command_registry
+
+registry = command_registry()
+print(registry[&quot;commands&quot;])  # list of command dicts
+print(registry[&quot;apps&quot;])      # list of app bindings
+</code></pre>
+<h2 id="agent-orchestrator">Agent Orchestrator</h2>
+<p><code>AgentOrchestrator</code> manages the autonomous execution loop for Fiona's workstation assistant. It uses an LLM to generate a multi-step plan, submits that plan for human approval, then executes the approved steps.</p>
+<p><strong>Pipeline:</strong></p>
+<ol>
+<li><strong>Plan generation</strong> — iterates up to <code>max_turns</code>, asking the LLM to produce <code>{thought, action, input}</code> JSON at each step</li>
+<li><strong>Human approval</strong> — submits the plan to an <code>ApprovalManager</code> and waits for user sign-off</li>
+<li><strong>Execution</strong> — executes each approved step, collecting observations</li>
+</ol>
+<pre><code class="language-python">from Agent import AgentOrchestrator
+
+orchestrator = AgentOrchestrator()
+result = orchestrator.run_goal(&quot;Open the terminal and check disk space&quot;)
+print(result)
+</code></pre>
+<p>Each turn produces an <code>AgentTurn</code> dataclass:</p>
+<pre><code class="language-python">@dataclass
+class AgentTurn:
+    thought: str
+    action_name: str | None = None
+    action_input: dict[str, Any] | None = None
+    observation: str | None = None
+</code></pre>
+<p><strong>Helper function:</strong> <code>run_agent_goal(goal, personality="controller")</code> creates an <code>AgentOrchestrator</code> and runs the goal in one call.</p>
+<h3 id="available-tools-in-the-orchestrator">Available tools in the orchestrator</h3>
+<p>The orchestrator has hardcoded tool execution for:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seeondesk_list</code></td>
+<td>List open windows</td>
+</tr>
+<tr>
+<td><code>seeondesk_active</code></td>
+<td>Active window details</td>
+</tr>
+<tr>
+<td><code>seeondesk_analyze</code></td>
+<td>Vision-based screen analysis</td>
+</tr>
+<tr>
+<td><code>press</code>, <code>click</code>, <code>move</code>, <code>text</code></td>
+<td>Input automation via <code>ActionRouter</code></td>
+</tr>
+<tr>
+<td><code>launch_binding</code></td>
+<td>Launch app by binding name</td>
+</tr>
+<tr>
+<td><code>macro</code></td>
+<td>Execute a sequence of actions</td>
+</tr>
+<tr>
+<td><code>dataclient_mine</code></td>
+<td>Web research and CSV export</td>
+</tr>
+<tr>
+<td><code>recall_remember</code></td>
+<td>Store a fact in persistent memory</td>
+</tr>
+<tr>
+<td><code>recall_search</code></td>
+<td>Search stored memories</td>
+</tr>
+<tr>
+<td><code>fiona_status</code></td>
+<td>Fiona subsystem status</td>
+</tr>
+<tr>
+<td><code>browser_status</code>, <code>browser_navigate</code>, <code>browser_click</code>, <code>browser_type</code>, <code>browser_screenshot</code></td>
+<td>Browser automation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="foremanagent-advanced-orchestration">ForemanAgent (Advanced Orchestration)</h2>
+<p><code>ForemanAgent</code> in <code>Agent/orchestration.py</code> provides a sophisticated multi-agent orchestration pipeline. It is the Milestone 4 advanced orchestration engine.</p>
+<p><strong>Pipeline:</strong></p>
+<pre><code>Goal → ComplexityAssessor → [Simple: single SubAgent]
+                           → [Moderate/Complex: TaskPlan.from_llm() → decompose
+                              → topological execution (parallel/sequential layers)
+                              → ForemanAgent._synthesize()]
+</code></pre>
+<h3 id="complexityassessor">ComplexityAssessor</h3>
+<p>LLM-based classifier that sends the goal to an Ollama model and asks it to classify as <code>simple</code>, <code>moderate</code>, or <code>complex</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Classification</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIMPLE</code></td>
+<td>Single <code>SubAgent</code> with the default personality</td>
+</tr>
+<tr>
+<td><code>MODERATE</code></td>
+<td>Decompose into sub-goals via <code>TaskPlan.from_llm()</code>, execute in dependency order</td>
+</tr>
+<tr>
+<td><code>COMPLEX</code></td>
+<td>Same as moderate (full decomposition and parallel execution)</td>
+</tr>
+</tbody>
+</table>
+<p>Falls back to <code>MODERATE</code> on any LLM error.</p>
+<h3 id="taskplan-subgoalspec">TaskPlan &amp; SubGoalSpec</h3>
+<p><code>TaskPlan</code> is a decomposed plan consisting of multiple sub-goals with dependency relationships. It is generated by the LLM and validated for correctness.</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class SubGoalSpec:
+    id: str
+    description: str
+    assigned_personality: str
+    depends_on: tuple[str, ...] = ()
+    parallel: bool = False
+</code></pre>
+<p><strong>Validation checks:</strong></p>
+<ul>
+<li>Unique sub-goal IDs</li>
+<li>All <code>depends_on</code> references exist</li>
+<li>No circular dependencies (DFS cycle detection)</li>
+<li>All <code>assigned_personality</code> values are valid in the <code>PersonalityRegistry</code></li>
+</ul>
+<p><strong>Topological execution:</strong> <code>plan.execution_order()</code> returns layers of parallel-independent tasks. Each inner list can execute in parallel; outer layers must execute sequentially.</p>
+<h3 id="subagent">SubAgent</h3>
+<p>A personality-wrapped agent using <code>SafeActionRouter</code> for tool access. Executes a ReAct loop:</p>
+<pre><code>Think → Act → Observe → repeat until final answer or max_turns
+</code></pre>
+<p>Each turn:
+1. Checks <code>CancellationToken</code>
+2. Sends context + prompt to the LLM
+3. Parses JSON response — expects either <code>{"action": "...", "input": {...}}</code> or <code>{"final": "..."}</code>
+4. If action: executes via <code>SafeActionRouter.run_with_fallback()</code>
+5. Appends observation to conversation history
+6. Repeats until final answer or <code>max_turns</code></p>
+<pre><code class="language-python">from Agent import OllamaClient
+from Agent.orchestration import SubAgent, ComplexityAssessor, ForemanAgent, ForemanConfig
+from Agent.personality import Personality, PersonalityRegistry
+from Agent.permission import PermissionEnforcer, SafeActionRouter
+from Agent.cancellation import CancellationToken
+
+# Build a SubAgent manually
+personality = PersonalityRegistry.get_instance().get(&quot;engineer&quot;)
+enforcer = PermissionEnforcer(personality)
+router = SafeActionRouter(enforcer)
+client = OllamaClient()
+
+agent = SubAgent(personality, client, router, max_turns=10)
+token = CancellationToken()
+result = agent.execute(&quot;Check the system status&quot;, token)
+print(result)
+</code></pre>
+<h3 id="parallel-execution">Parallel execution</h3>
+<p><code>ForemanAgent</code> uses <code>concurrent.futures.ThreadPoolExecutor</code> for parallel sub-agent execution. Sub-goals flagged with <code>parallel: true</code> at the same dependency level run concurrently.</p>
+<h3 id="result-synthesis">Result synthesis</h3>
+<p>After all sub-goals complete, <code>ForemanAgent._synthesize()</code> sends the collected results to the LLM with a synthesis prompt that produces a coherent final response for the user.</p>
+<h3 id="foremanconfig">ForemanConfig</h3>
+<pre><code class="language-python">@dataclass(frozen=True)
+class ForemanConfig:
+    parallel_by_default: bool = False
+    max_sub_agents: int = 5
+    max_turns_per_sub_agent: int = 10
+    max_plan_retries: int = 2
+    context_max_tokens: int = 2048
+    default_personality: str = &quot;general&quot;
+</code></pre>
+<h2 id="personality-system">Personality System</h2>
+<p><code>Personality</code> is an immutable dataclass that defines the behaviour and constraints of an agent persona.</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class Personality:
+    name: str
+    description: str
+    system_prompt: str
+    conversational_system_prompt: str | None = None
+    allowed_tools: frozenset[str] | None = None
+    model_override: str | None = None
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>Unique identifier</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>Human-readable role summary</td>
+</tr>
+<tr>
+<td><code>system_prompt</code></td>
+<td>System prompt sent to the LLM for ReAct-style interaction</td>
+</tr>
+<tr>
+<td><code>conversational_system_prompt</code></td>
+<td>Alternate prompt used when <code>QueryDetector</code> classifies input as a conversational query</td>
+</tr>
+<tr>
+<td><code>allowed_tools</code></td>
+<td><code>frozenset</code> of permitted tool names; <code>None</code> means all tools allowed</td>
+</tr>
+<tr>
+<td><code>model_override</code></td>
+<td>Forces a specific Ollama model when this personality is active</td>
+</tr>
+</tbody>
+</table>
+<h3 id="built-in-personalities">Built-in Personalities</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Role</th>
+<th>Tools</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>general</code></td>
+<td>General-purpose assistant with full tool access</td>
+<td>All</td>
+<td>default</td>
+</tr>
+<tr>
+<td><code>planner</code></td>
+<td>Strategic planner — reads state, does not execute</td>
+<td><code>seeondesk_*</code>, <code>fiona_status</code>, <code>recall_*</code></td>
+<td><code>qwen3:8b-en</code></td>
+</tr>
+<tr>
+<td><code>engineer</code></td>
+<td>Execution specialist — automation &amp; input</td>
+<td>Input, pointer, awareness tools</td>
+<td>default</td>
+</tr>
+<tr>
+<td><code>analyst</code></td>
+<td>Research &amp; memory analyst</td>
+<td><code>dataclient_mine</code>, <code>recall_*</code>, <code>seeondesk_analyze</code></td>
+<td><code>qwen3:8b-en</code></td>
+</tr>
+<tr>
+<td><code>security</code></td>
+<td>Read-only audit personality</td>
+<td><code>seeondesk_list</code>, <code>seeondesk_active</code>, <code>fiona_status</code>, <code>recall_search</code></td>
+<td><code>qwen3:8b-en</code></td>
+</tr>
+<tr>
+<td><code>controller</code></td>
+<td>Orchestration agent — plans, delegates, verifies</td>
+<td>All</td>
+<td><code>qwen3:8b-en</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>controller</code> personality's system prompt is loaded from the <code>rules/</code> directory (architecture, controller, tool_selection, execution, repository, coding, and recovery rule files). If the directory is missing, it falls back to the general system prompt.</p>
+<h3 id="personalityregistry">PersonalityRegistry</h3>
+<p>Thread-safe singleton registry for built-in and custom personalities.</p>
+<pre><code class="language-python">from Agent import Personality, PersonalityRegistry
+
+registry = PersonalityRegistry.get_instance()
+
+# Look up a built-in
+p = registry.get(&quot;engineer&quot;)
+
+# Register a custom personality
+custom = Personality(
+    name=&quot;coder&quot;,
+    description=&quot;Software development specialist&quot;,
+    system_prompt=&quot;You are a coding assistant. Generate Python code.&quot;,
+    allowed_tools=frozenset({&quot;fiona_status&quot;, &quot;recall_search&quot;}),
+)
+registry.register(custom)
+
+# List all registered personalities
+for p in registry.list():
+    print(p.name, p.description)
+</code></pre>
+<h2 id="permission-system">Permission System</h2>
+<h3 id="permissionenforcer">PermissionEnforcer</h3>
+<p>Runtime gate that checks tool access against a personality's restrictions. Completely optional — existing code never touches it, preserving full backward compatibility.</p>
+<pre><code class="language-python">from Agent import PermissionEnforcer
+from Agent.personality import PersonalityRegistry
+
+personality = PersonalityRegistry.get_instance().get(&quot;security&quot;)
+enforcer = PermissionEnforcer(personality)
+
+enforcer.check_tool(&quot;press&quot;)         # False (security has no input tools)
+enforcer.assert_tool_allowed(&quot;press&quot;) # raises AgentPermissionError
+</code></pre>
+<h3 id="safeactionrouter">SafeActionRouter</h3>
+<p>Wraps <code>FionaCore.ActionRouter</code> with personality-based permission checks. Provides <code>run()</code> and <code>run_with_fallback()</code> methods.</p>
+<p><code>run_with_fallback()</code> attempts the action through the normal router first. If the action is not recognised (<code>ValueError</code>), it falls back to invoking <code>fiona.cli</code> as a subprocess — this guarantees the agent can attempt any registered command even if <code>ActionRouter</code> does not have a dedicated handler.</p>
+<pre><code class="language-python">from Agent import SafeActionRouter, PermissionEnforcer
+from Agent.personality import PersonalityRegistry
+
+personality = PersonalityRegistry.get_instance().get(&quot;general&quot;)
+enforcer = PermissionEnforcer(personality)
+router = SafeActionRouter(enforcer)
+
+result = router.run(&quot;press&quot;, source=&quot;agent&quot;)
+print(result.ok, result.detail)
+</code></pre>
+<h2 id="query-detection">Query Detection</h2>
+<p><code>QueryDetector</code> classifies user input as either a conversational query (greeting, simple question, chit-chat) or an actionable task — <strong>with zero LLM calls</strong>. All classification is done via compiled regex patterns and heuristics.</p>
+<pre><code class="language-python">from Agent import QueryDetector, QueryOrTask
+
+QueryDetector.classify(&quot;hello&quot;)
+# QueryOrTask.QUERY
+
+QueryDetector.classify(&quot;create a new Python module for data processing&quot;)
+# QueryOrTask.TASK
+</code></pre>
+<p><strong>Classification rules (applied in order):</strong></p>
+<ol>
+<li>Empty/whitespace → <code>QUERY</code></li>
+<li>Greeting pattern → <code>QUERY</code></li>
+<li>Chit-chat pattern → <code>QUERY</code></li>
+<li>Very long message (&gt;300 chars) → <code>TASK</code></li>
+<li>Action verb present → <code>TASK</code></li>
+<li>Simple question starter → <code>QUERY</code></li>
+<li>Technical reference present → <code>TASK</code></li>
+<li>Short message (&lt;15 chars) → <code>QUERY</code></li>
+<li>Default → <code>QUERY</code> (conservative)</li>
+</ol>
+<p>This classifier is used by the chat handler to decide whether to use the personality's conversational system prompt (QueryDetector.QUERY) or the full ReAct-style prompt (QueryDetector.TASK), avoiding wasted tokens on small talk.</p>
+<h2 id="cancellation">Cancellation</h2>
+<p><code>CancellationToken</code> is a thread-safe cancellation primitive used throughout the Agent module. All methods are safe to call from any thread.</p>
+<pre><code class="language-python">from Agent import CancellationToken, CancelledError
+
+token = CancellationToken()
+
+# In a worker thread:
+token.raise_if_cancelled()  # raises CancelledError if cancelled
+
+# In the UI/main thread:
+token.cancel()  # signal cancellation
+
+# Reuse after reset:
+token.reset()
+</code></pre>
+<p>The <code>SubAgent</code>, <code>AgentChatHandler</code>, <code>ForemanAgent</code>, and <code>ComplexityAssessor</code> all check the cancellation token at each turn, ensuring long-running operations can be interrupted cleanly.</p>
+<h2 id="cli-commands">CLI Commands</h2>
+<p>All agent commands are available via <code>fiona agent &lt;subcommand&gt;</code>.</p>
+<h3 id="agent-status">agent status</h3>
+<p>Check whether the Ollama server is reachable:</p>
+<pre><code class="language-bash">fiona agent status
+</code></pre>
+<p>Returns the server's tag list as JSON if available, or an error report:</p>
+<pre><code class="language-json">{&quot;available&quot;: false, &quot;error&quot;: &quot;...&quot;, &quot;base_url&quot;: &quot;http://localhost:11434/api&quot;}
+</code></pre>
+<p>Custom endpoint:</p>
+<pre><code class="language-bash">fiona agent status --base-url http://localhost:11434/api
+</code></pre>
+<h3 id="agent-ask">agent ask</h3>
+<p>Send a one-shot prompt to Ollama:</p>
+<pre><code class="language-bash">fiona agent ask &quot;What is the capital of France?&quot;
+</code></pre>
+<p>Custom generation settings:</p>
+<pre><code class="language-bash">fiona agent ask \
+  --model &quot;llama3.2:3b&quot; \
+  --system &quot;You are a terse assistant.&quot; \
+  --temperature 0.7 \
   --max-tokens 512 \
-  --model &lt;model-id&gt; \
-  &quot;Prompt text&quot;
+  &quot;Explain quantum computing in one sentence.&quot;
 </code></pre>
-<h2 id="important-boundary">Important Boundary</h2>
-<p>This is inference, not model training. Fine-tuning, GPU resource control, dataset capture, evaluation, and rollback are future systems.</p></div>
+<h3 id="agent-run">agent run</h3>
+<p>Initiate the autonomous agent to solve a goal. Uses <code>AgentOrchestrator</code> to plan, get human approval, and execute:</p>
+<pre><code class="language-bash">fiona agent run &quot;Check the system status and report any issues&quot;
+</code></pre>
+<p>Limit the number of planning turns:</p>
+<pre><code class="language-bash">fiona agent run --turns 8 &quot;Research the weather and save it to a file&quot;
+</code></pre>
+<h3 id="agent-commands">agent commands</h3>
+<p>List the Fiona commands available to the agent:</p>
+<pre><code class="language-bash">fiona agent commands
+</code></pre>
+<p>With a custom QuikTieper config for app bindings:</p>
+<pre><code class="language-bash">fiona agent commands --config /path/to/config.yaml
+</code></pre>
+<h3 id="shared-cli-options">Shared CLI options</h3>
+<p>The <code>status</code>, <code>ask</code>, and <code>run</code> subcommands all accept:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--base-url</code></td>
+<td><code>http://localhost:11434/api</code></td>
+<td>Ollama API base URL</td>
+</tr>
+<tr>
+<td><code>--model</code></td>
+<td><code>qwen3:8b-en</code></td>
+<td>Ollama model name</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td><code>60.0</code></td>
+<td>Request timeout in seconds</td>
+</tr>
+</tbody>
+</table>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<pre><code>┌──────────────────────────────────────────────────┐
+│                    CLI / GUI                       │
+└──────────┬──────────┬───────────┬────────────────┘
+           │          │           │
+     ┌─────▼──┐  ┌───▼────┐  ┌──▼──────────┐
+     │ Chat   │  │ Agent  │  │ ForemanAgent │
+     │Handler │  │Orchestr│  │ (advanced)   │
+     └───┬────┘  │  ator  │  └──┬──┬──┬─────┘
+         │       └───┬────┘     │  │  │
+    ┌────▼───┐  ┌────▼────┐    │  │  │
+    │ChatStore│  │Approval │    │  │  │
+    │(SQLite) │  │Manager  │    │  │  │
+    └────────┘  └─────────┘    │  │  │
+                               │  │  │
+                    ┌──────────▼──▼──▼──────┐
+                    │    SubAgent (ReAct)     │
+                    │  ┌──────────────────┐  │
+                    │  │ LLM (Ollama)      │  │
+                    │  └────────┬─────────┘  │
+                    │           │            │
+                    │  ┌────────▼─────────┐  │
+                    │  │ PermissionEnforcer │  │
+                    │  └────────┬─────────┘  │
+                    │           │            │
+                    │  ┌────────▼─────────┐  │
+                    │  │ SafeActionRouter  │  │
+                    │  └────────┬─────────┘  │
+                    └───────────┼────────────┘
+                                │
+                    ┌───────────▼────────────┐
+                    │   ActionRouter         │
+                    │ (FionaCore)            │
+                    └────────────────────────┘
+</code></pre>
+<h2 id="package-exports">Package Exports</h2>
+<pre><code class="language-python">from Agent import (
+    # Ollama client
+    OllamaClient, OllamaError,
+    LMStudioClient, LMStudioError,     # backward compat aliases
+    DEFAULT_OLLAMA_BASE_URL,
+
+    # Chat
+    AgentChatHandler,
+    ChatStore, ChatStoreError,
+    ChatMessage,
+    estimate_tokens,
+
+    # Command registry
+    CommandSpec,
+    command_registry,
+
+    # Orchestration
+    AgentOrchestrator, AgentTurn,
+    run_agent_goal,
+    ForemanAgent, ForemanConfig,
+    ComplexityAssessor, Complexity,
+    TaskPlan, SubGoalSpec, SubAgent, SubAgentResult,
+    PlanValidationError,
+
+    # Personality
+    Personality, PersonalityRegistry,
+
+    # Permission
+    PermissionEnforcer, SafeActionRouter,
+    AgentPermissionError,
+
+    # Detection
+    QueryDetector, QueryOrTask,
+
+    # Cancellation
+    CancellationToken, CancelledError,
+)
+</code></pre></div>
             </div>
         </div>
 

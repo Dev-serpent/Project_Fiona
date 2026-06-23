@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -176,7 +183,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../../roadmap/" class="nav-link">
+                                <a rel="prev" href="../../prototypes/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -238,6 +245,20 @@
 <li>Done: trust store expiry with auto-prune and backward-compatible format.</li>
 <li>Done: key rotation with atomic writes and confirmation prompt.</li>
 <li>Done: system tray icon with color-coded state and right-click menu.</li>
+<li>Done: Agent migration from LM Studio to Ollama with backward-compatible LMStudioClient alias.</li>
+<li>Done: FionaCore action routing and approval system (ActionRouter, ApprovalManager).</li>
+<li>Done: Agent orchestration system with think-act-observe loop (AgentOrchestrator, AgentTurn, max_turns).</li>
+<li>Done: Agent chat system (AgentChatHandler, ChatStore with token estimation).</li>
+<li>Done: Agent command registry exposing 20+ Fiona actions (CommandSpec, DEFAULT_COMMANDS).</li>
+<li>Done: Agent personality/permission/query detection systems (Personality, PermissionEnforcer, QueryDetector).</li>
+<li>Done: Cancellation token infrastructure for long-running agent turns.</li>
+<li>Done: ForemanAgent advanced orchestration with task decomposition, sub-agents, and plan synthesis.</li>
+<li>Done: BrowserAutomation with Playwright lifecycle manager, state machine, config, and error handling.</li>
+<li>Done: fionaLocalPages web SPA frontend with aiohttp REST API, WebSocket, SSE, and 20+ dashboard pages.</li>
+<li>Done: Project-wide interface contracts (fiona/interfaces.py ABCs for all subsystems).</li>
+<li>Done: Tracing and metrics infrastructure (fiona/tracing.py, fiona/metrics.py).</li>
+<li>Done: Dependency injection container (fiona/di.py).</li>
+<li>Done: Fiona plugin system (fiona/plugin_system.py).</li>
 </ol></div>
             </div>
         </div>

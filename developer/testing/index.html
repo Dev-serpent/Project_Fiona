@@ -130,6 +130,10 @@
 <li>
     <a href="../../modules/agent/" class="dropdown-item">Agent</a>
 </li>
+                                    
+<li>
+    <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -137,6 +141,9 @@
                             </li>
                             <li class="nav-item">
                                 <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
@@ -213,6 +220,26 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#module-specific-test-commands" class="nav-link">Module-Specific Test Commands</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#browser-automation" class="nav-link">Browser Automation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#agent-orchestration" class="nav-link">Agent Orchestration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#contract-tests" class="nav-link">Contract Tests</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#additional-agent-tests" class="nav-link">Additional Agent Tests</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#compile-check" class="nav-link">Compile Check</a>
               <ul class="nav flex-column">
               </ul>
@@ -280,8 +307,25 @@ python -m pytest tests/test_voice.py -v
 # System tray
 python -m pytest tests/test_system_tray.py -v
 </code></pre>
+<h2 id="module-specific-test-commands">Module-Specific Test Commands</h2>
+<h3 id="browser-automation">Browser Automation</h3>
+<pre><code class="language-bash">python -m pytest tests/browser/ -v
+</code></pre>
+<p>This covers the <code>BrowserManager</code> state machine and the <code>PlaywrightBrowserProvider</code> with fully mocked Playwright imports.</p>
+<h3 id="agent-orchestration">Agent Orchestration</h3>
+<pre><code class="language-bash">python -m pytest tests/test_agent_orchestration.py tests/test_agent_orchestrator.py tests/test_agent_foreman_handler.py -v
+</code></pre>
+<p>This covers the think-act-observe loop, ForemanAgent task decomposition, sub-agent management, and plan synthesis.</p>
+<h3 id="contract-tests">Contract Tests</h3>
+<pre><code class="language-bash">python -m pytest tests/contracts/ -v
+</code></pre>
+<p>Validates every abstract interface defined in <code>fiona/interfaces.py</code> against contract test suites that verify method signatures, error conditions, and data type invariants.</p>
+<h3 id="additional-agent-tests">Additional Agent Tests</h3>
+<pre><code class="language-bash">python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py tests/test_agent_command_registry.py tests/test_agent_stress.py tests/test_agent_backward_compat.py -v
+</code></pre>
+<p>Covers chat session management, token estimation, personality detection, query classification, command discovery, stress/edge cases, and backward compatibility.</p>
 <h2 id="compile-check">Compile Check</h2>
-<pre><code class="language-bash">python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+<pre><code class="language-bash">python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
 </code></pre>
 <h2 id="camcoms-focused-tests">CamComs Focused Tests</h2>
 <pre><code class="language-bash">python -m unittest tests.test_camcoms_encryption tests.test_camcoms_transport

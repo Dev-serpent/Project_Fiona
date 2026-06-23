@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>BrowserAutomation - Fiona</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../operations/cli/" class="dropdown-item">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../../operations/gui/" class="dropdown-item">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../../operations/workflows/" class="dropdown-item">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="../camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="../esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="../fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
+    <a href="../phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="../dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="../vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="../seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../voice/" class="dropdown-item">Voice</a>
+</li>
+                                    
+<li>
+    <a href="../eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
+    <a href="../agent/" class="dropdown-item">Agent</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">BrowserAutomation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../agent/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../current-state/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#browserautomation" class="nav-link">BrowserAutomation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#state-machine" class="nav-link">State Machine</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#states" class="nav-link">States</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#auto-restart" class="nav-link">Auto-Restart</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#browserconfig" class="nav-link">BrowserConfig</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#fields" class="nav-link">Fields</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#default-configuration" class="nav-link">Default Configuration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#ibrowsercontext-interface" class="nav-link">IBrowserContext Interface</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#methods" class="nav-link">Methods</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#properties" class="nav-link">Properties</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#navigationevent" class="nav-link">NavigationEvent</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#session-management" class="nav-link">Session Management</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#sessionmanager" class="nav-link">SessionManager</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#module-level-convenience-api" class="nav-link">Module-Level Convenience API</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#error-hierarchy" class="nav-link">Error Hierarchy</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#playwrightprovider" class="nav-link">PlaywrightProvider</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#lazy-imports" class="nav-link">Lazy Imports</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#capabilities" class="nav-link">Capabilities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#launch-argument-mapping" class="nav-link">Launch Argument Mapping</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#cli-commands" class="nav-link">CLI Commands</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#command-details" class="nav-link">Command Details</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#alias" class="nav-link">Alias</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#dependencies" class="nav-link">Dependencies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="browserautomation">BrowserAutomation</h1>
+<p>BrowserAutomation provides Playwright-based browser automation for Fiona. It wraps Playwright with the interface contracts defined in <code>fiona.interfaces</code> and exposes a thread-safe state machine, synchronous session wrappers for CLI integration, and a comprehensive error hierarchy.</p>
+<p>All Playwright dependencies are imported <strong>lazily</strong> so the package can be imported and inspected without Playwright installed.</p>
+<h2 id="state-machine">State Machine</h2>
+<p>The <code>BrowserManager</code> uses a thread-safe state machine to track browser lifecycle:</p>
+<pre><code>STOPPED → STARTING → RUNNING ↔ DEGRADED → ERROR
+  ↑                                      │
+  └──────────── restart() ───────────────┘
+</code></pre>
+<h3 id="states">States</h3>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STOPPED</code></td>
+<td>The browser is not running and has not been started.</td>
+</tr>
+<tr>
+<td><code>STARTING</code></td>
+<td>The browser process is being launched.</td>
+</tr>
+<tr>
+<td><code>RUNNING</code></td>
+<td>The browser is running and healthy.</td>
+</tr>
+<tr>
+<td><code>DEGRADED</code></td>
+<td>The browser is running but in a reduced-capability state.</td>
+</tr>
+<tr>
+<td><code>ERROR</code></td>
+<td>The browser has crashed and auto-restart was attempted but failed.</td>
+</tr>
+</tbody>
+</table>
+<p>Transitions are protected by a <code>threading.Lock</code>. Calling an operation from an invalid state raises <code>RuntimeError</code>.</p>
+<h3 id="auto-restart">Auto-Restart</h3>
+<p>After an unexpected crash (<code>BrowserCrashError</code>), the manager performs <strong>one</strong> automatic restart attempt. If that launch also fails the state remains <code>ERROR</code>. Call <code>restart()</code> to retry.</p>
+<pre><code class="language-python">from BrowserAutomation import BrowserManager
+
+manager = BrowserManager()
+await manager.start()       # STOPPED → STARTING → RUNNING
+await manager.stop()        # RUNNING → STOPPED
+await manager.restart()     # STOPPED → STARTING → RUNNING
+</code></pre>
+<h2 id="browserconfig">BrowserConfig</h2>
+<p>Configuration is a frozen dataclass defined in <code>fiona.interfaces</code>:</p>
+<pre><code class="language-python">from fiona.interfaces import BrowserConfig
+</code></pre>
+<h3 id="fields">Fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>browser_type</code></td>
+<td><code>str</code></td>
+<td><code>"chromium"</code></td>
+<td>Browser engine (<code>chromium</code>, <code>firefox</code>, <code>webkit</code>).</td>
+</tr>
+<tr>
+<td><code>headless</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Run without a visible UI window.</td>
+</tr>
+<tr>
+<td><code>viewport_width</code></td>
+<td><code>int</code></td>
+<td><code>1280</code></td>
+<td>Default viewport width in pixels.</td>
+</tr>
+<tr>
+<td><code>viewport_height</code></td>
+<td><code>int</code></td>
+<td><code>720</code></td>
+<td>Default viewport height in pixels.</td>
+</tr>
+<tr>
+<td><code>data_dir</code></td>
+<td><code>str \| None</code></td>
+<td><code>None</code></td>
+<td>Persistent profile directory, or <code>None</code> for ephemeral.</td>
+</tr>
+<tr>
+<td><code>proxy</code></td>
+<td><code>str \| None</code></td>
+<td><code>None</code></td>
+<td>Proxy server URL, or <code>None</code> for direct connection.</td>
+</tr>
+<tr>
+<td><code>args</code></td>
+<td><code>tuple[str, ...]</code></td>
+<td><code>()</code></td>
+<td>Additional command-line arguments for the browser process.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="default-configuration">Default Configuration</h3>
+<pre><code class="language-python">from BrowserAutomation._config import default_config, merge_config
+
+config = default_config(headless=True, proxy=&quot;http://proxy:8080&quot;)
+
+# Merge overrides on top of an existing config
+updated = merge_config(config, viewport_width=1920, viewport_height=1080)
+</code></pre>
+<h2 id="ibrowsercontext-interface">IBrowserContext Interface</h2>
+<p>Each isolated browser context has its own cookies, storage, and authentication — analogous to an incognito window. Contexts created from the same <code>IBrowserInstance</code> are fully isolated.</p>
+<pre><code class="language-python">from fiona.interfaces import IBrowserContext, NavigationEvent, NavigationResult
+</code></pre>
+<h3 id="methods">Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>navigate(url, *, timeout=30.0, wait_until=NavigationEvent.LOAD)</code></td>
+<td>Navigate to a URL and return a <code>NavigationResult</code>.</td>
+</tr>
+<tr>
+<td><code>click(selector, *, timeout=5.0)</code></td>
+<td>Click the first element matching a CSS selector.</td>
+</tr>
+<tr>
+<td><code>type_text(selector, text, *, delay=0.01, timeout=5.0)</code></td>
+<td>Type text into an editable element with per-keystroke delay.</td>
+</tr>
+<tr>
+<td><code>get_text(selector, *, timeout=5.0)</code></td>
+<td>Retrieve the <code>textContent</code> of the first matching element.</td>
+</tr>
+<tr>
+<td><code>screenshot(*, path=None, full_page=False)</code></td>
+<td>Capture a PNG screenshot (returns raw bytes).</td>
+</tr>
+<tr>
+<td><code>evaluate(js, *, timeout=5.0)</code></td>
+<td>Execute JavaScript in the page's main frame.</td>
+</tr>
+<tr>
+<td><code>close()</code></td>
+<td>Close the context and release resources.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="properties">Properties</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>is_closed</code></td>
+<td><code>bool</code></td>
+<td><code>True</code> after <code>close()</code> has been called.</td>
+</tr>
+<tr>
+<td><code>context_id</code></td>
+<td><code>str</code></td>
+<td>Stable unique identifier for this context.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="navigationevent">NavigationEvent</h3>
+<p>Controls how long <code>navigate()</code> waits before considering the navigation complete:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NavigationEvent.LOAD</code></td>
+<td>Wait for the full <code>load</code> event (all resources fetched).</td>
+</tr>
+<tr>
+<td><code>NavigationEvent.DOM_CONTENT</code></td>
+<td>Wait only until the DOM is ready (faster, but styles/fonts may be missing).</td>
+</tr>
+<tr>
+<td><code>NavigationEvent.NETWORK_IDLE</code></td>
+<td>Wait until no network requests have been made for ~500 ms.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="session-management">Session Management</h2>
+<h3 id="sessionmanager">SessionManager</h3>
+<p><code>SessionManager</code> provides synchronous wrappers around the async <code>BrowserManager</code> for use in CLI handlers and agent commands. It owns a dedicated event loop running in a daemon thread.</p>
+<pre><code class="language-python">from BrowserAutomation._session_manager import SessionManager
+
+session = SessionManager()
+session.start()                          # Launches event loop thread + browser
+session.navigate(&quot;https://example.com&quot;)
+session.click(&quot;button#submit&quot;)
+session.type_text(&quot;#search&quot;, &quot;query&quot;)
+text = session.get_text(&quot;.result&quot;)
+data = session.screenshot(path=&quot;/tmp/page.png&quot;)
+js_result = session.evaluate(&quot;document.title&quot;)
+session.stop()
+</code></pre>
+<h3 id="module-level-convenience-api">Module-Level Convenience API</h3>
+<p>The <code>__init__.py</code> exports convenience functions that operate on a module-level default <code>BrowserManager</code>:</p>
+<pre><code class="language-python">from BrowserAutomation import (
+    browser_status,
+    create_context,
+    navigate,
+    click_element,
+    type_text,
+    get_text_content,
+    capture_screenshot,
+    evaluate_script,
+    get_browser_manager,
+)
+</code></pre>
+<p>These are thin wrappers around a shared singleton manager created on first access:</p>
+<pre><code class="language-python">manager = get_browser_manager()
+await manager.start()
+status = browser_status()   # BrowserManagerState.RUNNING
+await navigate(&quot;https://example.com&quot;)
+await click_element(&quot;#go&quot;)
+await type_text(&quot;#input&quot;, &quot;hello&quot;)
+await capture_screenshot(path=&quot;shot.png&quot;)
+</code></pre>
+<h2 id="error-hierarchy">Error Hierarchy</h2>
+<p>All browser errors are defined in <code>fiona.interfaces</code> and re-exported from <code>BrowserAutomation</code>.</p>
+<pre><code>BrowserError
+├── BrowserLaunchError          — Browser process could not be started
+├── BrowserNotRunning           — Operation requires a running browser
+├── BrowserShutdownError        — Failed to shut down the browser cleanly
+├── BrowserTimeout              — Base timeout error
+│   ├── NavigationTimeout       — Page navigation exceeded timeout
+│   └── SelectorTimeout         — Waiting for a DOM selector timed out
+├── ElementNotFound             — DOM element does not exist on the page
+├── ElementNotInteractable      — Element found but cannot be interacted with
+├── ScriptExecutionError        — JavaScript evaluation failed
+└── BrowserCrashError           — Browser process terminated unexpectedly
+</code></pre>
+<pre><code class="language-python">from BrowserAutomation import (
+    BrowserError,
+    BrowserLaunchError,
+    BrowserNotRunning,
+    BrowserShutdownError,
+    BrowserTimeout,
+    NavigationTimeout,
+    SelectorTimeout,
+    ElementNotFound,
+    ElementNotInteractable,
+    ScriptExecutionError,
+    BrowserCrashError,
+)
+
+try:
+    await manager.start()
+except BrowserLaunchError as exc:
+    print(f&quot;Failed to launch: {exc}&quot;)
+</code></pre>
+<h2 id="playwrightprovider">PlaywrightProvider</h2>
+<p><code>PlaywrightBrowserProvider</code> is the concrete implementation of <code>IBrowserProvider</code>. It translates <code>BrowserConfig</code> into Playwright launch arguments and maps Playwright exceptions into the Fiona error hierarchy.</p>
+<h3 id="lazy-imports">Lazy Imports</h3>
+<p>Playwright is imported <strong>inside methods</strong>, not at module level:</p>
+<pre><code class="language-python">async def launch(self, config: BrowserConfig) -&gt; IBrowserInstance:
+    _check_playwright_installed()
+
+    from playwright.async_api import async_playwright  # lazy import
+
+    pw = await async_playwright().__aenter__()
+    browser = await getattr(pw, config.browser_type).launch(**args)
+    return PlaywrightBrowserInstance(browser=browser)
+</code></pre>
+<p>If Playwright is not installed, a helpful <code>RuntimeError</code> is raised:</p>
+<pre><code>RuntimeError: Playwright is not installed. Install it with:
+  pip install playwright
+  playwright install chromium
+</code></pre>
+<h3 id="capabilities">Capabilities</h3>
+<p>The provider advertises these capabilities:</p>
+<pre><code class="language-python">PLAYWRIGHT_CAPABILITIES = frozenset({
+    &quot;screenshot&quot;,
+    &quot;pdf&quot;,
+    &quot;network_intercept&quot;,
+    &quot;js_eval&quot;,
+    &quot;multi_context&quot;,
+    &quot;emulation&quot;,
+})
+</code></pre>
+<h3 id="launch-argument-mapping">Launch Argument Mapping</h3>
+<p><code>BrowserConfig</code> fields are mapped to Playwright <code>launch()</code> kwargs as follows:</p>
+<table>
+<thead>
+<tr>
+<th>BrowserConfig Field</th>
+<th>Playwright kwarg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>headless</code></td>
+<td><code>headless</code></td>
+</tr>
+<tr>
+<td><code>proxy</code></td>
+<td><code>proxy={"server": config.proxy}</code></td>
+</tr>
+<tr>
+<td><code>args</code></td>
+<td><code>args=list(config.args)</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="cli-commands">CLI Commands</h2>
+<p>Browser automation is accessible via the <code>fiona browser</code> command (aliased as <code>fiona br</code>).</p>
+<pre><code class="language-bash">fiona browser start          # Start the browser engine
+fiona browser stop           # Stop the browser engine
+fiona browser status         # Show browser status as JSON
+fiona browser navigate &lt;url&gt; # Navigate to a URL
+fiona browser click &lt;sel&gt;    # Click a CSS selector
+fiona browser type &lt;sel&gt; txt # Type text into an element
+fiona browser screenshot     # Capture a screenshot
+</code></pre>
+<h3 id="command-details">Command Details</h3>
+<h4 id="fiona-browser-start"><code>fiona browser start</code></h4>
+<pre><code>fiona browser start
+</code></pre>
+<p>Starts the browser. Shows an error if already running.</p>
+<h4 id="fiona-browser-stop"><code>fiona browser stop</code></h4>
+<pre><code>fiona browser stop
+</code></pre>
+<p>Stops the browser gracefully. Idempotent.</p>
+<h4 id="fiona-browser-status"><code>fiona browser status</code></h4>
+<pre><code>fiona browser status
+</code></pre>
+<p>Outputs structured JSON:</p>
+<pre><code class="language-json">{
+  &quot;state&quot;: &quot;running&quot;,
+  &quot;config&quot;: {
+    &quot;headless&quot;: false,
+    &quot;slow_mo&quot;: null,
+    &quot;viewport_width&quot;: 1280,
+    &quot;viewport_height&quot;: 720
+  }
+}
+</code></pre>
+<h4 id="fiona-browser-navigate"><code>fiona browser navigate</code></h4>
+<pre><code>fiona browser navigate &lt;url&gt; [--timeout 30.0]
+</code></pre>
+<p>Arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td>positional</td>
+<td>—</td>
+<td>URL to navigate to.</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td><code>float</code></td>
+<td><code>30.0</code></td>
+<td>Navigation timeout in seconds.</td>
+</tr>
+</tbody>
+</table>
+<p>Outputs structured JSON with the navigation result:</p>
+<pre><code class="language-json">{
+  &quot;url&quot;: &quot;https://example.com/&quot;,
+  &quot;status_code&quot;: 200,
+  &quot;title&quot;: &quot;Example Domain&quot;,
+  &quot;duration_ms&quot;: 1234.56
+}
+</code></pre>
+<h4 id="fiona-browser-click"><code>fiona browser click</code></h4>
+<pre><code>fiona browser click &lt;selector&gt; [--timeout 5.0]
+</code></pre>
+<p>Arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>selector</code></td>
+<td>positional</td>
+<td>—</td>
+<td>CSS selector to click.</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td><code>float</code></td>
+<td><code>5.0</code></td>
+<td>Timeout in seconds.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="fiona-browser-type"><code>fiona browser type</code></h4>
+<pre><code>fiona browser type &lt;selector&gt; &lt;text&gt; [--delay 0.01] [--timeout 5.0]
+</code></pre>
+<p>Arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>selector</code></td>
+<td>positional</td>
+<td>—</td>
+<td>CSS selector for the target element.</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>positional</td>
+<td>—</td>
+<td>Text to type.</td>
+</tr>
+<tr>
+<td><code>--delay</code></td>
+<td><code>float</code></td>
+<td><code>0.01</code></td>
+<td>Delay between keystrokes (seconds).</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td><code>float</code></td>
+<td><code>5.0</code></td>
+<td>Timeout in seconds.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="fiona-browser-screenshot"><code>fiona browser screenshot</code></h4>
+<pre><code>fiona browser screenshot [--output path] [--full-page]
+</code></pre>
+<p>Arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--output</code></td>
+<td><code>Path</code></td>
+<td>stdout</td>
+<td>Output file path. If omitted, raw PNG bytes are written to stdout.</td>
+</tr>
+<tr>
+<td><code>--full-page</code></td>
+<td>flag</td>
+<td><code>False</code></td>
+<td>Capture the full scrollable page, not just the viewport.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="alias">Alias</h3>
+<p>The entire <code>browser</code> command group is aliased as <code>br</code>:</p>
+<pre><code class="language-bash">fiona br start
+fiona br status
+fiona br navigate https://example.com
+</code></pre>
+<h2 id="dependencies">Dependencies</h2>
+<p>Playwright is an <strong>optional</strong> dependency of Fiona. Install it with:</p>
+<pre><code class="language-bash">pip install fiona[browser]
+# or directly:
+pip install &quot;playwright&gt;=1.45.0&quot;
+playwright install chromium
+</code></pre>
+<p>The minimum required version is <code>playwright&gt;=1.45.0</code>, declared under the <code>[browser]</code> optional-dependencies group in <code>pyproject.toml</code>.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
