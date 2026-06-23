@@ -1,0 +1,286 @@
+/* ==========================================================================
+   chat.css — Chat Page Specific Styles
+   ==========================================================================
+   Styles for the AI Chat interface: message bubbles, typing indicator,
+   code blocks with syntax highlighting, and sidebar session list.
+   ========================================================================== */
+
+/* ── Chat Message Styles ───────────────────────────────────────────────── */
+
+.chat-message {
+  transition: background var(--transition-fast);
+}
+
+.chat-message:hover {
+  background: var(--surface);
+}
+
+.chat-message--user {
+  background: transparent;
+}
+
+.chat-message--user .chat-message__content {
+  background: var(--accent-muted);
+  border: 1px solid rgba(0, 240, 255, 0.08);
+}
+
+.chat-message--agent .chat-message__content {
+  background: transparent;
+}
+
+/* Markdown content inside messages */
+.chat-message__content p {
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+}
+
+.chat-message__content p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message__content ul {
+  list-style: disc;
+  padding-left: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+
+.chat-message__content ol {
+  list-style: decimal;
+  padding-left: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+
+.chat-message__content li {
+  margin-bottom: var(--space-1);
+  color: var(--text-primary);
+}
+
+.chat-message__content li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message__content strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.chat-message__content em {
+  font-style: italic;
+}
+
+.chat-message__content code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  background: var(--bg-tertiary);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.chat-message__content pre {
+  margin: var(--space-2) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+
+.chat-message__content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: inherit;
+}
+
+.chat-message__content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+
+.chat-message__content a:hover {
+  color: var(--accent-hover);
+}
+
+.chat-message__content br {
+  display: block;
+  content: '';
+  margin-top: var(--space-2);
+}
+
+/* ── Typing / Streaming Indicator ───────────────────────────────────────── */
+
+.chat-typing {
+  display: inline-block;
+  font-size: var(--font-size-lg);
+  color: var(--accent);
+  animation: chatPulse 1s ease-in-out infinite;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+@keyframes chatPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Sidebar Session List ───────────────────────────────────────────────── */
+
+#chat-sidebar .c-list__item {
+  transition: all var(--transition-fast);
+}
+
+#chat-sidebar .c-list__item:hover {
+  background: var(--surface);
+}
+
+#chat-sidebar .c-list__item--active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+#chat-sidebar .c-list__item--active .chat-delete-session-btn {
+  opacity: 1 !important;
+}
+
+/* Delete button appears on hover */
+#chat-sidebar .c-list__item .chat-delete-session-btn {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+#chat-sidebar .c-list__item:hover .chat-delete-session-btn {
+  opacity: 0.7;
+}
+
+#chat-sidebar .c-list__item:hover .chat-delete-session-btn:hover {
+  opacity: 1;
+}
+
+/* ── Input Area ─────────────────────────────────────────────────────────── */
+
+#chat-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+#chat-input::placeholder {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ── Model Select ───────────────────────────────────────────────────────── */
+
+#chat-model-select {
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+#chat-model-select:hover {
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+#chat-model-select:focus {
+  border-color: var(--accent);
+}
+
+/* ── Temperature Slider ─────────────────────────────────────────────────── */
+
+#chat-temp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+}
+
+#chat-temp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+#chat-temp-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-secondary);
+}
+
+/* ── Max Tokens Input ───────────────────────────────────────────────────── */
+
+#chat-max-tokens {
+  -moz-appearance: textfield;
+  font-family: var(--font-mono);
+}
+
+#chat-max-tokens::-webkit-outer-spin-button,
+#chat-max-tokens::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── Copy Button Hover ──────────────────────────────────────────────────── */
+
+.chat-copy-btn {
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.chat-copy-btn:hover {
+  background: var(--surface-hover);
+  color: var(--accent);
+}
+
+/* ── Scrollbar for message list ─────────────────────────────────────────── */
+
+#chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Responsive Adjustments ─────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  #chat-sidebar {
+    position: fixed;
+    left: 0;
+    top: 48px;
+    bottom: 32px;
+    width: 280px;
+    z-index: var(--z-overlay);
+    box-shadow: var(--shadow-lg);
+  }
+}

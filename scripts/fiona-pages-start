@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# ============================================================================
+# fiona-pages-start — Launch the Fiona Local Pages API Server
+# ============================================================================
+# Starts the aiohttp backend that serves the static frontend and REST API.
+# Makes the server accessible at  http://fiona.agent:8765  on the local
+# machine, and at  http://<lan-ip>:8765  from other devices on the network.
+#
+# Usage:
+#   ./scripts/fiona-pages-start                 # default port 8765
+#   ./scripts/fiona-pages-start --port 8080     # custom port
+#   ./scripts/fiona-pages-start --debug         # verbose logging
+# ============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PIDFILE="/tmp/fiona-pages.pid"
+HOSTS_SENTINEL="/tmp/fiona-pages.hosts-added"
+
+# ── Resolve port from args ────────────────────────────────────────────────
+PORT="8765"
+DEBUG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --port) PORT="$2"; shift 2 ;;
+    --debug) DEBUG="--debug"; shift ;;
+    *) shift ;;
+  esac
+done
+
+# ── Check if already running ──────────────────────────────────────────────
+if [ -f "$PIDFILE" ]; then
+  OLD_PID=$(cat "$PIDFILE")
+  if kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "[fiona-pages] Server already running (PID $OLD_PID) on port $PORT"
+    echo "[fiona-pages]   →  http://fiona.agent:$PORT"
+    echo "[fiona-pages] Use 'fiona-pages-stop' to stop it"
+    exit 0
+  else
+    rm -f "$PIDFILE"
+  fi
+fi
+
+# ── Register fiona.agent in /etc/hosts ────────────────────────────────────
+# This lets the local machine resolve http://fiona.agent → 127.0.0.1.
+HOSTS_ENTRY="127.0.0.1 fiona.agent"
+if ! grep -qsi 'fiona\.agent' /etc/hosts 2>/dev/null; then
+  echo "[fiona-pages] Adding '$HOSTS_ENTRY' to /etc/hosts (sudo required)…"
+  if echo "$HOSTS_ENTRY" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
+    echo "[fiona-pages] /etc/hosts updated"
+    date +%s > "$HOSTS_SENTINEL"
+  else
+    echo "[fiona-pages] WARNING: Could not update /etc/hosts — http://fiona.agent will not resolve locally"
+    echo "                     Try running:  echo '$HOSTS_ENTRY' | sudo tee -a /etc/hosts"
+  fi
+else
+  echo "[fiona-pages] fiona.agent already in /etc/hosts"
+fi
+
+# ── Launch server in background ───────────────────────────────────────────
+# Bind to 0.0.0.0 so the server is reachable from other devices on the LAN.
+cd "$PROJECT_ROOT"
+/usr/bin/python3 fionaLocalPages/server/app.py --host 0.0.0.0 --port "$PORT" $DEBUG &
+SERVER_PID=$!
+echo "$SERVER_PID" > "$PIDFILE"
+
+# ── Wait for server to be ready (up to 10 seconds) ────────────────────────
+echo -n "[fiona-pages] Starting server on http://fiona.agent:$PORT …"
+for i in $(seq 1 20); do
+  if curl -sf "http://127.0.0.1:$PORT/api/v1/health" >/dev/null 2>&1; then
+    LAN_IP=$(ip -4 route get 1 2>/dev/null | grep -oP 'src \K[\d.]+' || echo "<lan-ip>")
+    echo " ready (PID $SERVER_PID)"
+    echo ""
+    echo "  ┌─────────────────────────────────────────────────────┐"
+    echo "  │  Fiona Local Pages                                 │"
+    echo "  │                                                     │"
+    echo "  │  Local:    http://fiona.agent:$PORT                  │"
+    echo "  │  Network:  http://$LAN_IP:$PORT                      │"
+    echo "  │                                                     │"
+    echo "  │  Stop:     ./scripts/fiona-pages-stop               │"
+    echo "  └─────────────────────────────────────────────────────┘"
+    exit 0
+  fi
+  sleep 0.5
+  echo -n "."
+done
+
+echo
+echo "[fiona-pages] WARNING: Server started (PID $SERVER_PID) but health check did not respond."
+echo "                     Check logs with:  ./scripts/fiona-pages-start --debug"

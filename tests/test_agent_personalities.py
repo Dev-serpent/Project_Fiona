@@ -134,7 +134,7 @@ class TestPersonalityRegistry(unittest.TestCase):
     def test_list_returns_all_builtins(self) -> None:
         reg = PersonalityRegistry()
         names = {p.name for p in reg.list()}
-        self.assertEqual(names, {"general", "planner", "engineer", "analyst", "security"})
+        self.assertEqual(names, {"general", "planner", "engineer", "analyst", "security", "controller"})
 
     def test_register_custom_personality(self) -> None:
         reg = PersonalityRegistry()
@@ -197,7 +197,7 @@ class TestBuiltinPersonalities(unittest.TestCase):
             "recall_search", "recall_remember",
         })
         self.assertEqual(p.allowed_tools, expected_tools)
-        self.assertEqual(p.model_override, "qwen2:1.5b")
+        self.assertEqual(p.model_override, "qwen3:8b-en")
         self.assertIn("strategic planner", p.system_prompt.lower())
 
     def test_planner_denies_input_tools(self) -> None:
@@ -258,7 +258,7 @@ class TestBuiltinPersonalities(unittest.TestCase):
             "fiona_status",
         })
         self.assertEqual(p.allowed_tools, expected_tools)
-        self.assertEqual(p.model_override, "qwen2:1.5b")
+        self.assertEqual(p.model_override, "qwen3:8b-en")
         self.assertIn("system analyst", p.system_prompt.lower())
 
     def test_analyst_denies_input_tools(self) -> None:
@@ -280,7 +280,7 @@ class TestBuiltinPersonalities(unittest.TestCase):
             "recall_search",
         })
         self.assertEqual(p.allowed_tools, expected_tools)
-        self.assertEqual(p.model_override, "qwen2:1.5b")
+        self.assertEqual(p.model_override, "qwen3:8b-en")
         self.assertIn("security engineer", p.system_prompt.lower())
 
     def test_security_denies_mutation_tools(self) -> None:
@@ -502,6 +502,8 @@ class TestCommandRegistryFiltering(unittest.TestCase):
             "seeondesk_list", "seeondesk_active", "seeondesk_analyze",
             "dataclient_mine", "recall_remember", "recall_search",
             "fiona_status",
+            "browser_status", "browser_navigate", "browser_click",
+            "browser_type", "browser_screenshot",
         }
         self.assertEqual(names, expected)
 
@@ -533,7 +535,7 @@ class TestCommandRegistryFiltering(unittest.TestCase):
         enforcer = PermissionEnforcer(p)
         reg = command_registry(enforcer=enforcer)
         names = {c["name"] for c in reg["commands"]}
-        self.assertEqual(len(names), 13)
+        self.assertEqual(len(names), 18)
 
 
 # ======================================================================
@@ -583,7 +585,7 @@ class TestOllamaClientPersonality(unittest.TestCase):
     def test_personality_no_model_override_uses_default(self) -> None:
         p = Personality(name="general", description="x", system_prompt="Be general.")
         client = OllamaClient(personality=p)
-        self.assertEqual(client.model, "qwen2:1.5b")
+        self.assertEqual(client.model, "qwen3:8b-en")
 
     def test_personality_system_prompt_used_by_default(self) -> None:
         p = Personality(

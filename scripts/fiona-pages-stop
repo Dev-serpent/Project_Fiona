@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# ============================================================================
+# fiona-pages-stop — Stop the Fiona Local Pages API Server
+# ============================================================================
+# Stops the server started by fiona-pages-start and optionally cleans up
+# the /etc/hosts fiona.agent entry.
+#
+# Usage:
+#   ./scripts/fiona-pages-stop
+# ============================================================================
+
+set -euo pipefail
+
+PIDFILE="/tmp/fiona-pages.pid"
+HOSTS_SENTINEL="/tmp/fiona-pages.hosts-added"
+
+# ── Kill the server ────────────────────────────────────────────────────────
+SERVER_KILLED=false
+
+if [ -f "$PIDFILE" ]; then
+  PID=$(cat "$PIDFILE")
+  if kill -0 "$PID" 2>/dev/null; then
+    echo -n "[fiona-pages] Stopping server (PID $PID) …"
+    kill "$PID" 2>/dev/null || true
+    for i in $(seq 1 10); do
+      if ! kill -0 "$PID" 2>/dev/null; then
+        echo " stopped"
+        SERVER_KILLED=true
+        rm -f "$PIDFILE"
+        break
+      fi
+      sleep 0.5
+      echo -n "."
+    done
+    if kill -0 "$PID" 2>/dev/null; then
+      echo -n " force-killing …"
+      kill -9 "$PID" 2>/dev/null || true
+      sleep 0.5
+      echo " done"
+      SERVER_KILLED=true
+      rm -f "$PIDFILE"
+    fi
+  else
+    echo "[fiona-pages] PID $PID not found — server already stopped"
+    rm -f "$PIDFILE"
+  fi
+else
+  MATCHES=$(pgrep -f "fionaLocalPages/server/app.py" 2>/dev/null || true)
+  if [ -n "$MATCHES" ]; then
+    echo "[fiona-pages] No PID file found, but found running server process(es):"
+    echo "$MATCHES" | while read -r PID; do
+      echo "  Killing PID $PID …"
+      kill "$PID" 2>/dev/null || kill -9 "$PID" 2>/dev/null || true
+    done
+    echo "[fiona-pages] Stopped"
+    SERVER_KILLED=true
+  else
+    echo "[fiona-pages] No server process found"
+  fi
+fi
+
+# ── Clean up /etc/hosts entry (if we added it) ────────────────────────────
+if [ -f "$HOSTS_SENTINEL" ]; then
+  if grep -qsi 'fiona\.agent' /etc/hosts 2>/dev/null; then
+    echo "[fiona-pages] Removing 'fiona.agent' from /etc/hosts (sudo required)…"
+    if sudo sed -i '/fiona\.agent/d' /etc/hosts 2>/dev/null; then
+      echo "[fiona-pages] /etc/hosts cleaned up"
+    else
+      echo "[fiona-pages] WARNING: Could not remove fiona.agent from /etc/hosts"
+      echo "                     Run manually:  sudo sed -i '/fiona\\.agent/d' /etc/hosts"
+    fi
+  fi
+  rm -f "$HOSTS_SENTINEL"
+fi

@@ -185,6 +185,14 @@ def main() -> None:
         _run_seeondesk(args)
         return
 
+    if args.layer in {"browser", "br"}:
+        _run_browser(args)
+        return
+
+    if args.layer == "approval":
+        _run_approval(args)
+        return
+
     parser.print_help()
 
 
@@ -431,8 +439,48 @@ Use "fiona <group> --help" for a group-specific command grid.""",
                        help="Load a .cad document on startup")
     ficad.add_argument("--headless", action="store_true",
                        help="Run a CLI command instead of launching the GUI")
+    ficad.add_argument("--host", type=str, default="127.0.0.1",
+                       help="Server bind address (default: 127.0.0.1)")
+    ficad.add_argument("--port", type=int, default=8765,
+                       help="Server port (default: 8765)")
+    ficad.add_argument("--no-browser", action="store_true",
+                       help="Do not open a browser tab on server start")
     ficad.add_argument("cmd", nargs=argparse.REMAINDER,
                        help="Headless command to execute (e.g. create_box --width 10)")
+
+    browser_parser = subparsers.add_parser(
+        "browser",
+        aliases=["br"],
+        help="Browser automation: start, stop, navigate, click, screenshot, and status.",
+    )
+    browser_sub = browser_parser.add_subparsers(dest="browser_command", required=True)
+    browser_sub.add_parser("start", help="Start the browser automation engine.")
+    browser_sub.add_parser("stop", help="Stop the browser automation engine.")
+    browser_sub.add_parser("status", help="Show browser status.")
+    browser_nav = browser_sub.add_parser("navigate", help="Navigate to a URL.")
+    browser_nav.add_argument("url", help="URL to navigate to.")
+    browser_nav.add_argument("--timeout", type=float, default=30.0, help="Navigation timeout in seconds.")
+    browser_click = browser_sub.add_parser("click", help="Click an element.")
+    browser_click.add_argument("selector", help="CSS selector to click.")
+    browser_click.add_argument("--timeout", type=float, default=5.0, help="Timeout in seconds.")
+    browser_type = browser_sub.add_parser("type", help="Type text into an element.")
+    browser_type.add_argument("selector", help="CSS selector for the target element.")
+    browser_type.add_argument("text", help="Text to type.")
+    browser_type.add_argument("--delay", type=float, default=0.01, help="Delay between keystrokes (seconds).")
+    browser_type.add_argument("--timeout", type=float, default=5.0, help="Timeout in seconds.")
+    browser_scrn = browser_sub.add_parser("screenshot", help="Capture a screenshot.")
+    browser_scrn.add_argument("--output", type=Path, default=None, help="Output file path.")
+    browser_scrn.add_argument("--full-page", action="store_true", help="Capture full page (not just viewport).")
+
+    approval_parser = subparsers.add_parser("approval", help="Manage agent approval queue.")
+    approval_sub = approval_parser.add_subparsers(dest="approval_command", required=True)
+    approval_sub.add_parser("pending", help="List plans awaiting human approval.")
+    approval_sub.add_parser("list", help="List all plan history.")
+    approve_p = approval_sub.add_parser("approve", help="Approve a pending plan.")
+    approve_p.add_argument("plan_id", help="Plan ID to approve.")
+    deny_p = approval_sub.add_parser("deny", help="Deny a pending plan.")
+    deny_p.add_argument("plan_id", help="Plan ID to deny.")
+    deny_p.add_argument("--reason", default="", help="Reason for denial.")
 
     subparsers.add_parser("phiconnect", help="Open the standalone PhiConnect encrypted chat window.")
 
@@ -560,7 +608,7 @@ def _add_service_subcommands(parser: argparse.ArgumentParser) -> None:
 
 def _add_ollama_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base-url", default=DEFAULT_OLLAMA_BASE_URL)
-    parser.add_argument("--model", default="qwen2:1.5b")
+    parser.add_argument("--model", default="qwen3:8b-en")
     parser.add_argument("--timeout", type=float, default=60.0)
 
 
@@ -1190,7 +1238,17 @@ def _run_vsee(args: argparse.Namespace) -> None:
 
 def _run_ficad(args: argparse.Namespace) -> None:
     """Launch the Fiona CAD (ficad) GUI or run a headless command."""
-    if args.headless or args.cmd:
+
+    # Mode detection: headless or subcommand → CLI mode
+    # If --headless is set, or positional args exist, or --port is explicitly
+    # set with --headless, run CLI mode.
+    # Without --headless and without a subcommand, start the CadServer.
+    is_server_mode = (
+        not args.headless
+        and not args.cmd
+    )
+
+    if not is_server_mode:
         # Delegate to CLI
         from cad.cli.main import main as cadcli_main
 
@@ -1204,25 +1262,136 @@ def _run_ficad(args: argparse.Namespace) -> None:
             pass
         return
 
-    # Launch GUI
-    from cad.gui.main_window import CadMainWindow
+    # ── Server mode: start CadServer ──────────────────────────────────
+    from cad.server._app_builder import create_app_container
+    from cad.server._server import CadServer
 
-    app = CadMainWindow()
+    container = create_app_container()
+    doc_manager = container.resolve("document_manager")
+    cmd_executor = container.resolve("command_executor")
+    export_manager = container.resolve("export_manager")
+
+    # If a document was specified, load it
     if args.doc:
         from pathlib import Path
-        from cad.io.native_format import CadSerializer
-
         doc_path = Path(args.doc)
         if doc_path.exists():
-            doc = CadSerializer.deserialize_from_file(str(doc_path))
-            app.document = doc
-    app.run()
+            try:
+                doc_manager.open_document(str(doc_path))
+            except Exception as exc:
+                print(f"Warning: Could not load document {doc_path}: {exc}",
+                      file=sys.stderr)
+
+    event_bus = container.resolve("event_bus")
+
+    server = CadServer(
+        doc_manager=doc_manager,
+        cmd_executor=cmd_executor,
+        export_manager=export_manager,
+        host=args.host,
+        port=args.port,
+        open_browser=not args.no_browser,
+        event_bus=event_bus,
+    )
+    server.run()
+
+
+def _run_browser(args: argparse.Namespace) -> None:
+    """Control the browser automation engine."""
+    import asyncio
+    import json
+    import sys
+
+    from BrowserAutomation import (
+        BrowserManager,
+        browser_status,
+        get_browser_manager,
+    )
+
+    manager = get_browser_manager()
+
+    cmd = args.browser_command
+
+    if cmd == "start":
+        if manager.state.value != "stopped":
+            print(f"Browser is already {manager.state.value}.", file=sys.stderr)
+            return
+        print("Starting browser...", file=sys.stderr)
+        asyncio.run(manager.start())
+        print("Browser started.", file=sys.stderr)
+
+    elif cmd == "stop":
+        print("Stopping browser...", file=sys.stderr)
+        asyncio.run(manager.stop())
+        print("Browser stopped.", file=sys.stderr)
+
+    elif cmd == "status":
+        state = browser_status()
+        info = {
+            "state": state.value,
+            "config": {
+                "headless": manager.config.headless,
+                "slow_mo": manager.config.slow_mo,
+                "viewport_width": manager.config.viewport_width,
+                "viewport_height": manager.config.viewport_height,
+            },
+        }
+        print(json.dumps(info, indent=2, default=str))
+
+    elif cmd == "navigate":
+        print(f"Navigating to {args.url}...", file=sys.stderr)
+        result = asyncio.run(manager.navigate(args.url, timeout=args.timeout))
+        print(json.dumps({
+            "url": getattr(result, "url", args.url),
+            "status_code": getattr(result, "status_code", None),
+            "title": getattr(result, "title", None),
+            "duration_ms": getattr(result, "duration_ms", None),
+        }, indent=2, default=str))
+
+    elif cmd == "click":
+        print(f"Clicking '{args.selector}'...", file=sys.stderr)
+        asyncio.run(manager.click_element(args.selector, timeout=args.timeout))
+        print("Clicked.", file=sys.stderr)
+
+    elif cmd == "type":
+        print(f"Typing into '{args.selector}'...", file=sys.stderr)
+        asyncio.run(manager.type_text(args.selector, args.text,
+                                      delay=args.delay, timeout=args.timeout))
+        print("Typed.", file=sys.stderr)
+
+    elif cmd == "screenshot":
+        path = str(args.output) if args.output else None
+        data = asyncio.run(manager.capture_screenshot(
+            path=path, full_page=args.full_page))
+        if path:
+            print(f"Screenshot saved to {path}", file=sys.stderr)
+        else:
+            sys.stdout.buffer.write(data)
 
 
 def _run_phiconnect(_args: argparse.Namespace) -> None:
     from PhiConnect.gui import launch_phiconnect
 
     launch_phiconnect()
+
+
+def _run_approval(args: argparse.Namespace) -> None:
+    from FionaCore.approval import get_approval_manager
+    import json
+    manager = get_approval_manager()
+
+    if args.approval_command == "pending":
+        plans = manager.get_pending_plans()
+        print(json.dumps(plans, indent=2, default=str))
+    elif args.approval_command == "list":
+        plans = manager.get_all_plans()
+        print(json.dumps(plans, indent=2, default=str))
+    elif args.approval_command == "approve":
+        success = manager.approve_plan(args.plan_id)
+        print(f"Plan {args.plan_id}: {'approved' if success else 'not found or not pending'}")
+    elif args.approval_command == "deny":
+        success = manager.deny_plan(args.plan_id, args.reason)
+        print(f"Plan {args.plan_id}: {'denied' if success else 'not found or not pending'}")
 
 
 def _run_seeondesk(args: argparse.Namespace) -> None:

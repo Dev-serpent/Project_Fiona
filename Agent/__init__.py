@@ -5,6 +5,8 @@ from Agent.chat_handler import AgentChatHandler
 from Agent.chat_store import ChatMessage, ChatStore, ChatStoreError, estimate_tokens
 from Agent.command_registry import CommandSpec, command_registry
 from Agent.ollama import DEFAULT_OLLAMA_BASE_URL, OllamaClient, OllamaError
+LMStudioClient = OllamaClient
+LMStudioError = OllamaError
 from Agent.orchestration import (
     Complexity,
     ComplexityAssessor,
@@ -23,6 +25,7 @@ from Agent.permission import (
     SafeActionRouter,
 )
 from Agent.personality import Personality, PersonalityRegistry
+from Agent.query_detector import QueryDetector, QueryOrTask
 
 __all__ = [
     "AgentChatHandler",
@@ -42,10 +45,14 @@ __all__ = [
     "ForemanConfig",
     "OllamaClient",
     "OllamaError",
+    "LMStudioClient",
+    "LMStudioError",
     "PermissionEnforcer",
     "Personality",
     "PersonalityRegistry",
     "PlanValidationError",
+    "QueryDetector",
+    "QueryOrTask",
     "SafeActionRouter",
     "SubAgent",
     "SubAgentResult",

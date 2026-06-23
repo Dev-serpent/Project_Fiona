@@ -1,0 +1,908 @@
+/* ==========================================================================
+   plugins.js — Plugin Manager Page
+   ==========================================================================
+   Manages Fiona plugins: list, enable/disable, configure, uninstall, and
+   install new plugins.  Supports category filtering, search, and update
+   checks.  Falls back to mock/sample data when the backend API is
+   unavailable.
+   
+   Exports: { render(container), mount(container), destroy() }
+   Default export: factory for the SPA router.
+   ========================================================================== */
+
+import { html } from '../js/components/BaseComponent.js';
+import { ICONS } from '../js/components/_icons.js';
+import {
+  skeletonCard,
+  skeletonText,
+  skeletonHeading,
+  skeletonButton,
+  skeletonTableRow,
+} from '../js/components/LoadingSkeleton.js';
+
+/* ── Constants ──────────────────────────────────────────────────────────── */
+
+const CATEGORIES = [
+  { id: 'all',       label: 'All' },
+  { id: 'enabled',   label: 'Enabled' },
+  { id: 'disabled',  label: 'Disabled' },
+  { id: 'core',      label: 'Core' },
+  { id: 'community', label: 'Community' },
+];
+
+/* ── Mock Sample Data ───────────────────────────────────────────────────── */
+
+const MOCK_PLUGINS = [
+  {
+    id: 'voice-input',
+    name: 'Voice Input',
+    version: '1.2.0',
+    author: 'Fiona Team',
+    description: 'Speech-to-text input via Whisper or local ASR engine.',
+    status: 'enabled',
+    category: 'core',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0'],
+    config: { engine: 'whisper', language: 'en', hotwords: [] },
+    fullDescription: 'Provides voice input capabilities using local or cloud-based speech recognition engines. Supports multiple languages and custom hotwords.',
+  },
+  {
+    id: 'browser-automation',
+    name: 'Browser Automation',
+    version: '0.9.0',
+    author: 'Fiona Team',
+    description: 'Playwright-based web browsing and automation.',
+    status: 'enabled',
+    category: 'core',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0', 'playwright >= 1.30'],
+    config: { browser: 'chromium', headless: false, timeout: 30000 },
+    fullDescription: 'Full browser automation using Playwright. Navigate pages, fill forms, take screenshots, and extract data from the web.',
+  },
+  {
+    id: 'code-assist',
+    name: 'Code Assistant',
+    version: '0.5.0',
+    author: 'Community',
+    description: 'Inline code completions and analysis.',
+    status: 'disabled',
+    category: 'community',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0'],
+    config: { model: 'gpt-4', maxTokens: 512, temperature: 0.2 },
+    fullDescription: 'Provides AI-powered code completions, explanations, and refactoring suggestions directly in the terminal and editor views.',
+  },
+  {
+    id: 'macro-recorder',
+    name: 'Macro Recorder',
+    version: '1.0.0',
+    author: 'Fiona Team',
+    description: 'Record and replay desktop macros.',
+    status: 'enabled',
+    category: 'core',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0'],
+    config: { maxActions: 500, captureMouse: true, captureKeyboard: true },
+    fullDescription: 'Record sequences of desktop interactions (mouse clicks, keyboard input) and replay them on demand. Supports conditional logic and looping.',
+  },
+  {
+    id: 'git-integration',
+    name: 'Git Integration',
+    version: '0.4.0',
+    author: 'Community',
+    description: 'Git status, commit, and branch management.',
+    status: 'disabled',
+    category: 'community',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0', 'git >= 2.0'],
+    config: { autoFetch: true, diffContext: 3 },
+    fullDescription: 'Seamless Git integration within Fiona. View status, stage changes, commit, switch branches, and view diffs without leaving the terminal.',
+  },
+  {
+    id: 'ollama-bridge',
+    name: 'Ollama Bridge',
+    version: '0.8.0',
+    author: 'Fiona Team',
+    description: 'Local LLM inference via Ollama.',
+    status: 'enabled',
+    category: 'core',
+    homepage: '',
+    dependencies: ['fiona-core >= 0.1.0'],
+    config: { url: 'http://localhost:11434', model: 'llama3', timeout: 60000 },
+    fullDescription: 'Connects Fiona to locally-running Ollama models for private, offline AI assistance. Supports any model available in your Ollama installation.',
+  },
+];
+
+/* ── Module-level State ─────────────────────────────────────────────────── */
+
+const _state = {
+  container: null,
+  destroyed: false,
+  loading: true,
+  error: false,
+  errorMessage: '',
+
+  plugins: [],
+  filteredPlugins: [],
+  category: 'all',
+  searchQuery: '',
+  useMockData: false,
+
+  // Install modal
+  showInstallModal: false,
+  installPath: '',
+  installLoading: false,
+
+  // Detail expansion
+  expandedId: null,
+
+  // Uninstall confirm
+  uninstallTarget: null,
+};
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
+function getApi() {
+  return window.fiona?.api;
+}
+
+function esc(str) {
+  if (!str) return '';
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(str).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+/* ── Render ─────────────────────────────────────────────────────────────── */
+
+function renderPage(container) {
+  if (_state.destroyed) return;
+  _state.container = container;
+
+  if (_state.loading) {
+    renderSkeletons(container);
+    return;
+  }
+
+  if (_state.error) {
+    renderError(container);
+    return;
+  }
+
+  const total = _state.plugins.length;
+  const enabled = _state.plugins.filter((p) => p.status === 'enabled').length;
+  const filtered = applyFilters();
+
+  container.innerHTML = html`
+    <!-- Page Header -->
+    <div style="margin-bottom: var(--space-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+        <div>
+          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+            Plugin Manager
+          </h1>
+          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+            ${total} plugin${total !== 1 ? 's' : ''} installed · ${enabled} enabled
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-3);">
+          <button class="c-btn c-btn--primary c-btn--sm" id="plugin-install-btn">
+            <span class="c-btn__icon">${ICONS.plus}</span>
+            Install Plugin
+          </button>
+          <button class="c-btn c-btn--sm c-btn--ghost" id="plugin-check-updates" title="Check for updates">
+            <span class="c-btn__icon">${ICONS.refresh}</span>
+            Check Updates
+          </button>
+        </div>
+      </div>
+      ${_state.useMockData ? html`
+        <div class="c-alert c-alert--info" style="margin-top: var(--space-3);">
+          <span class="c-alert__icon">${ICONS.info}</span>
+          <div class="c-alert__content">Backend API not available — showing sample plugin data.</div>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- Filters & Search -->
+    <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
+      <!-- Category Tabs -->
+      <div class="c-tabs" style="flex-shrink: 0;">
+        ${html.raw(CATEGORIES.map((cat) => html`
+          <div class="c-tab ${cat.id === _state.category ? 'c-tab--active' : ''}"
+               data-action="filter-category" data-category="${cat.id}"
+               style="cursor: pointer; font-size: var(--font-size-xs);">
+            ${esc(cat.label)}
+          </div>
+        `).join(''))}
+      </div>
+      <!-- Search -->
+      <div class="c-input-wrapper" style="flex: 1; min-width: 180px; max-width: 300px;">
+        <span class="c-input-wrapper__icon c-input-wrapper__icon--left">${ICONS.search}</span>
+        <input type="text" class="c-input c-input--sm" id="plugin-search"
+               placeholder="Search plugins…"
+               value="${esc(_state.searchQuery)}"
+               style="padding-left: 32px; font-size: var(--font-size-xs);">
+      </div>
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">
+        ${filtered.length} displayed
+      </span>
+    </div>
+
+    <!-- Plugin List -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+      ${filtered.length === 0 ? html`
+        <div style="text-align: center; padding: var(--space-8); color: var(--text-muted); font-size: var(--font-size-sm);">
+          ${_state.searchQuery
+            ? `No plugins matching "${esc(_state.searchQuery)}".`
+            : 'No plugins in this category.'}
+        </div>
+      ` : html.raw(filtered.map((plugin) => renderPluginRow(plugin)).join(''))}
+    </div>
+
+    <!-- Install Modal -->
+    ${_state.showInstallModal ? renderInstallModal() : ''}
+  `;
+
+  mountHandlers(container);
+}
+
+function renderPluginRow(plugin) {
+  const isExpanded = _state.expandedId === plugin.id;
+  const isEnabled = plugin.status === 'enabled';
+
+  return html`
+    <div class="c-card" style="overflow: visible;">
+      <div class="c-card__body" style="padding: var(--space-3) var(--space-4);">
+        <!-- Main row -->
+        <div style="display: flex; align-items: flex-start; gap: var(--space-3);">
+          <!-- Plugin icon placeholder -->
+          <div style="width: 36px; height: 36px; border-radius: var(--radius-md);
+                      background: ${isEnabled ? 'var(--accent-muted)' : 'var(--bg-tertiary)'};
+                      display: flex; align-items: center; justify-content: center;
+                      color: ${isEnabled ? 'var(--accent)' : 'var(--text-muted)'};
+                      flex-shrink: 0;">
+            ${ICONS.puzzle}
+          </div>
+
+          <!-- Info -->
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+              <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">
+                ${esc(plugin.name)}
+              </span>
+              <span style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
+                v${esc(plugin.version)}
+              </span>
+              <span class="c-badge c-badge--${isEnabled ? 'success' : 'default'}" style="font-size: 9px; padding: 0 6px;">
+                ${isEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+              ${plugin.category === 'core' ? html`
+                <span class="c-badge c-badge--accent" style="font-size: 9px; padding: 0 6px;">Core</span>
+              ` : html`
+                <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px;">Community</span>
+              `}
+            </div>
+            <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; max-width: 500px;">
+              ${esc(plugin.description)}
+            </div>
+            <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 2px;">
+              by ${esc(plugin.author)}
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;">
+            <!-- Toggle switch -->
+            <label class="c-toggle" style="margin: 0;" title="${isEnabled ? 'Disable' : 'Enable'} plugin">
+              <input type="checkbox" class="c-toggle__input" data-action="toggle-plugin" data-plugin-id="${plugin.id}"
+                     ${isEnabled ? 'checked' : ''}>
+              <span class="c-toggle__track"><span class="c-toggle__thumb"></span></span>
+            </label>
+            <button class="c-btn c-btn--sm c-btn--ghost" data-action="configure-plugin" data-plugin-id="${plugin.id}"
+                    title="Configure" style="padding: 2px 6px;">
+              <span class="c-btn__icon">${ICONS.gear}</span>
+            </button>
+            <button class="c-btn c-btn--sm c-btn--ghost c-btn--danger" data-action="uninstall-plugin" data-plugin-id="${plugin.id}"
+                    title="Uninstall" style="padding: 2px 6px;">
+              <span class="c-btn__icon">${ICONS.trash}</span>
+            </button>
+            <button class="c-btn c-btn--sm c-btn--ghost" data-action="expand-plugin" data-plugin-id="${plugin.id}"
+                    style="padding: 2px 6px;">
+              <span class="c-btn__icon">${isExpanded ? ICONS.chevronUp : ICONS.chevronDown}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Expanded details -->
+        ${isExpanded ? html`
+          <div style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border-subtle);">
+            <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-2);">
+              ${esc(plugin.fullDescription || plugin.description)}
+            </div>
+            ${plugin.dependencies?.length > 0 ? html`
+              <div style="margin-bottom: var(--space-2);">
+                <span style="font-size: var(--font-size-xxs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Dependencies</span>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: 4px;">
+                  ${html.raw(plugin.dependencies.map((dep) => html`
+                    <span style="font-size: var(--font-size-xxs); padding: 2px 8px; background: var(--bg-tertiary); border-radius: var(--radius-sm); color: var(--text-muted); font-family: var(--font-mono);">
+                      ${esc(dep)}
+                    </span>
+                  `).join(''))}
+                </div>
+              </div>
+            ` : ''}
+            ${plugin.config ? html`
+              <div>
+                <span style="font-size: var(--font-size-xxs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Configuration</span>
+                <pre style="margin-top: 4px; padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                            font-size: var(--font-size-xxs); font-family: var(--font-mono); overflow-x: auto;
+                            color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;">
+${esc(JSON.stringify(plugin.config, null, 2))}
+                </pre>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderInstallModal() {
+  return html`
+    <div class="c-modal-backdrop" id="install-modal-backdrop" style="display: flex;">
+      <div class="c-modal c-modal--sm">
+        <div class="c-modal__header">
+          <h3 class="c-modal__title">Install Plugin</h3>
+          <button class="c-modal__close" data-action="close-install-modal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="c-modal__body">
+          <p style="color: var(--text-secondary); font-size: var(--font-size-sm); margin-bottom: var(--space-3);">
+            Provide a path to a plugin package or directory.
+          </p>
+          <div class="c-form-group" style="margin-bottom: var(--space-3);">
+            <label class="c-form-group__label">Plugin Path</label>
+            <div style="display: flex; gap: var(--space-2);">
+              <input type="text" class="c-input" id="install-plugin-path"
+                     placeholder="/path/to/plugin.zip or /path/to/plugin/dir"
+                     value="${esc(_state.installPath)}"
+                     style="flex: 1;">
+              <button class="c-btn c-btn--sm c-btn--ghost" id="install-browse-btn" title="Browse">
+                <span class="c-btn__icon">${ICONS.folder}</span>
+              </button>
+            </div>
+          </div>
+          <div class="c-form-group">
+            <label class="c-form-group__label">Or paste a URL</label>
+            <input type="text" class="c-input" id="install-plugin-url"
+                   placeholder="https://example.com/plugin.zip">
+          </div>
+        </div>
+        <div class="c-modal__footer">
+          <button class="c-btn" data-action="close-install-modal">Cancel</button>
+          <button class="c-btn c-btn--primary" id="install-confirm-btn"
+                  ?disabled="${_state.installLoading}">
+            ${_state.installLoading ? 'Installing…' : 'Install'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSkeletons(container) {
+  container.innerHTML = html`
+    <div style="padding: var(--space-2);">
+      ${skeletonHeading({ width: '200px' })}
+      ${skeletonText({ width: '180px' })}
+      <div style="display: flex; gap: var(--space-2); margin: var(--space-4) 0;">
+        ${Array.from({ length: 5 }, () => skeletonButton())}
+        ${skeletonText({ width: '200px', style: 'height: 32px;' })}
+      </div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        ${Array.from({ length: 4 }, () => skeletonCard({ height: '80px' }))}
+      </div>
+    </div>
+  `;
+}
+
+function renderError(container) {
+  container.innerHTML = html`
+    <div class="empty-state" style="margin-top: 10vh;">
+      <div class="empty-state__icon" style="color: var(--danger);">
+        ${ICONS.error}
+      </div>
+      <div class="empty-state__title">Failed to Load Plugins</div>
+      <div class="empty-state__description">
+        ${esc(_state.errorMessage || 'Unable to reach the Fiona backend for plugin data.')}
+      </div>
+      <button class="c-btn c-btn--primary" id="plugin-retry-btn" style="margin-top: var(--space-4);">
+        <span class="c-btn__icon">${ICONS.refresh}</span>
+        Retry
+      </button>
+    </div>
+  `;
+
+  container.querySelector('#plugin-retry-btn')?.addEventListener('click', () => {
+    _state.error = false;
+    _state.loading = true;
+    _state.errorMessage = '';
+    renderSkeletons(container);
+    loadData();
+  });
+}
+
+/* ── Filtering ──────────────────────────────────────────────────────────── */
+
+function applyFilters() {
+  let list = _state.plugins;
+
+  // Category filter
+  switch (_state.category) {
+    case 'enabled':
+      list = list.filter((p) => p.status === 'enabled');
+      break;
+    case 'disabled':
+      list = list.filter((p) => p.status === 'disabled');
+      break;
+    case 'core':
+      list = list.filter((p) => p.category === 'core');
+      break;
+    case 'community':
+      list = list.filter((p) => p.category === 'community');
+      break;
+    default: // 'all'
+      break;
+  }
+
+  // Search
+  if (_state.searchQuery) {
+    const q = _state.searchQuery.toLowerCase();
+    list = list.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.author.toLowerCase().includes(q),
+    );
+  }
+
+  _state.filteredPlugins = list;
+  return list;
+}
+
+/* ── Event Handlers ─────────────────────────────────────────────────────── */
+
+function mountHandlers(container) {
+  // Category filter tabs
+  container.querySelectorAll('[data-action="filter-category"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      _state.category = el.dataset.category;
+      if (_state.container) renderPage(_state.container);
+    });
+  });
+
+  // Search
+  const searchInput = container.querySelector('#plugin-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      _state.searchQuery = e.target.value;
+      if (_state.container) renderPage(_state.container);
+    });
+  }
+
+  // Install button
+  container.querySelector('#plugin-install-btn')?.addEventListener('click', () => {
+    _state.showInstallModal = true;
+    _state.installPath = '';
+    if (_state.container) renderPage(_state.container);
+    // Focus path input after render
+    setTimeout(() => {
+      const el = _state.container?.querySelector('#install-plugin-path');
+      if (el) el.focus();
+    }, 50);
+  });
+
+  // Check updates
+  container.querySelector('#plugin-check-updates')?.addEventListener('click', checkUpdates);
+
+  // Toggle plugin
+  container.querySelectorAll('[data-action="toggle-plugin"]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      const pluginId = e.target.dataset.pluginId;
+      const enabled = e.target.checked;
+      togglePlugin(pluginId, enabled);
+    });
+  });
+
+  // Configure
+  container.querySelectorAll('[data-action="configure-plugin"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      const pluginId = e.target.closest('[data-plugin-id]')?.dataset.pluginId
+        || e.target.dataset.pluginId;
+      if (pluginId) openConfig(pluginId);
+    });
+  });
+
+  // Uninstall
+  container.querySelectorAll('[data-action="uninstall-plugin"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      const pluginId = e.target.closest('[data-plugin-id]')?.dataset.pluginId
+        || e.target.dataset.pluginId;
+      if (pluginId) confirmUninstall(pluginId);
+    });
+  });
+
+  // Expand/collapse
+  container.querySelectorAll('[data-action="expand-plugin"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      const pluginId = e.target.closest('[data-plugin-id]')?.dataset.pluginId
+        || e.target.dataset.pluginId;
+      _state.expandedId = _state.expandedId === pluginId ? null : pluginId;
+      if (_state.container) renderPage(_state.container);
+    });
+  });
+
+  // Install modal actions
+  if (_state.showInstallModal) {
+    const backdrop = container.querySelector('#install-modal-backdrop');
+    backdrop?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeInstallModal();
+    });
+    container.querySelector('[data-action="close-install-modal"]')?.addEventListener('click', closeInstallModal);
+    container.querySelector('#install-confirm-btn')?.addEventListener('click', doInstall);
+    container.querySelector('#install-browse-btn')?.addEventListener('click', browseForPlugin);
+    // Enter key in path input
+    container.querySelector('#install-plugin-path')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doInstall();
+    });
+    container.querySelector('#install-plugin-url')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doInstall();
+    });
+  }
+}
+
+/* ── Plugin Actions ─────────────────────────────────────────────────────── */
+
+async function togglePlugin(pluginId, enabled) {
+  const api = getApi();
+  const plugin = _state.plugins.find((p) => p.id === pluginId);
+  if (!plugin) return;
+
+  // Optimistic update
+  plugin.status = enabled ? 'enabled' : 'disabled';
+  if (_state.container) renderPage(_state.container);
+
+  if (api && !_state.useMockData) {
+    try {
+      await api.put(`/api/v1/plugins/${pluginId}/toggle`, { enabled });
+    } catch (err) {
+      // Revert on failure
+      plugin.status = enabled ? 'disabled' : 'enabled';
+      if (_state.container) renderPage(_state.container);
+      showToast('error', `Failed to toggle plugin: ${err.message}`);
+    }
+  } else {
+    showToast('success', `${plugin.name} ${enabled ? 'enabled' : 'disabled'}.`);
+  }
+}
+
+async function confirmUninstall(pluginId) {
+  const plugin = _state.plugins.find((p) => p.id === pluginId);
+  if (!plugin) return;
+
+  _state.uninstallTarget = pluginId;
+
+  const modalContainer = document.getElementById('modal-container');
+  if (!modalContainer) return;
+
+  modalContainer.innerHTML = `
+    <div class="c-modal-backdrop" id="uninstall-backdrop">
+      <div class="c-modal c-modal--sm">
+        <div class="c-modal__header">
+          <h3 class="c-modal__title">Uninstall Plugin</h3>
+          <button class="c-modal__close" data-action="close-modal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="c-modal__body">
+          <p style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+            Are you sure you want to uninstall <strong>${esc(plugin.name)}</strong>?
+          </p>
+          <p style="color: var(--text-muted); font-size: var(--font-size-xs); margin-top: var(--space-2);">
+            This will remove the plugin and all its configuration.
+          </p>
+        </div>
+        <div class="c-modal__footer">
+          <button class="c-btn" data-action="cancel-uninstall">Cancel</button>
+          <button class="c-btn c-btn--danger-solid" data-action="confirm-uninstall" data-plugin-id="${esc(pluginId)}">
+            Uninstall
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modalContainer.style.display = 'flex';
+
+  const close = () => {
+    modalContainer.innerHTML = '';
+    modalContainer.style.display = 'none';
+    _state.uninstallTarget = null;
+  };
+
+  modalContainer.querySelector('[data-action="close-modal"]')?.addEventListener('click', close);
+  modalContainer.querySelector('[data-action="cancel-uninstall"]')?.addEventListener('click', close);
+  modalContainer.querySelector('#uninstall-backdrop')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) close();
+  });
+  modalContainer.querySelector('[data-action="confirm-uninstall"]')?.addEventListener('click', async (e) => {
+    const id = e.target.dataset.pluginId;
+    close();
+    await doUninstall(id);
+  });
+}
+
+async function doUninstall(pluginId) {
+  const api = getApi();
+  const idx = _state.plugins.findIndex((p) => p.id === pluginId);
+  if (idx === -1) return;
+  const plugin = _state.plugins[idx];
+
+  // Optimistic removal
+  _state.plugins.splice(idx, 1);
+  if (_state.container) renderPage(_state.container);
+
+  if (api && !_state.useMockData) {
+    try {
+      await api.del(`/api/v1/plugins/${pluginId}`);
+      showToast('success', `${plugin.name} uninstalled.`);
+    } catch (err) {
+      // Revert
+      _state.plugins.splice(idx, 0, plugin);
+      if (_state.container) renderPage(_state.container);
+      showToast('error', `Failed to uninstall: ${err.message}`);
+    }
+  } else {
+    showToast('success', `${plugin.name} uninstalled (mock).`);
+  }
+}
+
+async function openConfig(pluginId) {
+  const plugin = _state.plugins.find((p) => p.id === pluginId);
+  if (!plugin) return;
+
+  const api = getApi();
+  if (api && !_state.useMockData) {
+    try {
+      await api.get(`/api/v1/plugins/${pluginId}/config`);
+    } catch { /* fall through to showing local config */ }
+  }
+
+  // Show config in expanded view
+  _state.expandedId = pluginId;
+  if (_state.container) renderPage(_state.container);
+  showToast('info', `Configuration for ${plugin.name} — edit in expanded view.`);
+}
+
+/* ── Install Flow ───────────────────────────────────────────────────────── */
+
+function closeInstallModal() {
+  _state.showInstallModal = false;
+  _state.installPath = '';
+  _state.installLoading = false;
+  if (_state.container) renderPage(_state.container);
+}
+
+async function browseForPlugin() {
+  // Try using the backend file dialog, fallback to manual entry
+  const api = getApi();
+  if (api && !_state.useMockData) {
+    try {
+      const res = await api.post('/api/v1/files/dialog', { type: 'open', filters: [{ name: 'Plugins', extensions: ['zip', 'tgz', 'gz'] }] });
+      const path = res?.data?.path || res?.path;
+      if (path) {
+        _state.installPath = path;
+        const input = _state.container?.querySelector('#install-plugin-path');
+        if (input) input.value = path;
+      }
+      return;
+    } catch { /* fallback to manual */ }
+  }
+  showToast('info', 'Enter the plugin path or URL manually.');
+}
+
+async function doInstall() {
+  const pathInput = _state.container?.querySelector('#install-plugin-path');
+  const urlInput = _state.container?.querySelector('#install-plugin-url');
+  const path = pathInput?.value?.trim() || _state.installPath?.trim();
+  const url = urlInput?.value?.trim();
+
+  if (!path && !url) {
+    showToast('error', 'Please enter a plugin path or URL.');
+    return;
+  }
+
+  const source = url || path;
+  _state.installLoading = true;
+  if (_state.container) renderPage(_state.container);
+
+  const api = getApi();
+  if (api && !_state.useMockData) {
+    try {
+      const result = await api.post('/api/v1/plugins/install', { path: source });
+      const plugin = result?.data || result;
+      if (plugin && plugin.id) {
+        _state.plugins.push({
+          id: plugin.id,
+          name: plugin.name || plugin.id,
+          version: plugin.version || '0.0.0',
+          author: plugin.author || 'Unknown',
+          description: plugin.description || '',
+          status: 'enabled',
+          category: plugin.category || 'community',
+          dependencies: plugin.dependencies || [],
+          config: plugin.config || {},
+          fullDescription: plugin.fullDescription || plugin.description || '',
+        });
+      }
+      closeInstallModal();
+      showToast('success', `Plugin installed: ${plugin.name || source}`);
+      if (_state.container) renderPage(_state.container);
+    } catch (err) {
+      _state.installLoading = false;
+      if (_state.container) renderPage(_state.container);
+      showToast('error', `Installation failed: ${err.message}`);
+    }
+  } else {
+    // Mock installation: add a dummy plugin
+    const id = `plugin-${Date.now()}`;
+    _state.plugins.push({
+      id,
+      name: `Plugin from ${source.split('/').pop() || source}`,
+      version: '0.1.0',
+      author: 'User Installed',
+      description: `Installed from ${source}`,
+      status: 'enabled',
+      category: 'community',
+      dependencies: [],
+      config: {},
+      fullDescription: 'This is a mock plugin installed via the frontend.',
+    });
+    closeInstallModal();
+    showToast('success', 'Plugin installed (mock).');
+    if (_state.container) renderPage(_state.container);
+  }
+}
+
+/* ── Check Updates ──────────────────────────────────────────────────────── */
+
+async function checkUpdates() {
+  const api = getApi();
+  if (api && !_state.useMockData) {
+    try {
+      const result = await api.get('/api/v1/plugins/updates');
+      const updates = result?.data || result;
+      if (Array.isArray(updates) && updates.length > 0) {
+        showToast('info', `${updates.length} update(s) available.`);
+      } else {
+        showToast('success', 'All plugins are up to date.');
+      }
+      return;
+    } catch { /* fallback */ }
+  }
+  showToast('info', 'Update check is not available without the backend API.');
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+
+function showToast(type, message) {
+  const toast = document.createElement('div');
+  toast.className = `c-toast c-toast--${type || 'info'} animate-slide-right`;
+  toast.style.cssText = 'position: fixed; bottom: 60px; right: 20px; z-index: 9999; max-width: 360px;';
+  toast.innerHTML = `
+    <div class="c-toast__icon">${ICONS[type === 'success' ? 'check' : type === 'error' ? 'error' : 'info']}</div>
+    <div class="c-toast__content"><div class="c-toast__message">${esc(message)}</div></div>
+    <button class="c-toast__dismiss" data-toast-dismiss style="flex-shrink:0;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  `;
+  document.body.appendChild(toast);
+  toast.querySelector('[data-toast-dismiss]')?.addEventListener('click', () => toast.remove());
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.2s';
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
+}
+
+/* ── Data Loading ───────────────────────────────────────────────────────── */
+
+async function loadData() {
+  if (_state.destroyed) return;
+
+  const api = getApi();
+  let loadedFromBackend = false;
+
+  if (api) {
+    try {
+      const result = await api.get('/api/v1/plugins');
+      let plugins = result?.data || result;
+      if (Array.isArray(plugins)) {
+        _state.plugins = plugins;
+        _state.useMockData = false;
+        loadedFromBackend = true;
+      }
+    } catch (err) {
+      console.log('[plugins] Backend unavailable, using mock data:', err.message);
+    }
+  }
+
+  if (!loadedFromBackend) {
+    _state.plugins = MOCK_PLUGINS.map((p) => ({ ...p }));
+    _state.useMockData = true;
+  }
+
+  _state.loading = false;
+  _state.error = false;
+
+  if (!_state.destroyed && _state.container) {
+    renderPage(_state.container);
+  }
+}
+
+/* ── Lifecycle ──────────────────────────────────────────────────────────── */
+
+export function render(container) {
+  _state.destroyed = false;
+  _state.loading = true;
+  _state.error = false;
+  _state.errorMessage = '';
+  _state.container = container;
+  _state.expandedId = null;
+  _state.showInstallModal = false;
+
+  renderSkeletons(container);
+  loadData();
+}
+
+export function mount(container) {
+  if (container && !_state.container) {
+    _state.container = container;
+  }
+  if (!_state.loading && _state.container) {
+    renderPage(_state.container);
+  }
+}
+
+export function destroy() {
+  _state.destroyed = true;
+  _state.container = null;
+  _state.plugins = [];
+  _state.filteredPlugins = [];
+  _state.expandedId = null;
+  _state.showInstallModal = false;
+  _state.uninstallTarget = null;
+}
+
+/* ── Router-compatible default export ───────────────────────────────────── */
+
+export default function createPage(_routeInfo) {
+  return {
+    render() {
+      return '<div id="plugins-root"></div>';
+    },
+    mount(container) {
+      const root = container.querySelector('#plugins-root') || container;
+      render(root);
+    },
+    destroy,
+  };
+}

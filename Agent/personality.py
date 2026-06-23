@@ -13,6 +13,11 @@ class Personality:
         name: Unique identifier for this personality.
         description: Human-readable description of the personality's role.
         system_prompt: The system prompt sent to the LLM for this personality.
+        conversational_system_prompt:
+            Optional alternative system prompt used when the QueryDetector
+            classifies the user's input as a simple conversational query
+            (greeting, chit-chat, simple question).  When ``None`` (default),
+            the main *system_prompt* is used for all messages.
         allowed_tools: Optional frozenset of tool names this personality may use.
                        ``None`` means *all* tools are permitted.
         model_override: Optional model name to force when this personality is active.
@@ -21,6 +26,7 @@ class Personality:
     name: str
     description: str
     system_prompt: str
+    conversational_system_prompt: str | None = None
     allowed_tools: frozenset[str] | None = None
     model_override: str | None = None
 
@@ -34,6 +40,7 @@ class Personality:
             "name": self.name,
             "description": self.description,
             "system_prompt": self.system_prompt,
+            "conversational_system_prompt": self.conversational_system_prompt,
             "allowed_tools": list(self.allowed_tools) if self.allowed_tools is not None else None,
             "model_override": self.model_override,
         }
@@ -92,12 +99,47 @@ class PersonalityRegistry:
     # Built-in personalities
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _load_rules_prompt() -> str:
+        """Load and concatenate rule files from the ``rules/`` directory.
+
+        Returns a single system-prompt string composed from the architecture,
+        controller, tool-selection, execution, repository, coding, and recovery
+        rule files.  If the directory or any file is missing, a sensible
+        fallback is returned so the system degrades gracefully.
+        """
+        import os
+        _rules_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rules")
+        _order = (
+            "architecture.md",
+            "controller.md",
+            "tool_selection.md",
+            "execution.md",
+            "repository.md",
+            "coding.md",
+            "recovery.md",
+        )
+        parts: list[str] = []
+        if os.path.isdir(_rules_dir):
+            for name in _order:
+                path = os.path.join(_rules_dir, name)
+                if os.path.isfile(path):
+                    try:
+                        with open(path, encoding="utf-8") as fh:
+                            parts.append(fh.read())
+                    except OSError:
+                        pass  # skip unreadable files
+        if parts:
+            return "\n\n".join(parts)
+        return _GENERAL_SYSTEM_PROMPT  # graceful fallback
+
     def _register_builtins(self) -> None:
-        """Register the 5 built-in personalities."""
+        """Register the 6 built-in personalities."""
         general = Personality(
             name="general",
             description="General-purpose assistant with full tool access",
             system_prompt=_GENERAL_SYSTEM_PROMPT,
+            conversational_system_prompt=_GENERAL_CONVERSATIONAL_PROMPT,
             allowed_tools=None,
             model_override=None,
         )
@@ -109,7 +151,7 @@ class PersonalityRegistry:
                 "seeondesk_list", "seeondesk_active", "fiona_status",
                 "recall_search", "recall_remember",
             }),
-            model_override="qwen2:1.5b",
+            model_override="qwen3:8b-en",
         )
         engineer = Personality(
             name="engineer",
@@ -130,7 +172,7 @@ class PersonalityRegistry:
                 "seeondesk_analyze", "seeondesk_list", "seeondesk_active",
                 "fiona_status",
             }),
-            model_override="qwen2:1.5b",
+            model_override="qwen3:8b-en",
         )
         security = Personality(
             name="security",
@@ -140,9 +182,17 @@ class PersonalityRegistry:
                 "seeondesk_list", "seeondesk_active", "fiona_status",
                 "recall_search",
             }),
-            model_override="qwen2:1.5b",
+            model_override="qwen3:8b-en",
         )
-        for p in (general, planner, engineer, analyst, security):
+        # Controller personality uses the rule-framework files as its prompt.
+        controller = Personality(
+            name="controller",
+            description="Orchestration agent — plans, delegates, verifies",
+            system_prompt=self._load_rules_prompt(),
+            allowed_tools=None,
+            model_override="qwen3:8b-en",
+        )
+        for p in (general, planner, engineer, analyst, security, controller):
             self._personalities[p.name] = p
 
 
@@ -169,6 +219,17 @@ OUTPUT FORMAT:
 }
 
 If the goal is achieved, set "action" to null.
+"""
+
+_GENERAL_CONVERSATIONAL_PROMPT = """\
+You are Fiona, a friendly and helpful local workstation assistant.
+Respond naturally and conversationally. Do NOT use JSON, action blocks,
+or tool-calling format. Just talk like a human.
+
+Keep responses short and friendly. If the user asks a simple question,
+answer it directly. If they ask what you can do, tell them briefly.
+
+You are NOT a ReAct agent in this conversation — just chat.
 """
 
 _PLANNER_SYSTEM_PROMPT = """\

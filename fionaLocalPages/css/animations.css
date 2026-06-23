@@ -1,0 +1,449 @@
+/* ==========================================================================
+   animations.css — Keyframe Definitions and Animation Utility Classes
+   ==========================================================================
+   All @keyframes live here. Utility classes (.animate-*) can be added
+   to elements to trigger animations on mount. */
+
+/* ── Fade ──────────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Slide ─────────────────────────────────────────────────────────────── */
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+/* ── Scale ─────────────────────────────────────────────────────────────── */
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* ── Panel slide (for right panel) ─────────────────────────────────────── */
+
+@keyframes slideInPanel {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutPanel {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* ── Shimmer (skeleton loading) ────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes shimmerPulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ── Pulse ─────────────────────────────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes pulseSoft {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Spin (loading indicators) ─────────────────────────────────────────── */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+}
+
+/* ── Modal Backdrop ────────────────────────────────────────────────────── */
+
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalBackdropOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── Modal content scale in ────────────────────────────────────────────── */
+
+@keyframes modalContentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Context menu ──────────────────────────────────────────────────────── */
+
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Command palette ───────────────────────────────────────────────────── */
+
+@keyframes commandPaletteIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Notification badge pulse ──────────────────────────────────────────── */
+
+@keyframes badgePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* ── Connection indicator ──────────────────────────────────────────────── */
+
+@keyframes connectedPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Animation Utility Classes
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease forwards;
+}
+
+.animate-fade-out {
+  animation: fadeOut var(--transition-normal) ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideInUp var(--transition-normal) ease forwards;
+}
+
+.animate-slide-down {
+  animation: slideInDown var(--transition-normal) ease forwards;
+}
+
+.animate-slide-left {
+  animation: slideInLeft var(--transition-normal) ease forwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight var(--transition-normal) ease forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--transition-normal) var(--transition-spring) forwards;
+}
+
+.animate-scale-out {
+  animation: scaleOut var(--transition-fast) ease forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-hover) 37%,
+    var(--surface) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulseSoft 2s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 1.5s linear infinite;
+}
+
+.animate-toast-in {
+  animation: toastIn 0.3s var(--transition-spring) forwards;
+}
+
+.animate-toast-out {
+  animation: toastOut 0.25s ease forwards;
+}
+
+.animate-modal-backdrop-in {
+  animation: modalBackdropIn var(--transition-normal) ease forwards;
+}
+
+.animate-modal-backdrop-out {
+  animation: modalBackdropOut var(--transition-normal) ease forwards;
+}
+
+.animate-modal-content-in {
+  animation: modalContentIn var(--transition-normal) var(--transition-spring) forwards;
+}
+
+.animate-panel-in {
+  animation: slideInPanel var(--transition-slow) var(--transition-spring) forwards;
+}
+
+.animate-panel-out {
+  animation: slideOutPanel var(--transition-normal) ease forwards;
+}
+
+.animate-context-menu-in {
+  animation: contextMenuIn 0.15s var(--transition-spring) forwards;
+}
+
+.animate-command-palette-in {
+  animation: commandPaletteIn var(--transition-normal) var(--transition-spring) forwards;
+}
+
+/* ── Stagger children ──────────────────────────────────────────────────── */
+
+.stagger-children > * {
+  opacity: 0;
+  animation: slideInUp var(--transition-normal) ease forwards;
+}
+
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 30ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 90ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 150ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 210ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 270ms; }
+
+/* ── Transition utilities ──────────────────────────────────────────────── */
+
+.transition-fast   { transition: all var(--transition-fast); }
+.transition-normal { transition: all var(--transition-normal); }
+.transition-slow   { transition: all var(--transition-slow); }
+.transition-spring { transition: all var(--transition-spring); }
+
+.transition-opacity   { transition: opacity var(--transition-normal); }
+.transition-transform { transition: transform var(--transition-normal); }
+.transition-colors    { transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast); }
+
+/* ── Will-change hints ─────────────────────────────────────────────────── */
+
+.will-change-transform { will-change: transform; }
+.will-change-opacity   { will-change: opacity; }

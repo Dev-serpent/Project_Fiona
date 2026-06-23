@@ -11,7 +11,9 @@ DEFAULT_ALLOWED_ACTIONS = frozenset({
     "press", "click", "move", "launch_binding", "text", "macro",
     "seeondesk_list", "seeondesk_active", "seeondesk_analyze",
     "dataclient_mine", "recall_remember", "recall_search",
-    "fiona_status"
+    "fiona_status",
+    "browser_status", "browser_navigate", "browser_click",
+    "browser_type", "browser_screenshot",
 })
 
 
@@ -114,6 +116,37 @@ DEFAULT_COMMANDS = (
         name="fiona_status",
         category="system",
         description="Get an overview of Fiona's subsystem statuses.",
+        input_schema={},
+    ),
+    # Browser automation
+    CommandSpec(
+        name="browser_status",
+        category="browser",
+        description="Show the current state of the browser automation engine.",
+        input_schema={},
+    ),
+    CommandSpec(
+        name="browser_navigate",
+        category="browser",
+        description="Navigate the browser to a given URL.",
+        input_schema={"url": "https://example.com"},
+    ),
+    CommandSpec(
+        name="browser_click",
+        category="browser",
+        description="Click an element on the page by CSS selector.",
+        input_schema={"selector": "#submit-button"},
+    ),
+    CommandSpec(
+        name="browser_type",
+        category="browser",
+        description="Type text into an input element by CSS selector.",
+        input_schema={"selector": "#search-box", "text": "hello world"},
+    ),
+    CommandSpec(
+        name="browser_screenshot",
+        category="browser",
+        description="Capture a screenshot of the current browser page.",
         input_schema={},
     ),
 )

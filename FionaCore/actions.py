@@ -77,6 +77,96 @@ def default_action_specs() -> tuple[ActionSpec, ...]:
         ActionSpec("vsee.open", ("vsee",), "Open Vsee.", risk="medium", permission="gui", external=True, sender_scope="local"),
         ActionSpec("fiona.edit", ("edit",), "Open shared Fiona GUI.", risk="medium", permission="gui", external=True, sender_scope="local"),
         ActionSpec("fiona.cli", ("cli",), "Open fAT command center.", risk="medium", permission="gui", external=True, sender_scope="local"),
+        # ----------------------------------------------------------------------
+        # GUI / automation tools – previously only in command_registry
+        # ----------------------------------------------------------------------
+        ActionSpec(
+            "launch_binding",
+            ("launch_binding",),
+            "Launch an application by its Fiona binding name.",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        ActionSpec(
+            "press",
+            ("press",),
+            "Press a key chord (e.g. ['ctrl','c']).",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        ActionSpec(
+            "click",
+            ("click",),
+            "Click a mouse button (left, right, middle) optionally at coordinates.",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        ActionSpec(
+            "move",
+            ("move",),
+            "Move the pointer to absolute screen coordinates.",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        ActionSpec(
+            "text",
+            ("text",),
+            "Type a string of text through the local automation backend.",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        ActionSpec(
+            "macro",
+            ("macro",),
+            "Run a sequence of Fiona action steps.",
+            risk="low",
+            permission="gui",
+            sender_scope="local",
+        ),
+        # ------------------------------------------------------------------
+        # Browser automation commands
+        # ------------------------------------------------------------------
+        ActionSpec("browser.status", ("browser", "status"),
+                   "Show browser automation engine status.",
+                   risk="low", permission="read", sender_scope="local"),
+        ActionSpec("browser.start", ("browser", "start"),
+                   "Start the browser automation engine.",
+                   risk="medium", permission="service", sender_scope="local"),
+        ActionSpec("browser.stop", ("browser", "stop"),
+                   "Stop the browser automation engine.",
+                   risk="medium", permission="service", sender_scope="local"),
+        ActionSpec("browser.navigate", ("browser", "navigate"),
+                   "Navigate the browser to a URL.",
+                   risk="medium", permission="network", sender_scope="local"),
+        ActionSpec("browser.click", ("browser", "click"),
+                   "Click an element by CSS selector.",
+                   risk="medium", permission="gui", sender_scope="local"),
+        ActionSpec("browser.type", ("browser", "type"),
+                   "Type text into an element by CSS selector.",
+                   risk="medium", permission="gui", sender_scope="local"),
+        ActionSpec("browser.screenshot", ("browser", "screenshot"),
+                   "Capture a browser screenshot.",
+                   risk="low", permission="read", sender_scope="local"),
+        # ------------------------------------------------------------------
+        # Human-in-the-loop approval commands
+        # ------------------------------------------------------------------
+        ActionSpec("approval.pending", ("approval", "pending"),
+                   "Show plans awaiting human approval.",
+                   risk="low", permission="read", sender_scope="local"),
+        ActionSpec("approval.list", ("approval", "list"),
+                   "Show all plan history.",
+                   risk="low", permission="read", sender_scope="local"),
+        ActionSpec("approval.approve", ("approval", "approve"),
+                   "Approve a pending plan.",
+                   risk="medium", permission="control", sender_scope="local"),
+        ActionSpec("approval.deny", ("approval", "deny"),
+                   "Deny a pending plan.",
+                   risk="medium", permission="control", sender_scope="local"),
     )
 
 

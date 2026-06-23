@@ -1,0 +1,1188 @@
+/* ==========================================================================
+   settings.js — Unified Settings Page for Fiona Configuration
+   ==========================================================================
+   Split-panel settings page with category navigation on the left and
+   full form controls on the right.  Settings are persisted to
+   localStorage and optionally synced to the backend.
+   
+   Exports: { render(container), mount(container), destroy() }
+   Default export: factory for the SPA router.
+   ========================================================================== */
+
+import { html } from '../js/components/BaseComponent.js';
+import { ICONS } from '../js/components/_icons.js';
+import {
+  skeletonCard,
+  skeletonText,
+  skeletonButton,
+} from '../js/components/LoadingSkeleton.js';
+
+/* ── Constants ──────────────────────────────────────────────────────────── */
+
+const SETTINGS_KEY = 'fiona_settings';
+const SETTINGS_VERSION = 1;
+
+/** Default settings — built-in values used when nothing is stored. */
+const DEFAULT_SETTINGS = {
+  version: SETTINGS_VERSION,
+
+  general: {
+    theme: 'dark',
+    language: 'en',
+    startupBehavior: 'restore',
+    sidebarDefaultOpen: true,
+  },
+
+  appearance: {
+    accentColor: '#00f0ff',
+    glassOpacity: 0.65,
+    fontSize: 13,
+    themeMode: 'dark',
+    reducedMotion: false,
+  },
+
+  keyboard: {
+    shortcuts: {
+      'commandPalette': { key: 'k', ctrl: true, shift: false, alt: false, meta: true },
+      'toggleSidebar':  { key: 'b', ctrl: true, shift: false, alt: false, meta: true },
+      'openSettings':   { key: ',', ctrl: true, shift: false, alt: false, meta: true },
+      'newChat':        { key: 'n', ctrl: true, shift: false, alt: false, meta: false },
+      'focusTerminal':  { key: 't', ctrl: true, shift: false, alt: false, meta: false },
+      'togglePanel':    { key: 'p', ctrl: true, shift: false, alt: false, meta: false },
+      'saveFile':       { key: 's', ctrl: true, shift: false, alt: false, meta: false },
+      'searchFiles':    { key: 'f', ctrl: true, shift: false, alt: false, meta: false },
+    },
+    _order: [
+      'commandPalette', 'toggleSidebar', 'openSettings', 'newChat',
+      'focusTerminal', 'togglePanel', 'saveFile', 'searchFiles',
+    ],
+  },
+
+  notifications: {
+    enabled: true,
+    sound: true,
+    types: {
+      agentComplete:  true,
+      taskFinished:   true,
+      error:          true,
+      updateAvailable: true,
+      macroDone:      false,
+      systemAlert:    true,
+    },
+  },
+
+  privacy: {
+    historyRetentionDays: 90,
+    telemetry: false,
+    crashReports: true,
+    commandHistoryEnabled: true,
+    logLevel: 'info',
+  },
+
+  agent: {
+    defaultModel: 'gpt-4',
+    temperature: 0.7,
+    maxTokens: 4096,
+    systemPrompt: 'You are Fiona, a helpful AI assistant integrated into the desktop.',
+    streaming: true,
+    contextWindow: 8192,
+  },
+
+  terminal: {
+    shellPath: '/bin/zsh',
+    fontSize: 13,
+    scrollbackLines: 5000,
+    fontFamily: 'JetBrains Mono',
+    cursorStyle: 'block',
+  },
+
+  fileExplorer: {
+    showHiddenFiles: false,
+    defaultView: 'list',
+    sortBy: 'name',
+    sortAscending: true,
+  },
+
+  integrations: {
+    ollamaUrl: 'http://localhost:11434',
+    browserType: 'chromium',
+    browserHeadless: false,
+    gitEnabled: true,
+    dockerEnabled: false,
+  },
+};
+
+/** Section definitions for the settings navigation. */
+const SECTIONS = [
+  { id: 'general',       label: 'General',         icon: 'gear' },
+  { id: 'appearance',    label: 'Appearance',      icon: 'activity' },
+  { id: 'keyboard',      label: 'Keyboard Shortcuts', icon: 'keyboard' },
+  { id: 'notifications', label: 'Notifications',    icon: 'bell' },
+  { id: 'privacy',       label: 'Privacy',          icon: 'lock' },
+  { id: 'agent',         label: 'Agent',            icon: 'bot' },
+  { id: 'terminal',      label: 'Terminal',         icon: 'terminal' },
+  { id: 'fileExplorer',  label: 'File Explorer',    icon: 'folder' },
+  { id: 'integrations',  label: 'Integrations',     icon: 'globe' },
+];
+
+/** Shortcut labels for the keyboard section. */
+const SHORTCUT_LABELS = {
+  commandPalette: 'Command Palette',
+  toggleSidebar:  'Toggle Sidebar',
+  openSettings:   'Open Settings',
+  newChat:        'New Chat',
+  focusTerminal:  'Focus Terminal',
+  togglePanel:    'Toggle Right Panel',
+  saveFile:       'Save File',
+  searchFiles:    'Search Files',
+};
+
+/** Language options. */
+const LANGUAGE_OPTIONS = [
+  { value: 'en',  label: 'English' },
+  { value: 'es',  label: 'Español' },
+  { value: 'fr',  label: 'Français' },
+  { value: 'de',  label: 'Deutsch' },
+  { value: 'ja',  label: '日本語' },
+  { value: 'zh',  label: '中文' },
+];
+
+/** Theme options. */
+const THEME_OPTIONS = [
+  { value: 'dark',  label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'System' },
+];
+
+/** Startup behavior options. */
+const STARTUP_OPTIONS = [
+  { value: 'restore', label: 'Restore previous session' },
+  { value: 'dashboard', label: 'Open dashboard' },
+  { value: 'chat', label: 'Open chat' },
+  { value: 'blank', label: 'Blank page' },
+];
+
+/** File explorer view options. */
+const VIEW_OPTIONS = [
+  { value: 'list',  label: 'List' },
+  { value: 'grid',  label: 'Grid' },
+  { value: 'tree',  label: 'Tree' },
+];
+
+/** Browser type options. */
+const BROWSER_OPTIONS = [
+  { value: 'chromium',   label: 'Chromium' },
+  { value: 'firefox',    label: 'Firefox' },
+  { value: 'webkit',     label: 'WebKit' },
+];
+
+/** Retention options (days). */
+const RETENTION_OPTIONS = [
+  { value: 7,    label: '7 days' },
+  { value: 30,   label: '30 days' },
+  { value: 90,   label: '90 days' },
+  { value: 180,  label: '180 days' },
+  { value: 365,  label: '1 year' },
+  { value: -1,   label: 'Forever' },
+];
+
+/** Log level options. */
+const LOG_LEVEL_OPTIONS = [
+  { value: 'debug',   label: 'Debug' },
+  { value: 'info',    label: 'Info' },
+  { value: 'warn',    label: 'Warning' },
+  { value: 'error',   label: 'Error' },
+];
+
+const CURSOR_STYLE_OPTIONS = [
+  { value: 'block',       label: 'Block' },
+  { value: 'underline',   label: 'Underline' },
+  { value: 'beam',        label: 'Beam' },
+];
+
+/* ── Module-level State ─────────────────────────────────────────────────── */
+
+const _state = {
+  container: null,
+  settings: null,           // Deep clone of current settings
+  originalSettings: null,   // Snapshot for unsaved detection
+  activeSection: 'general',
+  searchQuery: '',
+  loading: true,
+  destroyed: false,
+  saveTimer: null,
+  rebindingKey: null,       // id of shortcut currently being rebound
+  showResetConfirm: false,
+  showImportDialog: false,
+  toastContainer: null,
+  previewStyles: null,      // <style> element for instant preview
+};
+
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+
+function getApi() {
+  return window.fiona?.api;
+}
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function esc(str) {
+  if (!str) return '';
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(str).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+function formatKey(key) {
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function shortcutToLabel(shortcut) {
+  const parts = [];
+  if (shortcut.ctrl) parts.push('Ctrl');
+  if (shortcut.meta) parts.push('⌘');
+  if (shortcut.alt) parts.push('Alt');
+  if (shortcut.shift) parts.push('Shift');
+  parts.push(formatKey(shortcut.key));
+  return parts.join(' + ');
+}
+
+/* ── Settings Persistence ───────────────────────────────────────────────── */
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return migrateSettings(parsed);
+    }
+  } catch (e) {
+    console.warn('[settings] Failed to load settings from localStorage:', e);
+  }
+  return deepClone(DEFAULT_SETTINGS);
+}
+
+function saveSettings() {
+  // Persist to localStorage
+  try {
+    const toStore = {
+      ..._state.settings,
+      version: SETTINGS_VERSION,
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(toStore));
+  } catch (e) {
+    console.warn('[settings] Failed to save settings to localStorage:', e);
+  }
+
+  // Optional sync to backend
+  const api = getApi();
+  if (api) {
+    api.put('/api/v1/settings', _state.settings).catch((err) => {
+      console.warn('[settings] Server sync failed (non-fatal):', err);
+    });
+  }
+
+  // Apply previews
+  applyPreviews();
+}
+
+function migrateSettings(settings) {
+  const version = settings.version || 0;
+  let migrated = { ...settings };
+
+  if (version < 1) {
+    // Migration v0 → v1: ensure all sections exist
+    migrated = {
+      ...deepClone(DEFAULT_SETTINGS),
+      ...migrated,
+      general:     { ...deepClone(DEFAULT_SETTINGS.general),     ...(migrated.general || {}) },
+      appearance:  { ...deepClone(DEFAULT_SETTINGS.appearance),  ...(migrated.appearance || {}) },
+      keyboard:    { ...deepClone(DEFAULT_SETTINGS.keyboard),    ...(migrated.keyboard || {}) },
+      notifications: { ...deepClone(DEFAULT_SETTINGS.notifications), ...(migrated.notifications || {}) },
+      privacy:     { ...deepClone(DEFAULT_SETTINGS.privacy),     ...(migrated.privacy || {}) },
+      agent:       { ...deepClone(DEFAULT_SETTINGS.agent),       ...(migrated.agent || {}) },
+      terminal:    { ...deepClone(DEFAULT_SETTINGS.terminal),    ...(migrated.terminal || {}) },
+      fileExplorer: { ...deepClone(DEFAULT_SETTINGS.fileExplorer), ...(migrated.fileExplorer || {}) },
+      integrations: { ...deepClone(DEFAULT_SETTINGS.integrations), ...(migrated.integrations || {}) },
+      version: SETTINGS_VERSION,
+    };
+  }
+
+  return migrated;
+}
+
+/* ── Preview Application ────────────────────────────────────────────────── */
+
+function applyPreviews() {
+  if (!_state.settings) return;
+
+  const s = _state.settings;
+
+  // Accent color — set CSS variable on root
+  document.documentElement.style.setProperty('--accent', s.appearance.accentColor);
+  document.documentElement.style.setProperty('--accent-hover', s.appearance.accentColor + 'cc');
+
+  // Font size
+  document.documentElement.style.setProperty('--font-size-base', s.appearance.fontSize + 'px');
+
+  // Glass opacity
+  const alpha = s.appearance.glassOpacity;
+  document.documentElement.style.setProperty('--glass-bg', `rgba(30, 32, 43, ${alpha})`);
+
+  // Theme mode
+  document.documentElement.style.colorScheme = s.appearance.themeMode;
+}
+
+/* ── Unsaved Changes ────────────────────────────────────────────────────── */
+
+function hasUnsavedChanges() {
+  if (!_state.settings || !_state.originalSettings) return false;
+  return JSON.stringify(_state.settings) !== JSON.stringify(_state.originalSettings);
+}
+
+function markSaved() {
+  _state.originalSettings = deepClone(_state.settings);
+}
+
+function updateUnsavedIndicator() {
+  const el = _state.container?.querySelector('#settings-unsaved');
+  if (el) {
+    const dirty = hasUnsavedChanges();
+    el.style.display = dirty ? 'inline-flex' : 'none';
+    const badge = el.querySelector('.settings-unsaved__count');
+    if (badge) {
+      badge.textContent = 'Unsaved changes';
+    }
+  }
+}
+
+/* ── Toast / Notification ───────────────────────────────────────────────── */
+
+function showToast(type, message) {
+  const toast = document.createElement('div');
+  toast.className = `c-toast c-toast--${type || 'info'} animate-slide-right`;
+  toast.style.cssText = 'position: fixed; bottom: 60px; right: 20px; z-index: 9999; max-width: 360px;';
+  toast.innerHTML = `
+    <div class="c-toast__icon">${ICONS[type === 'success' ? 'check' : type === 'error' ? 'error' : 'info']}</div>
+    <div class="c-toast__content">
+      <div class="c-toast__message">${esc(message)}</div>
+    </div>
+    <button class="c-toast__dismiss" data-toast-dismiss style="flex-shrink:0;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  `;
+  document.body.appendChild(toast);
+
+  toast.querySelector('[data-toast-dismiss]')?.addEventListener('click', () => {
+    toast.remove();
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.2s';
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
+}
+
+/* ── Search / Filter ────────────────────────────────────────────────────── */
+
+function filterSettingsByQuery(query) {
+  if (!query) return SECTIONS;
+  const q = query.toLowerCase();
+  // Show sections that match directly or contain a matching setting
+  return SECTIONS.filter((s) => {
+    if (s.label.toLowerCase().includes(q)) return true;
+    // Check setting values in section
+    const sectionData = _state.settings?.[s.id];
+    if (!sectionData || typeof sectionData !== 'object') return false;
+    return Object.entries(sectionData).some(([key, val]) => {
+      if (key === 'shortcuts' || key === '_order') return false;
+      return key.toLowerCase().includes(q) ||
+        String(val).toLowerCase().includes(q);
+    });
+  });
+}
+
+/* ── Export / Import ────────────────────────────────────────────────────── */
+
+function exportSettingsJSON() {
+  const blob = new Blob([JSON.stringify(_state.settings, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `fiona-settings-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importSettingsJSON(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const migrated = migrateSettings(parsed);
+      _state.settings = migrated;
+      markSaved();
+      saveSettings();
+      renderSettingsPage(_state.container);
+      showToast('success', 'Settings imported successfully.');
+    } catch (err) {
+      showToast('error', `Failed to import settings: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ── HTML Renderers ─────────────────────────────────────────────────────── */
+
+function renderSettingsPage(container) {
+  if (_state.destroyed) return;
+  _state.container = container;
+
+  if (_state.loading) {
+    renderSkeletons(container);
+    return;
+  }
+
+  const filteredSections = filterSettingsByQuery(_state.searchQuery);
+  const activeSectionData = _state.settings?.[_state.activeSection];
+
+  container.innerHTML = html`
+    <div class="settings-page" style="display: grid; grid-template-columns: 220px 1fr; height: 100%; gap: 0;">
+
+      <!-- Left Nav -->
+      <div class="settings-nav" style="border-right: 1px solid var(--border); overflow-y: auto; padding: 0;">
+        ${renderSearchBar()}
+        <nav style="padding: var(--space-2) 0;">
+          ${html.raw(filteredSections.map((s) => html`
+            <button class="settings-nav__item${s.id === _state.activeSection ? ' settings-nav__item--active' : ''}"
+                    data-section="${s.id}" data-action="nav-section"
+                    style="display: flex; align-items: center; gap: var(--space-3); width: 100%;
+                           padding: 9px var(--space-4); border: none; background: none;
+                           font-size: var(--font-size-sm); color: var(--text-secondary);
+                           cursor: pointer; text-align: left; transition: all var(--transition-fast);
+                           ${s.id === _state.activeSection ? 'background: var(--accent-muted); color: var(--accent); font-weight: var(--font-weight-medium);' : ''}
+                           border-right: 2px solid ${s.id === _state.activeSection ? 'var(--accent)' : 'transparent'};">
+              <span style="width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                ${ICONS[s.icon] || ICONS.gear}
+              </span>
+              <span>${esc(s.label)}</span>
+            </button>
+          `).join(''))}
+        </nav>
+
+        <!-- Import/Export buttons -->
+        <div style="padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle); margin-top: auto;">
+          <div style="display: flex; gap: var(--space-2);">
+            <button class="c-btn c-btn--sm c-btn--ghost" data-action="export-settings" title="Export settings JSON" style="flex:1;">
+              <span class="c-btn__icon">${ICONS.download}</span>
+              Export
+            </button>
+            <button class="c-btn c-btn--sm c-btn--ghost" data-action="import-settings" title="Import settings JSON" style="flex:1;">
+              <span class="c-btn__icon">${ICONS.upload}</span>
+              Import
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Content -->
+      <div class="settings-content" style="overflow-y: auto; padding: var(--space-6);">
+        <!-- Section Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6);">
+          <div>
+            <h2 style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+              ${esc(SECTIONS.find(s => s.id === _state.activeSection)?.label || 'Settings')}
+            </h2>
+            <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+              ${getSectionDescription(_state.activeSection)}
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <span id="settings-unsaved" style="display: none; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--warning);">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--warning);"></span>
+              <span class="settings-unsaved__count">Unsaved changes</span>
+            </span>
+            <button class="c-btn c-btn--sm c-btn--ghost" data-action="reset-section" title="Reset to defaults">
+              <span class="c-btn__icon">${ICONS.refresh}</span>
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Controls -->
+        <div class="settings-form" style="max-width: 640px;">
+          ${activeSectionData ? renderSectionControls(_state.activeSection, activeSectionData) : html`<p style="color: var(--text-muted);">Select a category to view settings.</p>`}
+        </div>
+      </div>
+    </div>
+  `;
+
+  mountComponents(container);
+}
+
+function getSectionDescription(sectionId) {
+  const descs = {
+    general:       'Theme, language, and startup behavior preferences.',
+    appearance:    'Visual customization: accent color, glass effect, font size, theme.',
+    keyboard:      'Configure keyboard shortcuts. Click a shortcut to rebind it.',
+    notifications: 'Control which events trigger notifications and sounds.',
+    privacy:       'Manage data retention, telemetry, and crash reporting.',
+    agent:         'Default AI model configuration, parameters, and system prompt.',
+    terminal:      'Terminal emulator settings: shell, font, scrollback.',
+    fileExplorer:  'File browsing preferences: hidden files, default view, sort order.',
+    integrations:  'External service connections: Ollama, browser automation, etc.',
+  };
+  return descs[sectionId] || 'Configure Fiona settings.';
+}
+
+function renderSearchBar() {
+  return html`
+    <div style="padding: var(--space-3) var(--space-3); border-bottom: 1px solid var(--border-subtle);">
+      <div class="c-input-wrapper">
+        <span class="c-input-wrapper__icon c-input-wrapper__icon--left">${ICONS.search}</span>
+        <input type="text" class="c-input c-input--sm" id="settings-search"
+               placeholder="Search settings…"
+               value="${esc(_state.searchQuery)}"
+               style="padding-left: 32px; font-size: var(--font-size-xs);">
+      </div>
+    </div>
+  `;
+}
+
+function renderSkeletons(container) {
+  container.innerHTML = html`
+    <div style="display: grid; grid-template-columns: 220px 1fr; height: 100%; gap: 0;">
+      <div style="padding: var(--space-3); border-right: 1px solid var(--border);">
+        ${skeletonText({ width: '100%' })}
+        ${html.raw(Array.from({ length: 8 }, () => skeletonText({ width: '80%' })).join(''))}
+      </div>
+      <div style="padding: var(--space-6);">
+        ${skeletonCard({ height: '400px' })}
+      </div>
+    </div>
+  `;
+}
+
+/* ── Section Control Renderers ──────────────────────────────────────────── */
+
+function renderSectionControls(sectionId, data) {
+  switch (sectionId) {
+    case 'general':       return renderGeneralControls(data);
+    case 'appearance':    return renderAppearanceControls(data);
+    case 'keyboard':      return renderKeyboardControls(data);
+    case 'notifications': return renderNotificationControls(data);
+    case 'privacy':       return renderPrivacyControls(data);
+    case 'agent':         return renderAgentControls(data);
+    case 'terminal':      return renderTerminalControls(data);
+    case 'fileExplorer':  return renderFileExplorerControls(data);
+    case 'integrations':  return renderIntegrationControls(data);
+    default:              return html`<p style="color: var(--text-muted);">Unknown section.</p>`;
+  }
+}
+
+function renderGeneralControls(data) {
+  return html`
+    ${toggleControl('general.themeMode', 'Dark Mode', 'Enable dark color scheme', data.themeMode === 'dark')}
+    ${selectControl('general.theme', 'Theme', THEME_OPTIONS, data.theme)}
+    ${selectControl('general.language', 'Language', LANGUAGE_OPTIONS, data.language)}
+    ${selectControl('general.startupBehavior', 'Startup Behavior', STARTUP_OPTIONS, data.startupBehavior)}
+    ${toggleControl('general.sidebarDefaultOpen', 'Sidebar Open by Default', 'Show sidebar on startup', data.sidebarDefaultOpen)}
+  `;
+}
+
+function renderAppearanceControls(data) {
+  return html`
+    ${colorControl('appearance.accentColor', 'Accent Color', data.accentColor)}
+    ${sliderControl('appearance.glassOpacity', 'Glass Opacity', data.glassOpacity, 0.2, 1, 0.05)}
+    ${sliderControl('appearance.fontSize', 'Font Size (px)', data.fontSize, 10, 20, 1)}
+    ${selectControl('appearance.themeMode', 'Theme Mode', THEME_OPTIONS, data.themeMode)}
+    ${toggleControl('appearance.reducedMotion', 'Reduced Motion', 'Disable animations', data.reducedMotion)}
+  `;
+}
+
+function renderKeyboardControls(data) {
+  const order = data._order || Object.keys(data.shortcuts);
+  return html`
+    <div class="c-alert c-alert--info" style="margin-bottom: var(--space-4);">
+      <span class="c-alert__icon">${ICONS.info}</span>
+      <div class="c-alert__content">Click a shortcut to rebind it. Press Escape to cancel.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      ${html.raw(order.map((id) => {
+        const sc = data.shortcuts[id];
+        if (!sc) return '';
+        const label = SHORTCUT_LABELS[id] || formatKey(id);
+        const isRebinding = _state.rebindingKey === id;
+        return html`
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); background: var(--surface); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <span style="font-size: var(--font-size-sm); color: var(--text-primary);">${esc(label)}</span>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <kbd data-shortcut-id="${id}" data-action="rebind-shortcut"
+                   style="cursor: pointer; min-width: 80px; justify-content: center;
+                          ${isRebinding ? 'background: var(--accent-muted); color: var(--accent); border-color: var(--accent);' : ''}">
+                ${isRebinding ? 'Press keys…' : esc(shortcutToLabel(sc))}
+              </kbd>
+              <button class="c-btn c-btn--sm c-btn--ghost" data-action="reset-shortcut" data-shortcut-id="${id}" title="Reset to default">
+                <span class="c-btn__icon">${ICONS.refresh}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join(''))}
+    </div>
+  `;
+}
+
+function renderNotificationControls(data) {
+  const typeLabels = {
+    agentComplete:   'Agent Task Complete',
+    taskFinished:    'Task Finished',
+    error:           'Errors',
+    updateAvailable: 'Updates Available',
+    macroDone:       'Macro Completed',
+    systemAlert:     'System Alerts',
+  };
+
+  return html`
+    ${toggleControl('notifications.enabled', 'Enable Notifications', 'Master switch for all notifications', data.enabled)}
+    ${toggleControl('notifications.sound', 'Notification Sounds', 'Play sound on new notification', data.sound)}
+    <div class="c-divider" style="margin: var(--space-4) 0;"></div>
+    <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--space-3); font-weight: var(--font-weight-medium);">Notification Types</p>
+    ${html.raw(Object.entries(data.types).map(([key, val]) => toggleControl(`notifications.types.${key}`, typeLabels[key] || formatKey(key), '', val)).join(''))}
+  `;
+}
+
+function renderPrivacyControls(data) {
+  return html`
+    ${selectControl('privacy.historyRetentionDays', 'Command History Retention', RETENTION_OPTIONS, data.historyRetentionDays)}
+    ${toggleControl('privacy.commandHistoryEnabled', 'Command History', 'Keep a record of executed commands', data.commandHistoryEnabled)}
+    ${toggleControl('privacy.telemetry', 'Telemetry', 'Send anonymous usage data', data.telemetry)}
+    ${toggleControl('privacy.crashReports', 'Crash Reports', 'Automatically send crash reports', data.crashReports)}
+    ${selectControl('privacy.logLevel', 'Log Level', LOG_LEVEL_OPTIONS, data.logLevel)}
+  `;
+}
+
+function renderAgentControls(data) {
+  return html`
+    ${textControl('agent.defaultModel', 'Default Model', data.defaultModel, 'e.g. gpt-4, claude-3-opus')}
+    ${sliderControl('agent.temperature', 'Temperature', data.temperature, 0, 2, 0.1)}
+    ${numberControl('agent.maxTokens', 'Max Output Tokens', data.maxTokens, 128, 32768)}
+    ${numberControl('agent.contextWindow', 'Context Window', data.contextWindow, 2048, 128000)}
+    ${toggleControl('agent.streaming', 'Streaming Responses', 'Tokens arrive as they are generated', data.streaming)}
+    <div class="c-form-group" style="margin-bottom: var(--space-5);">
+      <label class="c-form-group__label">System Prompt</label>
+      <textarea class="c-textarea" data-setting="agent.systemPrompt"
+                style="min-height: 100px; font-family: var(--font-mono); font-size: var(--font-size-xs);">${esc(data.systemPrompt)}</textarea>
+      <p class="c-form-group__description">Instructions that define the agent's behavior and personality.</p>
+    </div>
+  `;
+}
+
+function renderTerminalControls(data) {
+  return html`
+    ${textControl('terminal.shellPath', 'Shell Path', data.shellPath, '/bin/zsh')}
+    ${textControl('terminal.fontFamily', 'Font Family', data.fontFamily, 'JetBrains Mono')}
+    ${sliderControl('terminal.fontSize', 'Font Size (px)', data.fontSize, 10, 24, 1)}
+    ${numberControl('terminal.scrollbackLines', 'Scrollback Buffer', data.scrollbackLines, 500, 100000)}
+    ${selectControl('terminal.cursorStyle', 'Cursor Style', CURSOR_STYLE_OPTIONS, data.cursorStyle)}
+  `;
+}
+
+function renderFileExplorerControls(data) {
+  return html`
+    ${toggleControl('fileExplorer.showHiddenFiles', 'Show Hidden Files', 'Display files starting with a dot', data.showHiddenFiles)}
+    ${selectControl('fileExplorer.defaultView', 'Default View', VIEW_OPTIONS, data.defaultView)}
+    ${selectControl('fileExplorer.sortBy', 'Sort By', [
+      { value: 'name', label: 'Name' },
+      { value: 'size', label: 'Size' },
+      { value: 'modified', label: 'Last Modified' },
+      { value: 'type', label: 'Type' },
+    ], data.sortBy)}
+    ${toggleControl('fileExplorer.sortAscending', 'Sort Ascending', 'A→Z / small→large', data.sortAscending)}
+  `;
+}
+
+function renderIntegrationControls(data) {
+  return html`
+    ${textControl('integrations.ollamaUrl', 'Ollama API URL', data.ollamaUrl, 'http://localhost:11434')}
+    ${selectControl('integrations.browserType', 'Browser Type', BROWSER_OPTIONS, data.browserType)}
+    ${toggleControl('integrations.browserHeadless', 'Headless Browser', 'Run browser without visible window', data.browserHeadless)}
+    ${toggleControl('integrations.gitEnabled', 'Git Integration', 'Enable Git repository features', data.gitEnabled)}
+    ${toggleControl('integrations.dockerEnabled', 'Docker Integration', 'Enable Docker container management', data.dockerEnabled)}
+  `;
+}
+
+/* ── Form Control Primitives ────────────────────────────────────────────── */
+
+function toggleControl(settingPath, label, description, value) {
+  const checked = value === true || value === 'true';
+  return html`
+    <div class="c-form-group c-form-group--horizontal" style="margin-bottom: var(--space-4); justify-content: space-between;">
+      <div>
+        <label class="c-form-group__label">${esc(label)}</label>
+        ${description ? html`<p class="c-form-group__description">${esc(description)}</p>` : ''}
+      </div>
+      <label class="c-toggle" style="flex-shrink: 0;">
+        <input type="checkbox" class="c-toggle__input" data-setting="${esc(settingPath)}"
+               ${checked ? 'checked' : ''}>
+        <span class="c-toggle__track"><span class="c-toggle__thumb"></span></span>
+      </label>
+    </div>
+  `;
+}
+
+function sliderControl(settingPath, label, value, min, max, step) {
+  const pct = ((value - min) / (max - min)) * 100;
+  return html`
+    <div class="c-form-group" style="margin-bottom: var(--space-5);">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <label class="c-form-group__label">${esc(label)}</label>
+        <span style="font-size: var(--font-size-sm); color: var(--text-secondary); font-variant-numeric: tabular-nums; min-width: 40px; text-align: right;" id="slider-val-${esc(settingPath.replace(/\./g, '-'))}">
+          ${typeof value === 'number' && step < 1 ? value.toFixed(2) : value}
+        </span>
+      </div>
+      <input type="range" class="c-slider" data-setting="${esc(settingPath)}"
+             value="${value}" min="${min}" max="${max}" step="${step}"
+             style="width: 100%; accent-color: var(--accent);">
+      <div style="display: flex; justify-content: space-between; font-size: var(--font-size-xxs); color: var(--text-muted);">
+        <span>${min}</span>
+        <span>${max}</span>
+      </div>
+    </div>
+  `;
+}
+
+function selectControl(settingPath, label, options, value) {
+  return html`
+    <div class="c-form-group" style="margin-bottom: var(--space-5);">
+      <label class="c-form-group__label">${esc(label)}</label>
+      <select class="c-select" data-setting="${esc(settingPath)}" style="max-width: 300px;">
+        ${html.raw(options.map((opt) => html`
+          <option value="${esc(String(opt.value))}" ${String(opt.value) === String(value) ? 'selected' : ''}>
+            ${esc(opt.label)}
+          </option>
+        `).join(''))}
+      </select>
+    </div>
+  `;
+}
+
+function colorControl(settingPath, label, value) {
+  return html`
+    <div class="c-form-group c-form-group--horizontal" style="margin-bottom: var(--space-5);">
+      <label class="c-form-group__label">${esc(label)}</label>
+      <div style="display: flex; align-items: center; gap: var(--space-2);">
+        <input type="color" class="c-color-picker" data-setting="${esc(settingPath)}"
+               value="${esc(value)}"
+               style="width: 36px; height: 36px; border: 1px solid var(--border); border-radius: var(--radius-md); background: none; cursor: pointer; padding: 2px;">
+        <input type="text" class="c-input c-input--sm" data-setting-text="${esc(settingPath)}"
+               value="${esc(value)}" style="width: 100px; font-family: var(--font-mono); font-size: var(--font-size-xs);">
+      </div>
+    </div>
+  `;
+}
+
+function textControl(settingPath, label, value, placeholder) {
+  return html`
+    <div class="c-form-group" style="margin-bottom: var(--space-5);">
+      <label class="c-form-group__label">${esc(label)}</label>
+      <input type="text" class="c-input" data-setting="${esc(settingPath)}"
+             value="${esc(value)}" placeholder="${esc(placeholder || '')}"
+             style="max-width: 400px;">
+    </div>
+  `;
+}
+
+function numberControl(settingPath, label, value, min, max) {
+  return html`
+    <div class="c-form-group" style="margin-bottom: var(--space-5);">
+      <label class="c-form-group__label">${esc(label)}</label>
+      <input type="number" class="c-input" data-setting="${esc(settingPath)}"
+             value="${value}" min="${min}" max="${max}"
+             style="max-width: 160px; font-variant-numeric: tabular-nums;">
+    </div>
+  `;
+}
+
+/* ── Component Mounting ─────────────────────────────────────────────────── */
+
+function mountComponents(container) {
+  if (_state.destroyed) return;
+  _state.container = container;
+
+  // ── Search ──
+  const searchInput = container.querySelector('#settings-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      _state.searchQuery = e.target.value;
+      renderSettingsPage(container);
+    });
+    // Focus search on Ctrl+F or slash
+    setTimeout(() => searchInput.focus(), 100);
+  }
+
+  // ── Navigation sections ──
+  container.querySelectorAll('[data-action="nav-section"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      _state.activeSection = btn.dataset.section;
+      _state.rebindingKey = null;
+      renderSettingsPage(container);
+    });
+  });
+
+  // ── Form control changes ──
+  bindFormControls(container);
+
+  // ── Reset section ──
+  container.querySelector('[data-action="reset-section"]')?.addEventListener('click', () => {
+    showResetDialog();
+  });
+
+  // ── Export ──
+  container.querySelector('[data-action="export-settings"]')?.addEventListener('click', exportSettingsJSON);
+
+  // ── Import ──
+  container.querySelector('[data-action="import-settings"]')?.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', (e) => {
+      if (e.target.files[0]) importSettingsJSON(e.target.files[0]);
+    });
+    input.click();
+  });
+
+  // ── Keyboard shortcut rebinding ──
+  container.querySelectorAll('[data-action="rebind-shortcut"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.shortcutId;
+      if (!id) return;
+      if (_state.rebindingKey === id) {
+        _state.rebindingKey = null;
+        renderSettingsPage(container);
+        return;
+      }
+      _state.rebindingKey = id;
+      renderSettingsPage(container);
+      // Listen for keydown
+      const handler = (e) => {
+        e.preventDefault();
+        if (e.key === 'Escape') {
+          _state.rebindingKey = null;
+          renderSettingsPage(container);
+          document.removeEventListener('keydown', handler);
+          return;
+        }
+        // Only record modifier + key combos
+        if (e.key === 'Control' || e.key === 'Shift' || e.key === 'Alt' || e.key === 'Meta') return;
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          // Single key is valid too for some shortcuts
+        }
+        const newShortcut = {
+          key: e.key.toLowerCase(),
+          ctrl: e.ctrlKey || false,
+          shift: e.shiftKey || false,
+          alt: e.altKey || false,
+          meta: e.metaKey || false,
+        };
+        if (!_state.settings.keyboard.shortcuts[id]) {
+          _state.settings.keyboard.shortcuts[id] = {};
+        }
+        _state.settings.keyboard.shortcuts[id] = newShortcut;
+        _state.rebindingKey = null;
+        markUnsaved();
+        renderSettingsPage(container);
+        document.removeEventListener('keydown', handler);
+      };
+      // Debounce to avoid capturing the click's keyup
+      setTimeout(() => document.addEventListener('keydown', handler), 50);
+    });
+  });
+
+  // ── Reset shortcut to default ──
+  container.querySelectorAll('[data-action="reset-shortcut"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.shortcutId;
+      if (!id) return;
+      const def = DEFAULT_SETTINGS.keyboard.shortcuts[id];
+      if (def) {
+        if (!_state.settings.keyboard.shortcuts[id]) {
+          _state.settings.keyboard.shortcuts[id] = {};
+        }
+        _state.settings.keyboard.shortcuts[id] = { ...def };
+        markUnsaved();
+        renderSettingsPage(container);
+      }
+    });
+  });
+
+  updateUnsavedIndicator();
+}
+
+function bindFormControls(container) {
+  // Toggles
+  container.querySelectorAll('[data-setting].c-toggle__input').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      const path = e.target.dataset.setting;
+      setSettingByPath(path, e.target.checked);
+    });
+  });
+
+  // Sliders
+  container.querySelectorAll('input[type="range"][data-setting]').forEach((el) => {
+    const displayId = `slider-val-${el.dataset.setting.replace(/\./g, '-')}`;
+    el.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      const display = container.querySelector(`#${displayId}`);
+      if (display) {
+        display.textContent = parseFloat(e.target.step) < 1 ? val.toFixed(2) : val;
+      }
+      setSettingByPath(e.target.dataset.setting, val);
+    });
+  });
+
+  // Selects
+  container.querySelectorAll('select[data-setting]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      const val = e.target.value;
+      // Try to preserve number type
+      const num = parseFloat(val);
+      setSettingByPath(e.target.dataset.setting, isNaN(num) ? val : num);
+    });
+  });
+
+  // Color pickers
+  container.querySelectorAll('input[type="color"][data-setting]').forEach((el) => {
+    el.addEventListener('input', (e) => {
+      const val = e.target.value;
+      // Sync text input
+      const textInput = container.querySelector(`[data-setting-text="${e.target.dataset.setting}"]`);
+      if (textInput) textInput.value = val;
+      setSettingByPath(e.target.dataset.setting, val);
+    });
+  });
+
+  // Color text inputs
+  container.querySelectorAll('[data-setting-text]').forEach((el) => {
+    el.addEventListener('input', (e) => {
+      const val = e.target.value;
+      // Sync color picker
+      const colorInput = container.querySelector(`[data-setting="${e.target.dataset.settingText}"]`);
+      if (colorInput && /^#[0-9a-f]{6}$/i.test(val)) {
+        colorInput.value = val;
+      }
+      if (/^#[0-9a-f]{6}$/i.test(val)) {
+        setSettingByPath(e.target.dataset.settingText, val);
+      }
+    });
+  });
+
+  // Text inputs
+  container.querySelectorAll('input[type="text"][data-setting]:not([data-setting-text])').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      setSettingByPath(e.target.dataset.setting, e.target.value);
+    });
+    // Auto-save on blur
+    el.addEventListener('blur', (e) => {
+      setSettingByPath(e.target.dataset.setting, e.target.value);
+    });
+  });
+
+  // Number inputs
+  container.querySelectorAll('input[type="number"][data-setting]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) setSettingByPath(e.target.dataset.setting, val);
+    });
+    el.addEventListener('blur', (e) => {
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) setSettingByPath(e.target.dataset.setting, val);
+    });
+  });
+
+  // Textareas
+  container.querySelectorAll('textarea[data-setting]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      setSettingByPath(e.target.dataset.setting, e.target.value);
+    });
+    el.addEventListener('blur', (e) => {
+      setSettingByPath(e.target.dataset.setting, e.target.value);
+    });
+  });
+}
+
+/* ── Settings Mutation ──────────────────────────────────────────────────── */
+
+function setSettingByPath(path, value) {
+  if (!_state.settings) return;
+  const parts = path.split('.');
+  let obj = _state.settings;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!obj[parts[i]]) obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length - 1]] = value;
+
+  markUnsaved();
+}
+
+function markUnsaved() {
+  updateUnsavedIndicator();
+
+  // Debounced auto-save
+  if (_state.saveTimer) clearTimeout(_state.saveTimer);
+  _state.saveTimer = setTimeout(() => {
+    saveSettings();
+    markSaved();
+    updateUnsavedIndicator();
+  }, 800);
+}
+
+/* ── Reset Dialog ───────────────────────────────────────────────────────── */
+
+function showResetDialog() {
+  const modalContainer = document.getElementById('modal-container');
+  if (!modalContainer) return;
+
+  modalContainer.innerHTML = `
+    <div class="c-modal-backdrop" id="settings-reset-backdrop">
+      <div class="c-modal c-modal--sm">
+        <div class="c-modal__header">
+          <h3 class="c-modal__title">Reset Section</h3>
+          <button class="c-modal__close" data-action="close-modal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="c-modal__body">
+          <p style="color: var(--text-secondary); font-size: var(--font-size-sm);">
+            Reset <strong>${esc(SECTIONS.find(s => s.id === _state.activeSection)?.label || 'this section')}</strong> settings to their defaults?
+          </p>
+          <p style="color: var(--text-muted); font-size: var(--font-size-xs); margin-top: var(--space-2);">
+            This action cannot be undone.
+          </p>
+        </div>
+        <div class="c-modal__footer">
+          <button class="c-btn" data-action="cancel-reset">Cancel</button>
+          <button class="c-btn c-btn--danger" data-action="confirm-reset">Reset to Defaults</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modalContainer.style.display = 'flex';
+
+  const close = () => {
+    modalContainer.innerHTML = '';
+    modalContainer.style.display = 'none';
+  };
+
+  modalContainer.querySelector('[data-action="close-modal"]')?.addEventListener('click', close);
+  modalContainer.querySelector('[data-action="cancel-reset"]')?.addEventListener('click', close);
+  modalContainer.querySelector('#settings-reset-backdrop')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) close();
+  });
+  modalContainer.querySelector('[data-action="confirm-reset"]')?.addEventListener('click', () => {
+    if (_state.settings && _state.activeSection) {
+      _state.settings[_state.activeSection] = deepClone(DEFAULT_SETTINGS[_state.activeSection]);
+      markUnsaved();
+      if (_state.container) renderSettingsPage(_state.container);
+      showToast('success', 'Section reset to defaults.');
+    }
+    close();
+  });
+}
+
+/* ── Data Loading ───────────────────────────────────────────────────────── */
+
+async function loadSettings() {
+  if (_state.destroyed) return;
+
+  _state.settings = loadSettings();
+  _state.originalSettings = deepClone(_state.settings);
+  _state.loading = false;
+
+  // Attempt to load from server (overrides local if successful)
+  const api = getApi();
+  if (api) {
+    try {
+      const result = await api.get('/api/v1/settings');
+      if (result && typeof result === 'object') {
+        const serverSettings = result.data || result;
+        // Merge server settings on top of local
+        _state.settings = migrateSettings({
+          ..._state.settings,
+          ...serverSettings,
+        });
+        _state.originalSettings = deepClone(_state.settings);
+        saveSettings();
+      }
+    } catch (err) {
+      // Server not available — local settings only
+      console.log('[settings] Server settings unavailable, using local');
+    }
+  }
+
+  if (!_state.destroyed && _state.container) {
+    renderSettingsPage(_state.container);
+  }
+}
+
+/* ── Lifecycle ──────────────────────────────────────────────────────────── */
+
+export function render(container) {
+  _state.destroyed = false;
+  _state.loading = true;
+  _state.container = container;
+
+  renderSkeletons(container);
+  loadSettings();
+}
+
+export function mount(container) {
+  // Called after render() if the router calls mount separately
+  if (container && !_state.container) {
+    _state.container = container;
+  }
+  if (!_state.loading && _state.container) {
+    renderSettingsPage(_state.container);
+  }
+}
+
+export function destroy() {
+  _state.destroyed = true;
+  if (_state.saveTimer) {
+    clearTimeout(_state.saveTimer);
+    _state.saveTimer = null;
+  }
+  _state.rebindingKey = null;
+  _state.container = null;
+  _state.settings = null;
+  _state.originalSettings = null;
+
+  // Remove preview styles
+  if (_state.previewStyles) {
+    _state.previewStyles.remove();
+    _state.previewStyles = null;
+  }
+}
+
+/* ── Router-compatible default export ───────────────────────────────────── */
+
+export default function createPage(_routeInfo) {
+  return {
+    render() {
+      return '<div id="settings-root"></div>';
+    },
+    mount(container) {
+      const root = container.querySelector('#settings-root') || container;
+      render(root);
+    },
+    destroy,
+  };
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fiona CAD</title>
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+  <!-- Toolbar -->
+  <div id="toolbar"></div>
+
+  <!-- Navigation tabs -->
+  <div id="nav-bar">
+    <button class="nav-btn active" data-panel="viewport" title="3D Viewport">
+      🎯 3D View
+    </button>
+    <button class="nav-btn" data-panel="agent" title="Agent Supervisor Console">
+      🤖 Agent
+    </button>
+  </div>
+
+  <!-- Agent panel (shown when agent tab is active) -->
+  <div id="panel-agent" class="panel hidden">
+    <!-- AgentConsole renders here -->
+  </div>
+
+  <!-- Main content area: left-panel | viewport | right-panel -->
+  <div id="main-content">
+    <div id="left-panel">
+      <div class="panel-header">Project Tree</div>
+      <div id="project-tree"></div>
+    </div>
+
+    <div id="viewport">
+      <div id="viewport-info">
+        <span id="viewport-coords"></span>
+      </div>
+    </div>
+
+    <div id="right-panel">
+      <div class="panel-header">Properties</div>
+      <div id="property-editor"></div>
+    </div>
+  </div>
+
+  <!-- Bottom panel (console) -->
+  <div id="bottom-panel">
+    <div class="panel-header">Console</div>
+    <div id="console-panel"></div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

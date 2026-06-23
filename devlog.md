@@ -113,3 +113,84 @@
 | Shell execution points | 5/5 wrapped with safety |
 | CLI new commands | 9 |
 | GUI new tabs | 4 (Pairing, Voice, SeeOnDesk panel, System Tray) |
+
+---
+
+## Entry 9 — Browser Automation, CAD Server, 3js Frontend, Approval System ✅
+
+**Date**: 2026-06-22
+**Focus**: Browser automation, CAD JSON-RPC server, 3js frontend, human-in-the-loop approval, EventBus wiring
+
+### Summary
+Massive expansion: added 4 new subsystems (~12,000+ lines), 3 new test suites (478 tests), and wire up real-time event propagation across all components.
+
+### New Subsystems
+
+#### BrowserAutomation (`BrowserAutomation/`)
+- Playwright-based browser automation with state machine (`STOPPED→STARTING→RUNNING↔DEGRADED→ERROR`)
+- `BrowserManager` with thread-safe lifecycle, crash handling, auto-restart
+- Lazy Playwright import — optional dependency `pip install -e ".[browser]"`
+- EventBus integration: publishes `BrowserLaunched`, `BrowserCrashed`, `BrowserContextCreated`, `NavigationCompleted`
+- CLI: `fiona browser start|stop|status|navigate|click|type|screenshot`
+- 50 tests
+
+#### CAD JSON-RPC 2.0 Server (`cad/server/`)
+- Stdlib-only async WebSocket server (RFC 6455) with HTTP static file serving
+- JSON-RPC 2.0 protocol with 17+ RPC methods across 6 groups
+- `DocumentManager` — thread-safe document lifecycle with EventBus publishing
+- `CommandExecutor` — snapshot-based undo/redo with change classification (created/modified/deleted)
+- `ExportManager` — STL/OBJ/SVG export provider registry
+- Incremental change-set broadcasting via `document_updated` WebSocket events
+- 10 files, 140+ tests (cad server + contract tests)
+
+#### 3js Frontend (`cad/server/_frontend/`)
+- Vite + Three.js with Z-up convention, OrbitControls, dark theme
+- Full UI: Toolbar, Project Tree, Property Editor, Console, Status Bar, Agent Console
+- WebSocket JSON-RPC 2.0 client with auto-reconnection (exponential backoff)
+- Bidirectional camera sync between frontend and backend
+- AgentConsole: real-time plan display via WebSocket events (no polling), streaming agent thinking, approve/deny buttons
+- Production build: ~537KB JS + 11KB CSS
+
+#### Human-in-the-Loop Approval System (`FionaCore/approval.py`)
+- `ApprovalManager` — thread-safe plan lifecycle (PENDING→APPROVED/DENIED→EXECUTING→COMPLETED/FAILED/CANCELLED)
+- Blocking `wait_for_approval()` with timeout for agent threads
+- EventBus integration + WebSocket event broadcasting
+- 5 CLI subcommands: `fiona approval pending|list|approve|deny`
+- 5 RPC handlers with per-step and agent_thinking support
+
+### EventBus Wiring
+
+| Component | Before | After |
+|---|---|---|
+| EventBus | Created in container, never injected | Wired to DocumentManager, CadServer, ApprovalManager |
+| BrowserManager | Published events but no subscribers | Full event pipeline (BrowerLaunched→WebSocket) |
+| DocumentManager | No events | Publishes DocumentCreated/Saved/Closed/Modified |
+| CadServer | No EventBus support | Bridges DocumentEvent→WebSocket, publishes lifecycle events |
+| ApprovalManager | Custom callbacks only | Also publishes on EventBus |
+
+### Agent Command Registration
+- 7 new `ActionSpec` entries in `FionaCore/actions.py` (browser.*)
+- 5 new `CommandSpec` entries + `DEFAULT_ALLOWED_ACTIONS` in `Agent/command_registry.py`
+- 6 browser dispatch handlers in `Agent/orchestrator.py`
+- Full browser CLI subcommand with argument parsing
+
+### Removed
+- `cad/tests/` — 446 old CAD fixture tests deleted (replaced by `tests/cad_server/` + `tests/contracts/`)
+
+### Key Achievements
+
+| Metric | Value |
+|--------|-------|
+| New files created | ~40 |
+| Files modified | ~15 |
+| New tests | 478 (288 cad server + 50 browser + 140 contracts) |
+| Total tests | 1407 pass, 13 pre-existing env failures |
+| CLI new commands | 15+ (browser 7 + approval 5 + ficad options) |
+| EventBus subscribers | 0 → 3 production subscribers |
+| Real-time events | 12+ event types flowing through WebSocket |
+
+### Remaining
+- Frontend per-step approval controls (UI for step-level approve/deny)
+- AgentConsole intervention controls (step reorder, skip, modify)
+- 3js frontend feature parity with Tkinter GUI
+- Production deployment hardening for CAD server

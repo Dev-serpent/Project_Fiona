@@ -18,6 +18,7 @@ from Agent.chat_store import ChatStore
 from Agent.ollama import OllamaClient, OllamaError
 from Agent.orchestration import ForemanAgent, ForemanConfig
 from Agent.personality import PersonalityRegistry
+from Agent.query_detector import QueryDetector, QueryOrTask
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +237,30 @@ class ForemanChatHandler:
             Called when the round-trip finishes successfully.  The
             caller **must** marshal this onto the GUI thread.
         """
-        if self._foreman_enabled or force_foreman:
+        use_foreman = self._foreman_enabled or force_foreman
+        if use_foreman:
+            # Before committing to the full orchestration pipeline, check
+            # whether the user's input is a simple conversational query
+            # (greeting, chit-chat, simple question).  If so, skip the
+            # Foreman entirely — a single LLM call is sufficient and avoids
+            # wasting tokens on planning/decomposition.
+            if not force_foreman and QueryDetector.classify(message) is QueryOrTask.QUERY:
+                # Route through the simple AgentChatHandler with a
+                # conversational system prompt (no ReAct/JSON output).
+                personality_name = self._session_personality.get(session_id, "general")
+                p = self._registry.get(personality_name)
+                conv_prompt = p.conversational_system_prompt if p.conversational_system_prompt is not None else p.system_prompt
+                self._simple_handler.send_message(
+                    session_id=session_id,
+                    message=message,
+                    token=token,
+                    system_prompt_override=conv_prompt,
+                    on_message=on_message,
+                    on_error=on_error,
+                    on_complete=on_complete,
+                )
+                return
+
             personality = self._session_personality.get(session_id, "general")
             thread = threading.Thread(
                 target=self._send_foreman_thread,

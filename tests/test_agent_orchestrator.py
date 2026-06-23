@@ -56,7 +56,7 @@ class AgentOrchestratorTests(unittest.TestCase):
         self.mock_client.ask.return_value = '{"thought": "Task complete!", "action": null}'
         
         result = self.orchestrator.run_goal("dummy goal")
-        self.assertEqual(result, "Task complete!")
+        self.assertEqual(result, "No actions planned. Task complete!")
         self.assertEqual(len(self.orchestrator.history), 1)
 
 if __name__ == "__main__":

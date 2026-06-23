@@ -100,6 +100,57 @@ class SafeActionRouter:
             action_scope=action_scope,
         )
 
+    def run_with_fallback(
+        self,
+        name: str,
+        *,
+        source: str = "agent",
+        permission_profile: str = "local",
+        dry_run: bool = False,
+        timeout_seconds: float = 30.0,
+        record_history: bool = True,
+        sender_id: str | None = None,
+        action_scope: str | None = None,
+    ) -> ActionResult:
+        """Run the action via the normal router; if unknown, fallback to CLI.
+
+        The ReAct loop uses this to guarantee that even if a tool is not
+        present in ``ActionRouter`` the agent can still attempt execution via
+        the generic ``fiona.cli`` entry point.  This returns a proper
+        ``ActionResult`` so the observation can be fed back to the LLM.
+        """
+        try:
+            return self.run(
+                name,
+                source=source,
+                permission_profile=permission_profile,
+                dry_run=dry_run,
+                timeout_seconds=timeout_seconds,
+                record_history=record_history,
+                sender_id=sender_id,
+                action_scope=action_scope,
+            )
+        except ValueError:
+            # Fallback: invoke the generic CLI for the unknown command
+            import subprocess, sys, json
+            args = [sys.executable, "-m", "fiona.cli", name]
+            completed = subprocess.run(
+                args, capture_output=True, text=True, check=False
+            )
+            ok = completed.returncode == 0
+            detail = completed.stdout if ok else completed.stderr
+            return ActionResult(
+                ok=ok,
+                action=name,
+                detail=detail,
+                command=tuple(args),
+                returncode=completed.returncode,
+                source="cli-fallback",
+                timestamp="",
+                duration_ms=0,
+                dry_run=False,
+            )
+
     def list_allowed_actions(self) -> list[dict[str, Any]]:
         """Return the intersection of :meth:`ActionRouter.list_actions`
         and the personality's *allowed_tools*.

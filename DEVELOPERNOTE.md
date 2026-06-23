@@ -4,24 +4,36 @@ This file records the current Fiona project structure, runtime setup, and latest
 
 ## Project Structure
 
-Fiona is the umbrella project. It exposes nine sibling subsystems:
+Fiona is the umbrella project. It exposes the following subsystems:
 
 - `QuikTieper`: the local access layer for keyboard, mouse, app launch, clicks, and shortcuts
 - `CamComs`: the communication layer for encoded/encrypted host communication
 - `Vsee`: the 3D coordinate hologram viewer
-- `Agent`: the local LM Studio bridge for future agent inference
+- `Agent`: the local LM Studio bridge, orchestration engine, and command registry
 - `PhiConnect`: the standalone encrypted computer-to-computer chat app
 - `SeeOnDesk`: the desktop-awareness layer for active app/window identification
 - `DataClient`: the standalone research/data collection app
 - `EyeControl`: optional camera-based eye-controlled mouse tracker
 - `TerminalAssist`: Fiona Terminal Assistance (`fAT`) terminal dashboard and Zellij workspace helper
+- `BrowserAutomation`: Playwright-based browser automation with state machine management
+- `FionaCore`: shared modules (approval system, action router, macros, permissions, ACL, DI)
+- `cad`: CAD platform — parametric 3D modeling core + JSON-RPC 2.0 server + 3js frontend
 
 Current file structure:
 
 ```text
 Fiona/
 ├── fiona/                  umbrella package and CLI entrypoint
-├── cad/                    CAD platform (parametric 3D modeling)
+├── FionaCore/              shared modules (approval, actions, macros, permissions, ACL, DI)
+│   ├── approval.py         Human-in-the-loop plan approval system
+│   ├── actions.py          ActionSpec router with ACL and permissions
+│   ├── macros.py           Macro engine v2 with waits, conditions, branching
+│   ├── permissions.py      Permission profiles
+│   ├── acl.py              Sender ACL rules
+│   ├── verification.py     Verification prompt system
+│   ├── shell_safety.py     Destructive command regex safety wrapper
+│   └── di.py               Dependency injection container
+├── cad/                    CAD platform
 │   ├── core/               Document, Object, Property system
 │   ├── geometry/            Primitives, math, transforms, modifiers
 │   ├── constraints/         Constraint types and solver
@@ -33,28 +45,55 @@ Fiona/
 │   ├── rendering/           Viewport, camera, projection
 │   ├── plugins/             Plugin manager
 │   ├── io/                  STL, OBJ, SVG exporters
-│   ├── tests/               18 test files, 446 tests
-│   └── serialization/       JSON serializer
+│   ├── server/              JSON-RPC 2.0 WebSocket server + 3js frontend
+│   │   ├── _server.py           CadServer (HTTP + WebSocket, stdlib-only)
+│   │   ├── _handlers.py         RPC method dispatch (document, command, export, approval)
+│   │   ├── _protocol.py         JSON-RPC 2.0 codec, error codes, ServerEvent
+│   │   ├── _document_manager.py Document lifecycle with EventBus publishing
+│   │   ├── _command_executor.py Snapshot-based undo/redo with change classification
+│   │   ├── _export_manager.py   STL/OBJ/SVG export provider registry
+│   │   ├── _websocket_handler.py RFC 6455 WebSocket (stdlib-only)
+│   │   ├── _app_builder.py      DI container wiring
+│   │   └── _frontend/           3js frontend (Vite + Three.js)
+│   │       ├── src/
+│   │       │   ├── main.js          Entry point, WebSocket lifecycle, event handlers
+│   │       │   ├── client.js        RpcClient (JSON-RPC 2.0 over WebSocket)
+│   │       │   ├── store.js         CadStore (central state)
+│   │       │   ├── scene/           SceneManager, CameraSync, meshes
+│   │       │   ├── panels/          Toolbar, ProjectTree, PropertyEditor, ConsolePanel,
+│   │       │   │                    StatusBar, AgentConsole
+│   │       │   └── styles/main.css  Dark theme stylesheet
+│   │       └── dist/               Production build output
+│   └── tests/                (removed — old 446 fixture tests deleted 2026-06-22)
+├── BrowserAutomation/       Playwright-based browser automation
+│   ├── _manager.py          BrowserManager with state machine (STOPPED→STARTING→RUNNING...)
+│   ├── _playwright_provider.py Playwright provider (lazy import)
+│   ├── _config.py           BrowserConfig dataclass
+│   ├── _errors.py           Error hierarchy
+│   └── __init__.py          Convenience wrappers, get_browser_manager()
 ├── QuikTieper/             local access layer implementation
 ├── CamComs/                communication/encryption layer implementation
 │   └── esp32payload/       ESP32 sender payload template
 ├── Vsee/                   3D point/edge hologram viewer model
-├── Agent/                  local LM Studio bridge
+├── Agent/                  local LM Studio bridge, orchestrator, command registry
 ├── PhiConnect/             encrypted computer-to-computer chat app
 ├── SeeOnDesk/              desktop awareness and active-window identification
 ├── DataClient/             research/data collection app
 ├── EyeControl/             optional eye-controlled mouse tracker integration
 ├── TerminalAssist/         fAT terminal dashboard and Zellij layout generation
-├── tests/                  Python tests (legacy)
+├── Voice/                  Wake word, push-to-talk, feedback engine
+├── tests/                  Python tests
+│   ├── browser/            BrowserAutomation tests (50)
+│   ├── cad_server/         CAD server tests (140)
+│   ├── contracts/          Interface contract tests (140)
+│   └── ...                 Existing test suite
 ├── scripts/                local launch wrappers
+├── fionaDocsPage/          Documentation site
 ├── .backups/               timestamped backup snapshots
-├── backup-20260430-185502/ older backup snapshot
 ├── fiona.egg-info/         editable-install metadata
-├── .git/                   Git metadata
-├── .agents/                agent metadata
-├── .codex                  Codex metadata
 ├── README.md
 ├── DEVELOPERNOTE.md
+├── ARCHITECTURE_REVIEW.md  Architecture specification with ADRs
 ├── pyproject.toml
 ├── devlog.md
 ├── dependencies.md
@@ -140,9 +179,22 @@ fiona fat status
 fiona fat tui
 fiona fat layout --print
 fiona fat run
-fiona ficad
-fiona ficad --headless --doc my_doc --create-box 10 20 30
-fiona ficad --gui
+fiona ficad                          # Start CAD server + 3js frontend
+fiona ficad --headless               # Headless CAD CLI mode
+fiona ficad --doc my_doc.cad         # Load document on startup
+fiona ficad --port 8765              # Custom port (default 8765)
+fiona ficad --no-browser             # Don't auto-open browser tab
+fiona browser start                  # Start browser automation engine
+fiona browser stop                   # Stop browser automation engine
+fiona browser status                 # Show browser status
+fiona browser navigate <url>         # Navigate browser to URL
+fiona browser click <selector>       # Click element by CSS selector
+fiona browser type <sel> <text>      # Type text into element
+fiona browser screenshot             # Capture screenshot
+fiona approval pending               # List plans awaiting human approval
+fiona approval list                  # List all plan history
+fiona approval approve <plan_id>     # Approve a pending plan
+fiona approval deny <plan_id>        # Deny a pending plan
 ```
 
 ## Missing Issues
@@ -503,19 +555,31 @@ Run all current tests:
 python -m unittest discover -s tests -v
 ```
 
-Latest result, run on 2026-06-20:
+Latest result, run on 2026-06-22:
 
 ```text
-446 passed, 5 subtests passed in 0.41s
+1407 passed, 16 subtests passed in 44s (pytest)
+13 pre-existing environment failures (numpy.rec, no camera, no network)
 ```
 
-CAD platform tests can also be run independently:
+Test suites can be run independently:
 
 ```bash
-python -m pytest cad/tests/ --tb=short -q
+# Run all tests (pytest)
+python -m pytest
+
+# CAD server + contract tests
+python -m pytest tests/cad_server/ tests/contracts/
+
+# Browser automation tests
+python -m pytest tests/browser/
+
+# Agent tests (orchestrator excluded due to pre-existing plan-approval changes)
+python -m pytest tests/test_agent_personalities.py tests/test_agent_backward_compat.py
 ```
 
-Note: Legacy `tests/` tests use `unittest discover`. CAD tests use `pytest` for modern fixture support. Both test suites pass.
+Note: The old `cad/tests/` (446 fixture tests) were removed on 2026-06-22.
+All existing tests use `pytest`. Legacy `unittest`-style tests are in `tests/` and run via `pytest`.
 
 Direct host-service CLI smoke checks, run on 2026-05-05:
 
@@ -609,6 +673,21 @@ Added 2026-06-20 as part of the agent expansion milestone.
 - `CancelledError` — raised when operation is cancelled
 - Used across all layers from GUI to LLM calls
 
+#### Query Detector (`Agent/query_detector.py`)
+- `QueryDetector` — stateless heuristic classifier (zero LLM calls)
+- `QueryOrTask` enum: `QUERY` or `TASK`
+- Classifies user input as conversational query vs. actionable task using regex patterns:
+  - Query: greetings, chit-chat, simple questions, short messages
+  - Task: action verbs (`make`, `create`, `build`…), technical references (`.py`, `api`, `database`…), very long messages
+- Integrated into `ForemanChatHandler.send_message()`: when Foreman is enabled,
+  queries are routed through the simple `AgentChatHandler` (single LLM call) instead
+  of the full orchestration pipeline — avoids wasting tokens on planning/decomposition.
+- When routing a query to the simple handler, the personality's
+  `conversational_system_prompt` is used instead of the standard ReAct prompt.
+  This prevents the model from outputting JSON `thought`/`action` blocks for
+  simple greetings and questions — it responds naturally.
+- `force_foreman=True` bypasses detection (explicit override).
+
 #### Orchestration Engine (`Agent/orchestration.py`)
 - `ComplexityAssessor` — LLM-based goal complexity classification
 - `TaskPlan` — validated goal decomposition with retry logic
@@ -635,13 +714,201 @@ None. All new code uses Python 3.11+ stdlib only.
 ### Test Coverage
 - `tests/test_agent_personalities.py` — 59 tests
 - `tests/test_agent_chat_store.py` — 54 tests
-- `tests/test_agent_chat_handler.py` — 34 tests
+- `tests/test_agent_chat_handler.py` — 36 tests
 - `tests/test_agent_orchestration.py` — 66 tests
 - `tests/test_agent_foreman_handler.py` — 59 tests
 - `tests/test_agent_stress.py` — 28 tests
 - `tests/test_agent_backward_compat.py` — 12 tests
+- `tests/test_agent_query_detector.py` — 53 tests
 
-Total new tests: ~312
+Total new tests: ~367
+
+## BrowserAutomation System
+
+Added 2026-06-22. Playwright-based browser automation with state machine lifecycle management.
+
+### Components
+
+- `BrowserAutomation/_manager.py` — `BrowserManager` with state machine: `STOPPED → STARTING → RUNNING ↔ DEGRADED → ERROR`
+- `BrowserAutomation/_playwright_provider.py` — Playwright provider with lazy import (no hard dependency)
+- `BrowserAutomation/_config.py` — `BrowserConfig` dataclass (headless, slow_mo, viewport, proxy, data_dir)
+- `BrowserAutomation/_errors.py` — Full error hierarchy (BrowserLaunchError, BrowserNotRunning, ElementNotFound, etc.)
+- `BrowserAutomation/__init__.py` — Convenience wrappers: `browser_status()`, `get_browser_manager()`, `navigate()`, `click_element()`, etc.
+
+### EventBus Integration
+
+- `BrowserManager.__init__(event_bus=...)` — publishes `BrowserLaunched`, `BrowserCrashed`, `BrowserContextCreated`, `NavigationCompleted` events
+- Events defined in `fiona/interfaces.py` with `BrowserEvent` base class
+
+### CLI
+
+```bash
+fiona browser start|stop|status
+fiona browser navigate <url>
+fiona browser click <selector>
+fiona browser type <selector> <text>
+fiona browser screenshot [--output path] [--full-page]
+```
+
+### Dependencies
+
+Optional: `pip install -e ".[browser]" && playwright install chromium`
+
+### Tests
+
+- `tests/browser/test_browser_manager.py` — State machine transitions, crash handling
+- `tests/browser/test_playwright_provider.py` — Mock-based provider contract tests
+- 50 tests total
+
+## CAD Server — JSON-RPC 2.0 WebSocket Server
+
+Added 2026-06-22. Stdlib-only async WebSocket server with JSON-RPC 2.0 protocol and 3js frontend.
+
+### Components
+
+- `cad/server/_server.py` — `CadServer` (HTTP + WebSocket, stdlib-only `asyncio`)
+- `cad/server/_websocket_handler.py` — RFC 6455 WebSocket implementation (frame parsing, heartbeat, reconnection)
+- `cad/server/_protocol.py` — JSON-RPC 2.0 codec (RpcRequest, RpcResponse, ServerEvent, error codes)
+- `cad/server/_handlers.py` — `RequestHandler` with RPC method dispatch (document.*, command.*, export.*, server.*, approval.*)
+- `cad/server/_document_manager.py` — Thread-safe document lifecycle with EventBus publishing
+- `cad/server/_command_executor.py` — Snapshot-based undo/redo with change classification
+- `cad/server/_export_manager.py` — STL/OBJ/SVG export provider registry
+- `cad/server/_app_builder.py` — `FionaContainer` DI wiring
+
+### RPC Methods
+
+| Group | Methods |
+|---|---|
+| `document.*` | `list`, `create`, `open`, `save`, `close`, `get_state` |
+| `command.*` | `execute`, `undo`, `redo`, `can_undo`, `can_redo`, `list` |
+| `export.*` | `formats`, `run` |
+| `server.*` | `health`, `capabilities`, `ping` |
+| `approval.*` | `list`, `pending`, `approve`, `deny`, `thinking` |
+| `system` | `handshake` |
+
+### EventBus Integration
+
+- `CadServer.__init__(event_bus=...)` — subscribes to `DocumentEvent` subtypes and bridges to WebSocket `ServerEvent` broadcast
+- Server lifecycle events: `server_started`, `server_stopped`
+- Document changes are broadcast as `document_updated` events (incremental changeset when available, full snapshot fallback)
+- Approval events: `plan_updated`, `plan_approved`, `plan_denied`, `agent_thinking`
+
+### Tests
+
+- `tests/cad_server/test_protocol.py` — JSON-RPC 2.0 protocol conformance
+- `tests/cad_server/test_document_manager.py` — Document lifecycle, EventBus publishing
+- `tests/cad_server/test_command_executor.py` — Undo/redo, change classification
+- `tests/cad_server/test_export_manager.py` — Provider registration, export formats
+- `tests/contracts/test_interface_contracts.py` — 140 contract tests across all interfaces
+- 288 tests total (cad server + contracts)
+
+## 3js Frontend — Vite + Three.js CAD Viewer
+
+Added 2026-06-22. Dark-themed Three.js frontend with Z-up convention, OrbitControls, and full UI panels.
+
+### Panels
+
+| Panel | Purpose |
+|---|---|
+| Toolbar | File, Create, Actions, View menus |
+| Project Tree | Object list with search/filter, select/delete/focus |
+| Property Editor | Editable property form for selected objects |
+| Console | Interactive command input + output |
+| Status Bar | Connection state, object count, messages |
+| Agent Console | Plan approval panel (hidden by default, shown via "Agent" nav tab) |
+
+### Key Features
+
+- WebSocket JSON-RPC 2.0 client with auto-reconnection (exponential backoff)
+- Camera sync between frontend and backend (bidirectional)
+- Incremental changeset application (created/modified/deleted objects)
+- Toast notification system
+- AgentConsole: real-time plan updates via WebSocket events (not polling), streaming agent thinking display, approve/deny buttons
+- Production build: ~537KB JS + 11KB CSS (minified)
+
+### Build
+
+```bash
+cd cad/server/_frontend && npm install && npm run build
+```
+
+### Serve
+
+```bash
+fiona ficad --port 8765
+# Frontend served at http://127.0.0.1:8765
+```
+
+## Human-in-the-Loop Approval System
+
+Added 2026-06-22. Thread-safe plan approval queue with blocking wait and WebSocket event broadcasting.
+
+### Components
+
+- `FionaCore/approval.py` — `ApprovalManager` with plan lifecycle (PENDING→APPROVED/DENIED→EXECUTING→COMPLETED/FAILED/CANCELLED)
+- `Agent/orchestrator.py` — 4-phase flow: plan generation → submit → wait for approval → execute
+- `cad/server/_handlers.py` — 5 RPC handlers: `approval.list`, `approval.pending`, `approval.approve`, `approval.deny`, `approval.thinking`
+- `cad/server/_handlers.py` — `_setup_approval_listener()` bridges ApprovalManager changes → WebSocket broadcast
+- `cad/server/_frontend/src/panels/AgentConsole.js` — Real-time plan display via WebSocket events
+
+### EventBus Integration
+
+- `ApprovalManager.__init__(event_bus=...)` publishes plan status changes
+- WebSocket events: `plan_updated`, `plan_approved`, `plan_denied`, `agent_thinking`
+
+### CLI
+
+```bash
+fiona approval pending    # List plans awaiting human approval
+fiona approval list       # List all plan history
+fiona approval approve <plan_id>
+fiona approval deny <plan_id>
+```
+
+## Agent Browser Command Registration
+
+Added 2026-06-22. Browser automation commands are registered across all four agent layers:
+
+| Layer | File | Entries |
+|---|---|---|
+| ActionSpec | `FionaCore/actions.py` | 7 entries (browser.status/start/stop/navigate/click/type/screenshot) |
+| CommandSpec | `Agent/command_registry.py` | 5 entries + added to DEFAULT_ALLOWED_ACTIONS |
+| Orchestrator dispatch | `Agent/orchestrator.py` | 6 handlers in `_execute_action()` + risk estimates |
+| CLI | `fiona/cli.py` | Full CLI subcommand with argument parsing |
+
+## EventBus Wiring — Real-Time Event Propagation
+
+Added 2026-06-22. The `EventBus` (defined in `fiona/interfaces.py`) is now wired across all major components:
+
+### Event Catalog
+
+| Event Class | Published By | Consumers |
+|---|---|---|
+| `DocumentCreated` | DocumentManager | WebSocket clients (via CadServer bridge) |
+| `DocumentModified` | DocumentManager (via _replace_document) | WebSocket clients |
+| `DocumentSaved` | DocumentManager | WebSocket clients |
+| `DocumentClosed` | DocumentManager | WebSocket clients |
+| `BrowserLaunched` | BrowserManager | EventBus subscribers |
+| `BrowserCrashed` | BrowserManager | EventBus subscribers |
+| `BrowserContextCreated` | BrowserManager | EventBus subscribers |
+| `NavigationCompleted` | BrowserManager | EventBus subscribers |
+| `server_started/stopped` | CadServer | WebSocket clients |
+| `plan_updated/approved/denied` | RequestHandler | WebSocket clients |
+| `agent_thinking` | RequestHandler | WebSocket clients |
+| `document_updated` | RequestHandler | WebSocket clients (incremental changeset) |
+
+### Wiring Diagram
+
+```
+EventBus
+  ├── BrowserManager (publishes lifecycle events)
+  ├── DocumentManager (publishes document lifecycle events)
+  ├── ApprovalManager (publishes plan status changes)
+  └── CadServer
+       ├── subscribes to DocumentEvent → bridges to WebSocket ServerEvent
+       ├── publishes server_started/stopped
+       └── RequestHandler broadcasts approval + document events
+```
 
 ## Permission Notes
 

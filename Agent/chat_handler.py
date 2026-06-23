@@ -101,21 +101,23 @@ class AgentChatHandler:
         on_message: Callable[[str, str], None],
         on_error: Callable[[str], None],
         on_complete: Callable[[], None],
+        system_prompt_override: str | None = None,
     ) -> None:
         """Send *message* in a **daemon thread**.
 
         The call flow inside the worker thread:
 
-        1. ``token.raise_if_cancelled()``
-        2. Store ``"user"`` message in :class:`ChatStore`
-        3. ``on_message("user", message)``
-        4. Build context window via :meth:`ChatStore.get_context_window`
-        5. Look up the session's :class:`Personality`
-        6. Call :meth:`OllamaClient.ask` with the personality's
-           ``system_prompt``
-        7. Store ``"agent"`` response in :class:`ChatStore`
-        8. ``on_message("agent", response)``
-        9. ``on_complete()``
+         1. ``token.raise_if_cancelled()``
+         2. Store ``"user"`` message in :class:`ChatStore`
+         3. ``on_message("user", message)``
+         4. Build context window via :meth:`ChatStore.get_context_window`
+         5. Look up the session's :class:`Personality`
+         6. Call :meth:`OllamaClient.ask` with the effective system prompt
+            (*system_prompt_override* if given, otherwise the personality's
+            ``system_prompt``)
+         7. Store ``"agent"`` response in :class:`ChatStore`
+         8. ``on_message("agent", response)``
+         9. ``on_complete()``
 
         If a :class:`CancelledError` is caught the message ``"Operation
         cancelled"`` is stored with role ``"cancelled"`` and
@@ -144,6 +146,12 @@ class AgentChatHandler:
             Called from the worker thread when the round-trip finishes
             successfully.  The caller **must** marshal this onto the
             GUI thread.
+        system_prompt_override:
+            If provided, this string is used as the system prompt
+            instead of the personality's ``system_prompt``.  Used by
+            :class:`ForemanChatHandler` when the :class:`QueryDetector`
+            classifies a message as a conversational query — avoids
+            wasting tokens on ReAct-style planning.
         """
         personality = self._session_personality.get(session_id, "general")
 
@@ -157,6 +165,7 @@ class AgentChatHandler:
                 on_error,
                 on_complete,
                 personality,
+                system_prompt_override,
             ),
             daemon=True,
         )
@@ -171,6 +180,7 @@ class AgentChatHandler:
         on_error: Callable[[str], None],
         on_complete: Callable[[], None],
         personality: str,
+        system_prompt_override: str | None = None,
     ) -> None:
         """Worker thread body for :meth:`send_message`."""
         try:
@@ -197,10 +207,14 @@ class AgentChatHandler:
             # Build prompt from context
             full_prompt = self._format_context(context_messages)
 
-            # Step 6 — call LLM
+            # Step 6 — call LLM.
+            # Use system_prompt_override if provided (e.g. for conversational
+            # queries detected by QueryDetector), otherwise use the personality's
+            # standard ReAct-style system_prompt.
+            system = system_prompt_override if system_prompt_override is not None else p.system_prompt
             response = self._client.ask(
                 prompt=full_prompt,
-                system_prompt=p.system_prompt,
+                system_prompt=system,
             )
 
             # Re-check cancellation before persisting the response

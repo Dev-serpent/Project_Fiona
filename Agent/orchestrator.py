@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from Agent import OllamaClient, command_registry
+from Agent.personality import PersonalityRegistry
 from FionaCore import ActionRouter, ActionResult
+from FionaCore.approval import (
+    ApprovalManager, PlannedStep, PlanStatus,
+    get_approval_manager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +29,32 @@ class AgentOrchestrator:
     Manages the autonomous execution loop for Fiona's workstation assistant.
     Uses an LLM to select and execute tools from the command registry.
     """
-    def __init__(self, client: OllamaClient | None = None):
+    def __init__(self, client: OllamaClient | None = None,
+                 approval_manager: ApprovalManager | None = None,
+                 personality_name: str | None = None):
         self.client = client or OllamaClient()
         self.router = ActionRouter()
         self.history: List[AgentTurn] = []
         self.max_turns = 10
+        self.approval_manager = approval_manager or get_approval_manager()
+        self._personality_name = personality_name  # None = use hardcoded prompt
 
     def run_goal(self, goal: str) -> str:
-        """Attempt to achieve a user goal through a series of actions."""
+        """Attempt to achieve a user goal through human-approved actions."""
         self.history = []
         
         system_prompt = self._build_system_prompt()
-        current_prompt = f"Goal: {goal}\n\nThink about what to do first."
-
+        
+        # Phase 1: Generate plan (think only, don't execute yet)
+        plan_steps = []
+        
         for turn_idx in range(self.max_turns):
+            current_prompt = (
+                f"Goal: {goal}\n\n"
+                f"Plan so far: {self._format_plan_steps(plan_steps)}\n\n"
+                f"What is the next step? Think step by step."
+            )
+            
             response_text = self.client.ask(
                 current_prompt,
                 system_prompt=system_prompt,
@@ -45,24 +62,82 @@ class AgentOrchestrator:
             
             turn = self._parse_response(response_text)
             self.history.append(turn)
-
-            if not turn.action_name:
-                # Agent thinks it's done or can't proceed
-                return turn.thought
-
-            # Execute action
-            observation = self._execute_action(turn.action_name, turn.action_input or {})
-            turn.observation = observation
             
-            # Update prompt for next turn
-            current_prompt = f"Observation from {turn.action_name}: {observation}\n\nWhat is your next thought or action?"
-
-        return "Goal could not be completed within the turn limit."
+            if not turn.action_name:
+                # Agent thinks it's done planning
+                break
+            
+            plan_steps.append(PlannedStep(
+                step_number=len(plan_steps) + 1,
+                action=turn.action_name,
+                params=turn.action_input or {},
+                reasoning=turn.thought,
+                risk=self._estimate_risk(turn.action_name),
+            ))
+            
+            if len(plan_steps) >= self.max_turns:
+                break
+        
+        if not plan_steps:
+            return "No actions planned. " + (self.history[-1].thought if self.history else "")
+        
+        # Phase 2: Submit for human approval
+        plan_id = self.approval_manager.submit_plan(
+            goal=goal,
+            steps=plan_steps,
+            agent_id="fiona-agent",
+        )
+        
+        # Phase 3: Wait for human decision
+        status = self.approval_manager.wait_for_approval(plan_id, timeout=300)
+        
+        if status != 'approved':
+            plan = self.approval_manager.get_plan(plan_id)
+            reason = plan.get('decision_reason', '') if plan else ''
+            return f"Plan was {status}. {reason}"
+        
+        self.approval_manager.mark_executing(plan_id)
+        
+        # Phase 4: Execute the approved plan
+        observations = []
+        for step in plan_steps:
+            observation = self._execute_action(step.action, step.params)
+            observations.append(f"Step {step.step_number} ({step.action}): {observation}")
+        
+        summary = "\n".join(observations)
+        self.approval_manager.mark_completed(plan_id, summary=summary)
+        
+        return f"Plan completed.\n{summary}"
 
     def _build_system_prompt(self) -> str:
         registry = command_registry()
         commands_str = json.dumps(registry["commands"], indent=2)
         apps_str = json.dumps(registry["apps"], indent=2)
+        tool_section = f"""
+AVAILABLE TOOLS:
+{commands_str}
+
+AVAILABLE APPLICATIONS (use with launch_binding):
+{apps_str}
+
+OUTPUT FORMAT:
+{{
+  "thought": "Deconstruct the user's request. What is the current state? What tool will move us closer to the goal?",
+  "action": "command_name_or_null",
+  "input": {{ "arg": "value" }}
+}}
+
+If the goal is achieved, set "action" to null.
+"""
+
+        # If a personality is set, append tool info after its system prompt
+        if self._personality_name:
+            try:
+                registry = PersonalityRegistry.get_instance()
+                p = registry.get(self._personality_name)
+                return p.system_prompt + "\n\n" + tool_section
+            except KeyError:
+                pass  # fall through to hardcoded prompt
 
         return f"""You are Fiona, a highly advanced local workstation control system. 
 You are NOT a general-purpose AI assistant; you are the SYSTEM OPERATOR.
@@ -107,6 +182,26 @@ If the goal is achieved, set "action" to null.
         except Exception as e:
             return AgentTurn(thought=f"Error parsing agent response: {e}\nRaw: {text}")
 
+    def _format_plan_steps(self, steps: list[PlannedStep]) -> str:
+        if not steps:
+            return "No steps planned yet."
+        return "\n".join(
+            f"  {s.step_number}. {s.action}({s.params}) - {s.reasoning[:100]}"
+            for s in steps
+        )
+
+    def _estimate_risk(self, action_name: str) -> str:
+        """Estimate risk level of an action."""
+        high_risk = {"press", "click", "text", "move", "macro", "browser_eval",
+                     "host.restart", "shell"}
+        medium_risk = {"browser_navigate", "browser_type", "browser_click",
+                       "launch_binding", "dataclient_mine"}
+        if action_name in high_risk:
+            return "high"
+        if action_name in medium_risk:
+            return "medium"
+        return "low"
+
     def _execute_action(self, name: str, params: dict[str, Any]) -> str:
         try:
             logger.info(f"Executing action: {name} with params: {params}")
@@ -133,16 +228,7 @@ If the goal is achieved, set "action" to null.
                     app_name = params.get("name")
                     result = self.router.run(f"launch:{app_name}", source="agent")
                 else:
-                    # For input actions, we can use the same router run logic 
-                    # but since they aren't in default_action_specs, we'll wrap them as CLI calls.
-                    args = self._build_cli_args(name, params)
-                    import subprocess
-                    import sys
-                    completed = subprocess.run(
-                        [sys.executable, "-m", "fiona.cli", *args],
-                        capture_output=True, text=True, check=False
-                    )
-                    return f"Status: {'Success' if completed.returncode == 0 else 'Failed'}\nOutput: {completed.stdout}\nError: {completed.stderr}"
+                    result = self.router.run(f"{name}:{json.dumps(params)}", source="agent")
                 
                 return f"Status: {'Success' if result.ok else 'Failed'}\nOutput: {result.detail}"
 
@@ -182,6 +268,59 @@ If the goal is achieved, set "action" to null.
                 )
                 return f"System Status: {completed.stdout}"
 
+            # 6. Browser Tools
+            if name == "browser_status":
+                from BrowserAutomation import get_browser_manager
+                manager = get_browser_manager()
+                state = manager.state.value
+                return f"Browser state: {state}"
+
+            if name == "browser_navigate":
+                url = params.get("url") or params.get("0", "")
+                if not url:
+                    return "Error: 'url' is required."
+                from BrowserAutomation import get_browser_manager
+                import asyncio
+                manager = get_browser_manager()
+                result = asyncio.run(manager.navigate(url))
+                final_url = getattr(result, "url", url)
+                status = getattr(result, "status_code", None)
+                return f"Navigated to {final_url} (HTTP {status or 'unknown'})"
+
+            if name == "browser_click":
+                selector = params.get("selector") or params.get("0", "")
+                if not selector:
+                    return "Error: 'selector' is required."
+                from BrowserAutomation import get_browser_manager
+                import asyncio
+                manager = get_browser_manager()
+                asyncio.run(manager.click_element(selector))
+                return f"Clicked {selector}"
+
+            if name == "browser_type":
+                selector = params.get("selector") or params.get("0", "")
+                text = params.get("text") or params.get("1", "")
+                if not selector or not text:
+                    return "Error: 'selector' and 'text' are required."
+                from BrowserAutomation import get_browser_manager
+                import asyncio
+                manager = get_browser_manager()
+                asyncio.run(manager.type_text(selector, text))
+                return f"Typed '{text}' into {selector}"
+
+            if name == "browser_screenshot":
+                from BrowserAutomation import get_browser_manager
+                import asyncio
+                import tempfile
+                import os
+                manager = get_browser_manager()
+                tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+                tmp.close()
+                asyncio.run(manager.capture_screenshot(path=tmp.name))
+                size = os.path.getsize(tmp.name)
+                os.unlink(tmp.name)
+                return f"Screenshot captured ({size} bytes)"
+
             return f"Error: Unknown action '{name}'"
 
         except Exception as e:
@@ -205,6 +344,6 @@ If the goal is achieved, set "action" to null.
         return []
 
 
-def run_agent_goal(goal: str) -> str:
-    orchestrator = AgentOrchestrator()
+def run_agent_goal(goal: str, personality: str | None = "controller") -> str:
+    orchestrator = AgentOrchestrator(personality_name=personality)
     return orchestrator.run_goal(goal)

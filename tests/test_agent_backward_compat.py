@@ -18,7 +18,7 @@ class TestBackwardCompat(unittest.TestCase):
         from Agent import OllamaClient
         client = OllamaClient()
         self.assertEqual(client.base_url, "http://localhost:11434/api")
-        self.assertEqual(client.model, "qwen2:1.5b")
+        self.assertEqual(client.model, "qwen3:8b-en")
 
     def test_command_registry_no_args(self) -> None:
         """command_registry() with no args returns identical structure."""
@@ -108,7 +108,7 @@ class TestBackwardCompat(unittest.TestCase):
         self.assertEqual(DEFAULT_OLLAMA_BASE_URL, "http://localhost:11434/api")
 
     def test_command_registry_returns_expected_tools(self) -> None:
-        """command_registry() returns exactly the 13 expected tools."""
+        """command_registry() returns the expected tools."""
         from Agent import command_registry
         result = command_registry()
         names = {c["name"] for c in result["commands"]}
@@ -117,6 +117,8 @@ class TestBackwardCompat(unittest.TestCase):
             "seeondesk_list", "seeondesk_active", "seeondesk_analyze",
             "dataclient_mine", "recall_remember", "recall_search",
             "fiona_status",
+            "browser_status", "browser_navigate", "browser_click",
+            "browser_type", "browser_screenshot",
         }
         self.assertEqual(names, expected)
 

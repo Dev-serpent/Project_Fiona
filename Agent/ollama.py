@@ -24,8 +24,8 @@ _ASK_SENTINEL = object()
 @dataclass(frozen=True)
 class OllamaClient:
     base_url: str = DEFAULT_OLLAMA_BASE_URL
-    model: str = "qwen2:1.5b"
-    timeout_seconds: float = 60.0
+    model: str = "qwen3:8b-en"
+    timeout_seconds: float = 120.0
     personality: Any | None = None  # Agent.personality.Personality | None
 
     def __post_init__(self) -> None:
@@ -48,7 +48,7 @@ class OllamaClient:
         system_prompt: Any = _ASK_SENTINEL,  # str — sentinel detects "not passed"
         image_path: str | Path | None = None,
         temperature: float = 0.3,
-        max_tokens: int = 512,
+        max_tokens: int = 2048,
     ) -> str:
         # Resolve system prompt from personality when caller didn't pass one.
         if system_prompt is _ASK_SENTINEL:

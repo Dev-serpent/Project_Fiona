@@ -242,13 +242,6 @@ class Viewport:
             a = 2 * math.pi * i / segments
             top_verts.append(Vector3(ox + r*math.cos(a), oy + r*math.sin(a), oz + h/2))
             bot_verts.append(Vector3(ox + r*math.cos(a), oy + r*math.sin(a), oz - h/2))
-        for i in range(segments):
-            j = (i + 1) % segments
-            for pair in [(top_verts, top_verts), (bot_verts, bot_verts),
-                         (top_verts, bot_verts)]:
-                p1 = self._project(pair[0][i])
-                p2 = self._project(pair[1][j] if pair is not (top_verts, top_verts) else pair[0][j])
-                # Actually simpler: just draw top circle, bottom circle, and side lines
         # Draw top circle
         for i in range(segments):
             j = (i + 1) % segments

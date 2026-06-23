@@ -599,7 +599,7 @@ class SubAgent:
 
             # Execute the action via SafeActionRouter
             try:
-                result = self._router.run(action_name, source="agent")
+                result = self._router.run_with_fallback(action_name, source="agent")
                 if result.ok:
                     observation = result.detail
                 else:
@@ -632,11 +632,20 @@ class SubAgent:
             parts.append(f"Observation: {observation}")
 
         parts.append("")
+        # ---- Available tools/apps (visible to the LLM) -----------------------
+        from Agent import command_registry
+        registry = command_registry()
+        parts.append("AVAILABLE COMMANDS:")
+        parts.append(json.dumps(registry["commands"], indent=2))
+        parts.append("AVAILABLE APPLICATIONS (use with launch_binding):")
+        parts.append(json.dumps(registry["apps"], indent=2))
+        parts.append("")
+        # ---- Action-selection instruction ------------------------------------
         parts.append(
             "Think step by step. Respond with JSON using ONE of these formats:\n"
             '{"thought": "...", "final": "Your final answer here"}\n'
             "OR\n"
-            '{"thought": "...", "action": "tool_name", "input": {...}}'
+            '{"thought": "...", "action": "<tool_name>", "input": {...}}'
         )
 
         return "\n".join(parts)
