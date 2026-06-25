@@ -1,0 +1,31 @@
+<!-- macros.html — Macro Runner Page Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Macros
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Record and replay workflows
+      </p>
+    </div>
+    {{#if hasTotalCount}}
+    <span class="c-badge c-badge--accent">{{totalCount}} macro{{#unless singular}}s{{/unless}}</span>
+    {{/if}}
+  </div>
+</div>
+
+<div style="position: relative; margin-bottom: var(--space-4); max-width: 360px;">
+  <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
+    {{{searchIcon}}}
+  </span>
+  <input type="text" class="c-input" id="macros-search-input"
+         placeholder="Search macros…"
+         value="{{searchQuery}}"
+         style="padding-left: 32px; height: 34px;"
+         autocomplete="off" />
+</div>
+
+<div id="macros-list">
+  {{{macrosListContent}}}
+</div>

@@ -18,6 +18,7 @@ import {
   skeletonTableRow,
   skeletonChart,
 } from '../js/components/LoadingSkeleton.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -169,7 +170,7 @@ async function loadMetrics() {
     if (!_state.error) {
       _state.error = true;
       _state.errorMessage = err.message || 'Failed to fetch metrics.';
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     }
   }
 }
@@ -288,7 +289,7 @@ function updateMetrics(metrics) {
 
 /* ── HTML Rendering ─────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -302,165 +303,59 @@ function renderPage(container) {
     return;
   }
 
-  const intervalLabel = REFRESH_INTERVALS.find(i => i.value === _state.refreshInterval)?.label || '5s';
   const timeAgoText = _state.lastUpdated
     ? `Updated ${timeAgo(_state.lastUpdated)}`
     : 'Waiting for data…';
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);" id="perf-header">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Performance
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-            Real-time system resource monitoring
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-          <span style="font-size: var(--font-size-xs); color: var(--text-muted);" id="perf-timestamp">
-            ${esc(timeAgoText)}
-          </span>
-          <span style="display: flex; align-items: center; gap: var(--space-1);">
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted);">Interval:</span>
-            <select class="c-select c-select--sm" id="perf-interval"
-                    style="width: auto; min-width: 80px; height: 30px; font-size: var(--font-size-xs); padding: 0 var(--space-3);">
-              ${html.raw(REFRESH_INTERVALS.map((i) => html`
-                <option value="${i.value}" ${_state.refreshInterval === i.value ? 'selected' : ''}>${esc(i.label)}</option>
-              `).join(''))}
-            </select>
-          </span>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="perf-refresh-btn" title="Refresh now">
-            <span class="c-btn__icon">${ICONS.refresh}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+  // Build raw HTML sections
+  const metricCards = renderCpuCard() + renderMemoryCard() + renderDiskCard() + renderNetworkCard();
 
-    <!-- Top Row: 4 Metric Cards -->
-    <div id="perf-metric-cards"
-         style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-5);">
-      ${renderCpuCard()}
-      ${renderMemoryCard()}
-      ${renderDiskCard()}
-      ${renderNetworkCard()}
-    </div>
+  const intervalOptions = REFRESH_INTERVALS.map((i) =>
+    `<option value="${i.value}"${_state.refreshInterval === i.value ? ' selected' : ''}>${esc(i.label)}</option>`
+  ).join('');
 
-    <!-- Middle: Time-Series Graphs -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-5);">
-      <div class="c-card" id="chart-cpu-container">
-        <div class="c-card__header">
-          <span class="c-card__title">CPU Usage</span>
-          <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
-        </div>
-        <div class="c-card__body" style="position: relative;">
-          <canvas id="chart-cpu" style="width: 100%; height: 180px;"></canvas>
-          <div id="chart-cpu-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
-        </div>
-      </div>
-      <div class="c-card" id="chart-memory-container">
-        <div class="c-card__header">
-          <span class="c-card__title">Memory</span>
-          <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
-        </div>
-        <div class="c-card__body" style="position: relative;">
-          <canvas id="chart-memory" style="width: 100%; height: 180px;"></canvas>
-          <div id="chart-memory-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
-        </div>
-      </div>
-      <div class="c-card" id="chart-network-container">
-        <div class="c-card__header">
-          <span class="c-card__title">Network</span>
-          <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
-        </div>
-        <div class="c-card__body" style="position: relative;">
-          <canvas id="chart-network" style="width: 100%; height: 180px;"></canvas>
-          <div id="chart-network-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
-        </div>
-      </div>
-      <div class="c-card" id="chart-combined-container">
-        <div class="c-card__header">
-          <span class="c-card__title">Combined Overview</span>
-          <div style="display: flex; align-items: center; gap: var(--space-2);">
-            ${html.raw([60, 300, 900, 3600].map((r) => html`
-              <button class="c-btn c-btn--sm c-btn--ghost${_state.graphTimeRange === r ? ' c-btn--primary' : ''}"
-                      data-action="time-range" data-range="${r}"
-                      style="font-size: var(--font-size-xxs); padding: 2px 8px;">
-                ${r >= 60 ? Math.floor(r / 60) + 'm' : r + 's'}
-              </button>
-            `).join(''))}
-          </div>
-        </div>
-        <div class="c-card__body" style="position: relative;">
-          <canvas id="chart-combined" style="width: 100%; height: 180px;"></canvas>
-          <div id="chart-combined-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
-        </div>
-      </div>
-    </div>
+  const timeRangeButtons = [60, 300, 900, 3600].map((r) =>
+    `<button class="c-btn c-btn--sm c-btn--ghost${_state.graphTimeRange === r ? ' c-btn--primary' : ''}" data-action="time-range" data-range="${r}" style="font-size: var(--font-size-xxs); padding: 2px 8px;">${r >= 60 ? Math.floor(r / 60) + 'm' : r + 's'}</button>`
+  ).join('');
 
-    <!-- Bottom: Process List -->
-    <div class="c-card">
-      <div class="c-card__header">
-        <span class="c-card__title">Processes</span>
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-          <div class="c-input-wrapper" style="width: 200px;">
-            <span class="c-input-wrapper__icon c-input-wrapper__icon--left">${ICONS.search}</span>
-            <input type="text" class="c-input c-input--sm" id="perf-process-search"
-                   placeholder="Filter by name…"
-                   value="${esc(_state.processSearch)}"
-                   style="padding-left: 32px;">
-          </div>
-          <span style="font-size: var(--font-size-xs); color: var(--text-muted);">
-            ${_state.processTotal} processes
-          </span>
-        </div>
-      </div>
-      <div style="overflow-x: auto;">
-        <table class="c-table" id="perf-process-table">
-          <thead>
-            <tr>
-              ${html.raw(['PID', 'Name', 'CPU%', 'Memory%', 'Status', 'User', ''].map((col, i) => {
-                const sortKey = ['pid', 'name', 'cpu', 'mem', 'status', 'user', ''][i];
-                if (!sortKey) return html`<th style="width: 50px;">Actions</th>`;
-                const isSorted = _state.processSort === sortKey;
-                const arrow = isSorted
-                  ? (_state.processOrder === 'asc' ? ' ▲' : ' ▼')
-                  : '';
-                return html`
-                  <th class="c-table th--sortable${isSorted ? ' th--sorted' : ''}"
-                      data-action="sort-process" data-sort="${sortKey}"
-                      style="cursor: pointer; user-select: none;">
-                    ${esc(col)}${arrow ? html`<span style="margin-left: 2px;">${arrow}</span>` : ''}
-                  </th>
-                `;
-              }).join(''))}
-            </tr>
-          </thead>
-          <tbody id="perf-process-tbody">
-            ${html.raw(renderProcessRows())}
-          </tbody>
-        </table>
-      </div>
-      ${_state.processTotal > PROCESS_PAGE_SIZE ? html`
-        <div class="c-card__footer" style="justify-content: center; gap: var(--space-2);">
-          <button class="c-btn c-btn--sm c-btn--ghost" data-action="page-process" data-page="${_state.processPage - 1}"
-                  ${_state.processPage <= 1 ? 'disabled' : ''}>
-            Previous
-          </button>
-          <span style="font-size: var(--font-size-sm); color: var(--text-muted);">
-            Page ${_state.processPage} of ${Math.ceil(_state.processTotal / PROCESS_PAGE_SIZE)}
-          </span>
-          <button class="c-btn c-btn--sm c-btn--ghost" data-action="page-process" data-page="${_state.processPage + 1}"
-                  ${_state.processPage * PROCESS_PAGE_SIZE >= _state.processTotal ? 'disabled' : ''}>
-            Next
-          </button>
-        </div>
-      ` : ''}
-    </div>
-  `;
+  const sortCols = ['PID', 'Name', 'CPU%', 'Memory%', 'Status', 'User', ''];
+  const sortKeys = ['pid', 'name', 'cpu', 'mem', 'status', 'user', ''];
+  const processHeaders = sortCols.map((col, i) => {
+    const sortKey = sortKeys[i];
+    if (!sortKey) return '<th style="width: 50px;">Actions</th>';
+    const isSorted = _state.processSort === sortKey;
+    const arrow = isSorted
+      ? (_state.processOrder === 'asc' ? ' &#9650;' : ' &#9660;')
+      : '';
+    return `<th class="c-table th--sortable${isSorted ? ' th--sorted' : ''}" data-action="sort-process" data-sort="${sortKey}" style="cursor: pointer; user-select: none;">${esc(col)}${arrow ? '<span style="margin-left: 2px;">' + arrow + '</span>' : ''}</th>`;
+  }).join('');
 
+  const processTableRows = String(renderProcessRows());
+
+  let processPagination = '';
+  if (_state.processTotal > PROCESS_PAGE_SIZE) {
+    processPagination = `<div class="c-card__footer" style="justify-content: center; gap: var(--space-2);">
+      <button class="c-btn c-btn--sm c-btn--ghost" data-action="page-process" data-page="${_state.processPage - 1}"${_state.processPage <= 1 ? ' disabled' : ''}>Previous</button>
+      <span style="font-size: var(--font-size-sm); color: var(--text-muted);">Page ${_state.processPage} of ${Math.ceil(_state.processTotal / PROCESS_PAGE_SIZE)}</span>
+      <button class="c-btn c-btn--sm c-btn--ghost" data-action="page-process" data-page="${_state.processPage + 1}"${_state.processPage * PROCESS_PAGE_SIZE >= _state.processTotal ? ' disabled' : ''}>Next</button>
+    </div>`;
+  }
+
+  const data = {
+    timestamp: esc(timeAgoText),
+    refreshIcon: ICONS.refresh.html,
+    searchIcon: ICONS.search.html,
+    intervalOptions,
+    metricCards,
+    timeRangeButtons,
+    processHeaders,
+    processTableRows,
+    processPagination,
+    processSearch: esc(_state.processSearch),
+    processCount: _state.processTotal,
+  };
+
+  container.innerHTML = await loadTemplate('performance', data);
   mountPageComponents(container);
 }
 

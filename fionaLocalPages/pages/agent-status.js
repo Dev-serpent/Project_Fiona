@@ -16,6 +16,7 @@ import {
   skeletonHeading,
 } from '../js/components/LoadingSkeleton.js';
 import { toast } from '../js/components/Toast.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -104,7 +105,17 @@ function statusLabel(status) {
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+function buildTabContent() {
+  switch (_state.activeTab) {
+    case 'thoughts': return renderThoughtStream().html;
+    case 'conversation': return renderConversation().html;
+    case 'tools': return renderToolCalls().html;
+    case 'performance': return renderPerformance().html;
+    default: return '';
+  }
+}
+
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -129,92 +140,41 @@ function renderPage(container) {
   const label = statusLabel(status);
   const uptime = agent.uptime || agent.uptime_seconds || agent.elapsed_ms || 0;
   const model = agent.model || '—';
+  const isPaused = status === 'paused';
+  const isWorking = status === 'working';
 
-  container.innerHTML = html`
-    <!-- Back Button -->
-    <div style="margin-bottom: var(--space-3);">
-      <button class="c-btn c-btn--sm c-btn--ghost" id="agent-back-btn" style="padding-left: 4px;">
-        <span class="c-btn__icon">${ICONS.chevronLeft}</span>
-        Back to Agents
-      </button>
-    </div>
+  const tabContent = buildTabContent();
 
-    <!-- Agent Header -->
-    <div class="c-card" style="margin-bottom: var(--space-5);">
-      <div class="c-card__body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-        <div style="display: flex; align-items: center; gap: var(--space-4);">
-          <div class="c-avatar c-avatar--lg c-avatar--accent">
-            ${esc((agent.name || 'A')[0])}
-          </div>
-          <div>
-            <div style="display: flex; align-items: center; gap: var(--space-3);">
-              <h2 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-                ${esc(agent.name || agent.id || 'Unknown Agent')}
-              </h2>
-              <span style="display: flex; align-items: center; gap: 4px; font-size: var(--font-size-xs); color: ${color};">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color};
-                     ${status === 'working' ? 'animation: pulse 1.5s ease-in-out infinite;' : ''}"></span>
-                ${esc(label)}
-              </span>
-            </div>
-            <div style="display: flex; gap: var(--space-4); margin-top: var(--space-1); font-size: var(--font-size-xs); color: var(--text-muted);">
-              <span>Model: ${esc(model)}</span>
-              <span>ID: ${esc(agent.id ? agent.id.slice(0, 12) : '—')}</span>
-              <span>Uptime: ${typeof uptime === 'number' ? formatDuration(uptime) : esc(uptime || '—')}</span>
-            </div>
-          </div>
-        </div>
+  const data = {
+    backIcon: ICONS.chevronLeft.html,
+    avatarLetter: esc((agent.name || 'A')[0]),
+    agentName: esc(agent.name || agent.id || 'Unknown Agent'),
+    statusColor: color,
+    isWorking,
+    statusLabel: esc(label),
+    model: esc(model),
+    agentIdShort: esc(agent.id ? agent.id.slice(0, 12) : '—'),
+    uptime: typeof uptime === 'number' ? formatDuration(uptime) : esc(uptime || '—'),
+    ctrlToggleIcon: (isPaused ? ICONS.play : ICONS.pause).html,
+    ctrlToggleTitle: isPaused ? 'Resume' : 'Pause',
+    ctrlToggleLabel: isPaused ? 'Resume' : 'Pause',
+    stopIcon: ICONS.close.html,
+    restartIcon: ICONS.refresh.html,
+    isThoughtsActive: _state.activeTab === 'thoughts',
+    thoughtsTabIcon: ICONS.activity.html,
+    thoughtsCount: _state.thoughts.length,
+    isConversationActive: _state.activeTab === 'conversation',
+    conversationTabIcon: ICONS.message.html,
+    conversationCount: _state.conversation.length,
+    isToolsActive: _state.activeTab === 'tools',
+    toolsTabIcon: ICONS.bolt.html,
+    toolsCount: _state.toolCalls.length,
+    isPerfActive: _state.activeTab === 'performance',
+    perfTabIcon: ICONS.clock.html,
+    tabContent,
+  };
 
-        <!-- Controls -->
-        <div style="display: flex; gap: var(--space-2);">
-          <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="toggle-pause" title="${status === 'paused' ? 'Resume' : 'Pause'}">
-            <span class="c-btn__icon">${status === 'paused' ? ICONS.play : ICONS.pause}</span>
-            ${status === 'paused' ? 'Resume' : 'Pause'}
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="stop" title="Stop" style="color: var(--danger);">
-            <span class="c-btn__icon">${ICONS.close}</span>
-            Stop
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="restart" title="Restart">
-            <span class="c-btn__icon">${ICONS.refresh}</span>
-            Restart
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab Bar -->
-    <div class="c-tabs" style="margin-bottom: var(--space-4);">
-      <button class="c-tab ${_state.activeTab === 'thoughts' ? 'c-tab--active' : ''}" data-tab="thoughts">
-        <span class="c-tab__icon">${ICONS.activity}</span>
-        Thought Stream
-        <span class="c-tab__count">${_state.thoughts.length}</span>
-      </button>
-      <button class="c-tab ${_state.activeTab === 'conversation' ? 'c-tab--active' : ''}" data-tab="conversation">
-        <span class="c-tab__icon">${ICONS.message}</span>
-        Conversation
-        <span class="c-tab__count">${_state.conversation.length}</span>
-      </button>
-      <button class="c-tab ${_state.activeTab === 'tools' ? 'c-tab--active' : ''}" data-tab="tools">
-        <span class="c-tab__icon">${ICONS.bolt}</span>
-        Tool Calls
-        <span class="c-tab__count">${_state.toolCalls.length}</span>
-      </button>
-      <button class="c-tab ${_state.activeTab === 'performance' ? 'c-tab--active' : ''}" data-tab="performance">
-        <span class="c-tab__icon">${ICONS.clock}</span>
-        Performance
-      </button>
-    </div>
-
-    <!-- Tab Content -->
-    <div id="agent-tab-content">
-      ${_state.activeTab === 'thoughts' ? renderThoughtStream() : ''}
-      ${_state.activeTab === 'conversation' ? renderConversation() : ''}
-      ${_state.activeTab === 'tools' ? renderToolCalls() : ''}
-      ${_state.activeTab === 'performance' ? renderPerformance() : ''}
-    </div>
-  `;
-
+  container.innerHTML = await loadTemplate('agent-status', data);
   mountComponents(container);
 }
 
@@ -490,11 +450,11 @@ function renderError(container) {
   if (backBtn) backBtn.addEventListener('click', navigateBack);
 
   const retryBtn = container.querySelector('#agent-retry-btn');
-  if (retryBtn) retryBtn.addEventListener('click', () => {
+  if (retryBtn) retryBtn.addEventListener('click', async () => {
     _state.error = false;
     _state.loading = true;
     renderSkeletons(container);
-    loadAgentData(_state.agentId);
+    await loadAgentData(_state.agentId);
   });
 }
 
@@ -532,9 +492,9 @@ function mountComponents(container) {
 
   // Tab switching
   container.querySelectorAll('.c-tab[data-tab]').forEach((tab) => {
-    const handler = () => {
+    const handler = async () => {
       _state.activeTab = tab.dataset.tab;
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     };
     tab.addEventListener('click', handler);
     listeners.push(() => tab.removeEventListener('click', handler));
@@ -551,9 +511,9 @@ function mountComponents(container) {
   // Clear thoughts
   const clearBtn = container.querySelector('#thought-clear-btn');
   if (clearBtn) {
-    const handler = () => {
+    const handler = async () => {
       _state.thoughts = [];
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     };
     clearBtn.addEventListener('click', handler);
     listeners.push(() => clearBtn.removeEventListener('click', handler));
@@ -647,7 +607,7 @@ async function loadAgentData(agentId) {
     _state.error = true;
     _state.errorMessage = 'API client not available.';
     _state.loading = false;
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     return;
   }
 
@@ -664,7 +624,7 @@ async function loadAgentData(agentId) {
     _state.loading = false;
 
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch (err) {
     console.error('[agent-status] Failed to load agent:', err);
@@ -672,7 +632,7 @@ async function loadAgentData(agentId) {
     _state.errorMessage = err.message || 'Failed to fetch agent data.';
     _state.loading = false;
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   }
 }
@@ -686,7 +646,7 @@ function subscribeWebSocket() {
   try {
     const ws = api.connect?.();
     if (ws && typeof ws.on === 'function') {
-      const unsub = ws.on('message', (msg) => {
+      const unsub = ws.on('message', async (msg) => {
         if (_state.destroyed) return;
         if (!msg || !msg.event) return;
 
@@ -744,7 +704,7 @@ function subscribeWebSocket() {
                 }
               } else {
                 // Stream element not mounted yet, do full re-render
-                renderPage(_state.container);
+                await renderPage(_state.container);
               }
             }
           }
@@ -758,7 +718,7 @@ function subscribeWebSocket() {
           if (_state.agent) {
             _state.agent = { ..._state.agent, ...params };
             if (_state.container && !_state.loading) {
-              renderPage(_state.container);
+              await renderPage(_state.container);
             }
           }
           return;
@@ -804,7 +764,7 @@ async function silentPoll() {
     if (data.agent || data) {
       _state.agent = data.agent || data;
       if (_state.container && !_state.loading) {
-        renderPage(_state.container);
+        await renderPage(_state.container);
       }
     }
   } catch {

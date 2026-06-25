@@ -99,6 +99,12 @@ class BrowserManager:
         """Return the current :class:`BrowserConfig`."""
         return self._config
 
+    @property
+    def has_context(self) -> bool:
+        """Return ``True`` if at least one browser context exists."""
+        with self._lock:
+            return len(self._contexts) > 0
+
     def update_config(self, **overrides: object) -> None:
         """Merge *overrides* into the active config (applied on next start)."""
         with self._lock:

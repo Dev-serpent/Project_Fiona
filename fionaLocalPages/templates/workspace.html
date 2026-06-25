@@ -1,0 +1,182 @@
+<!-- workspace.html — Project Workspace Overview Template -->
+<div id="ws-content">
+  <style>
+    /* No page-specific styles needed — all use design-token inline styles */
+  </style>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: var(--space-5);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+      <div>
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Workspace
+        </h1>
+        <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;
+                  font-family: var(--font-mono);">
+          {{projectPath}}
+        </p>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--space-2);">
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-explorer" title="Open in file explorer">
+          <span class="c-btn__icon">{{{folderIcon}}}</span>
+          Open Folder
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-refresh" title="Refresh">
+          <span class="c-btn__icon">{{{refreshIcon}}}</span>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Row: Project Info Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">
+    <!-- Project Name Card -->
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+          <div style="width: 24px; height: 24px; border-radius: var(--radius-md); background: var(--accent-muted); display: flex; align-items: center; justify-content: center; color: var(--accent);">
+            {{{projectIcon}}}
+          </div>
+          <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Project</span>
+        </div>
+        <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          {{projectName}}
+        </div>
+        {{#if projectDescription}}
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px;">
+          {{projectDescription}}
+        </div>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- File Stats Card -->
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+          <div style="width: 24px; height: 24px; border-radius: var(--radius-md); background: var(--info-muted, rgba(56,189,248,0.15)); display: flex; align-items: center; justify-content: center; color: var(--info);">
+            {{{filesIcon}}}
+          </div>
+          <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Files</span>
+        </div>
+        <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary);">
+          {{fileCount}} files
+        </div>
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px;">
+          {{dirCount}} directories · {{linesOfCode}} lines of code
+        </div>
+      </div>
+    </div>
+
+    <!-- Git Info Card -->
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+          <div style="width: 24px; height: 24px; border-radius: var(--radius-md); {{{gitIconBoxStyle}}} display: flex; align-items: center; justify-content: center; {{{gitIconColor}}}">
+            {{{gitIcon}}}
+          </div>
+          <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Git</span>
+        </div>
+        {{#if gitBranch}}
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <span class="c-badge c-badge--accent" style="font-family: var(--font-mono); font-size: 10px;">
+            {{gitBranch}}
+          </span>
+        </div>
+        <div style="font-size: var(--font-size-xs); color: var(--text-primary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          {{gitLastCommit}}
+        </div>
+        <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 1px;">
+          {{gitLastAuthor}}{{#if gitTimestamp}} · {{gitTimestamp}}{{/if}}
+        </div>
+        {{/if}}
+        {{#unless gitBranch}}
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted);">
+          Not a git repository
+        </div>
+        {{/unless}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle Section: 2 Columns -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
+    <!-- Left Column: Recent Files & Bookmarks -->
+    <div>
+      <!-- Recent Files -->
+      <div class="c-card" style="margin-bottom: var(--space-4);">
+        <div class="c-card__header">
+          <span class="c-card__title">Recent Files</span>
+          <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-file-manager" title="Open file manager">
+            <span class="c-btn__icon">{{{folderIcon}}}</span>
+            Browse
+          </button>
+        </div>
+        <div class="c-card__body" style="padding: var(--space-2); max-height: 260px; overflow-y: auto;">
+          {{{recentFilesHtml}}}
+        </div>
+      </div>
+
+      <!-- Bookmarks -->
+      <div class="c-card">
+        <div class="c-card__header">
+          <span class="c-card__title">Bookmarked Folders</span>
+        </div>
+        <div class="c-card__body" style="padding: var(--space-2); max-height: 160px; overflow-y: auto;">
+          {{{bookmarksHtml}}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Quick Actions & Recent Activity -->
+    <div>
+      <!-- Quick Actions -->
+      <div class="c-card" style="margin-bottom: var(--space-4);">
+        <div class="c-card__header">
+          <span class="c-card__title">Quick Actions</span>
+        </div>
+        <div class="c-card__body" style="padding: var(--space-3);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
+            <button class="c-btn c-btn--sm" data-action="open-terminal" style="justify-content: flex-start;">
+              <span class="c-btn__icon">{{{terminalIcon}}}</span>
+              Open Terminal
+            </button>
+            <button class="c-btn c-btn--sm" data-action="open-explorer-page" style="justify-content: flex-start;">
+              <span class="c-btn__icon">{{{folderIcon}}}</span>
+              File Explorer
+            </button>
+            <button class="c-btn c-btn--sm" data-action="run-diagnostics" style="justify-content: flex-start;">
+              <span class="c-btn__icon">{{{activityIcon}}}</span>
+              Run Diagnostic
+            </button>
+            <button class="c-btn c-btn--sm" data-action="view-logs" style="justify-content: flex-start;">
+              <span class="c-btn__icon">{{{fileTextIcon}}}</span>
+              View Logs
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="c-card">
+        <div class="c-card__header">
+          <span class="c-card__title">Recent Activity</span>
+        </div>
+        <div class="c-card__body" style="padding: var(--space-2); max-height: 260px; overflow-y: auto;">
+          {{{activityHtml}}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom: Project Health -->
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Project Health</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-3);">
+      {{{healthHtml}}}
+    </div>
+  </div>
+</div>

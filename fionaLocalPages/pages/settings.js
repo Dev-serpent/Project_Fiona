@@ -16,6 +16,7 @@ import {
   skeletonText,
   skeletonButton,
 } from '../js/components/LoadingSkeleton.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -250,7 +251,7 @@ function shortcutToLabel(shortcut) {
 
 /* ── Settings Persistence ───────────────────────────────────────────────── */
 
-function loadSettings() {
+function _loadLocalSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -420,14 +421,14 @@ function exportSettingsJSON() {
 
 function importSettingsJSON(file) {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const parsed = JSON.parse(e.target.result);
       const migrated = migrateSettings(parsed);
       _state.settings = migrated;
       markSaved();
       saveSettings();
-      renderSettingsPage(_state.container);
+      await renderSettingsPage(_state.container);
       showToast('success', 'Settings imported successfully.');
     } catch (err) {
       showToast('error', `Failed to import settings: ${err.message}`);
@@ -438,7 +439,7 @@ function importSettingsJSON(file) {
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
-function renderSettingsPage(container) {
+async function renderSettingsPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -450,76 +451,74 @@ function renderSettingsPage(container) {
   const filteredSections = filterSettingsByQuery(_state.searchQuery);
   const activeSectionData = _state.settings?.[_state.activeSection];
 
-  container.innerHTML = html`
-    <div class="settings-page" style="display: grid; grid-template-columns: 220px 1fr; height: 100%; gap: 0;">
-
-      <!-- Left Nav -->
-      <div class="settings-nav" style="border-right: 1px solid var(--border); overflow-y: auto; padding: 0;">
-        ${renderSearchBar()}
-        <nav style="padding: var(--space-2) 0;">
-          ${html.raw(filteredSections.map((s) => html`
-            <button class="settings-nav__item${s.id === _state.activeSection ? ' settings-nav__item--active' : ''}"
-                    data-section="${s.id}" data-action="nav-section"
-                    style="display: flex; align-items: center; gap: var(--space-3); width: 100%;
-                           padding: 9px var(--space-4); border: none; background: none;
-                           font-size: var(--font-size-sm); color: var(--text-secondary);
-                           cursor: pointer; text-align: left; transition: all var(--transition-fast);
-                           ${s.id === _state.activeSection ? 'background: var(--accent-muted); color: var(--accent); font-weight: var(--font-weight-medium);' : ''}
-                           border-right: 2px solid ${s.id === _state.activeSection ? 'var(--accent)' : 'transparent'};">
-              <span style="width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-                ${ICONS[s.icon] || ICONS.gear}
-              </span>
-              <span>${esc(s.label)}</span>
-            </button>
-          `).join(''))}
-        </nav>
-
-        <!-- Import/Export buttons -->
-        <div style="padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle); margin-top: auto;">
-          <div style="display: flex; gap: var(--space-2);">
-            <button class="c-btn c-btn--sm c-btn--ghost" data-action="export-settings" title="Export settings JSON" style="flex:1;">
-              <span class="c-btn__icon">${ICONS.download}</span>
-              Export
-            </button>
-            <button class="c-btn c-btn--sm c-btn--ghost" data-action="import-settings" title="Import settings JSON" style="flex:1;">
-              <span class="c-btn__icon">${ICONS.upload}</span>
-              Import
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Content -->
-      <div class="settings-content" style="overflow-y: auto; padding: var(--space-6);">
-        <!-- Section Header -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6);">
-          <div>
-            <h2 style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-              ${esc(SECTIONS.find(s => s.id === _state.activeSection)?.label || 'Settings')}
-            </h2>
-            <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-              ${getSectionDescription(_state.activeSection)}
-            </p>
-          </div>
-          <div style="display: flex; align-items: center; gap: var(--space-3);">
-            <span id="settings-unsaved" style="display: none; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--warning);">
-              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--warning);"></span>
-              <span class="settings-unsaved__count">Unsaved changes</span>
-            </span>
-            <button class="c-btn c-btn--sm c-btn--ghost" data-action="reset-section" title="Reset to defaults">
-              <span class="c-btn__icon">${ICONS.refresh}</span>
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <!-- Form Controls -->
-        <div class="settings-form" style="max-width: 640px;">
-          ${activeSectionData ? renderSectionControls(_state.activeSection, activeSectionData) : html`<p style="color: var(--text-muted);">Select a category to view settings.</p>`}
-        </div>
+  // Build nav content
+  const navContent = renderSearchBar() + `
+    <nav style="padding: var(--space-2) 0;">
+      ${filteredSections.map((s) => {
+        const isActive = s.id === _state.activeSection;
+        const iconSvg = ICONS[s.icon] ? ICONS[s.icon].html : ICONS.gear.html;
+        return `
+          <button class="settings-nav__item${isActive ? ' settings-nav__item--active' : ''}"
+                  data-section="${s.id}" data-action="nav-section"
+                  style="${isActive ? 'background: var(--accent-muted); color: var(--accent); font-weight: var(--font-weight-medium);' : ''}
+                         border-right: 2px solid ${isActive ? 'var(--accent)' : 'transparent'};">
+            <span class="settings-nav__icon">${iconSvg}</span>
+            <span>${esc(s.label)}</span>
+          </button>
+        `;
+      }).join('')}
+    </nav>
+    <div style="padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle); margin-top: auto;">
+      <div style="display: flex; gap: var(--space-2);">
+        <button class="c-btn c-btn--sm c-btn--ghost" data-action="export-settings" title="Export settings JSON" style="flex:1;">
+          <span class="c-btn__icon">${ICONS.download.html}</span>
+          Export
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" data-action="import-settings" title="Import settings JSON" style="flex:1;">
+          <span class="c-btn__icon">${ICONS.upload.html}</span>
+          Import
+        </button>
       </div>
     </div>
   `;
+
+  // Build content HTML
+  const sectionLabel = esc(SECTIONS.find(s => s.id === _state.activeSection)?.label || 'Settings');
+  const sectionDesc = getSectionDescription(_state.activeSection);
+  const formHtml = activeSectionData ? renderSectionControls(_state.activeSection, activeSectionData) : '<p style="color: var(--text-muted);">Select a category to view settings.</p>';
+
+  const contentHtml = `
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6);">
+      <div>
+        <h2 style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          ${sectionLabel}
+        </h2>
+        <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+          ${sectionDesc}
+        </p>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--space-3);">
+        <span id="settings-unsaved" style="display: none; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--warning);">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--warning);"></span>
+          <span class="settings-unsaved__count">Unsaved changes</span>
+        </span>
+        <button class="c-btn c-btn--sm c-btn--ghost" data-action="reset-section" title="Reset to defaults">
+          <span class="c-btn__icon">${ICONS.refresh.html}</span>
+          Reset
+        </button>
+      </div>
+    </div>
+    <div class="settings-form" style="max-width: 640px;">
+      ${formHtml}
+    </div>
+  `;
+
+  const data = {
+    navContent,
+    contentHtml,
+  };
+
+  container.innerHTML = await loadTemplate('settings', data);
 
   mountComponents(container);
 }
@@ -1103,7 +1102,7 @@ function showResetDialog() {
 async function loadSettings() {
   if (_state.destroyed) return;
 
-  _state.settings = loadSettings();
+  _state.settings = _loadLocalSettings();
   _state.originalSettings = deepClone(_state.settings);
   _state.loading = false;
 
@@ -1129,29 +1128,23 @@ async function loadSettings() {
   }
 
   if (!_state.destroyed && _state.container) {
-    renderSettingsPage(_state.container);
+    await renderSettingsPage(_state.container);
   }
 }
 
 /* ── Lifecycle ──────────────────────────────────────────────────────────── */
 
-export function render(container) {
+export function render() {
+  return '<div id="settings-root"></div>';
+}
+
+export async function mount(container) {
   _state.destroyed = false;
   _state.loading = true;
   _state.container = container;
 
   renderSkeletons(container);
-  loadSettings();
-}
-
-export function mount(container) {
-  // Called after render() if the router calls mount separately
-  if (container && !_state.container) {
-    _state.container = container;
-  }
-  if (!_state.loading && _state.container) {
-    renderSettingsPage(_state.container);
-  }
+  await loadSettings();
 }
 
 export function destroy() {
@@ -1176,12 +1169,15 @@ export function destroy() {
 
 export default function createPage(_routeInfo) {
   return {
-    render() {
-      return '<div id="settings-root"></div>';
-    },
-    mount(container) {
+    render,
+    async mount(container) {
       const root = container.querySelector('#settings-root') || container;
-      render(root);
+      _state.destroyed = false;
+      _state.loading = true;
+      _state.container = root;
+
+      renderSkeletons(root);
+      await loadSettings();
     },
     destroy,
   };

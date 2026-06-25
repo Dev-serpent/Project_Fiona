@@ -1,0 +1,153 @@
+<!-- phiconnect.html — PhiConnect Secure Messaging Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        PhiConnect
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Secure local messaging
+      </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+      <label style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--text-muted); cursor: pointer; user-select: none;">
+        <input type="checkbox" id="phc-auto-refresh" {{#if autoRefresh}}checked{{/if}}
+               style="accent-color: var(--accent); cursor: pointer;">
+        Auto-refresh
+      </label>
+      <button class="c-btn c-btn--sm c-btn--ghost" id="phc-refresh-btn"
+              title="Refresh messages">
+        <span class="c-btn__icon">{{{refreshIcon}}}</span>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: var(--space-4);">
+
+  <!-- Status & Identity Card -->
+  <div class="c-card">
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+        <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{lockIcon}}}</span>
+        Status &amp; Identity
+      </div>
+
+      <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);">
+        <span style="width: 12px; height: 12px; border-radius: 50%;
+                     background: {{#if statusReady}}var(--success){{else}}var(--danger){{/if}};
+                     flex-shrink: 0;"></span>
+        <span style="font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary);">
+          {{#if statusReady}}Ready{{else}}Not Ready{{/if}}
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        {{#if hasPort}}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3);
+                    background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-secondary);">
+          <span>Port</span>
+          <span style="color: var(--text-primary); font-family: var(--font-mono);">{{port}}</span>
+        </div>
+        {{/if}}
+
+        {{#if hasConfigDir}}
+        <div style="padding: var(--space-2) var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-muted); font-family: var(--font-mono); word-break: break-all;">
+          {{configDir}}
+        </div>
+        {{/if}}
+
+        {{#if hasDeviceId}}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3);
+                    background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-secondary);">
+          <span>Device ID</span>
+          <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 10px;">{{deviceId}}</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <div style="margin-top: var(--space-4);">
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-2);">
+          Device fingerprint for secure pairing
+        </div>
+        {{#if hasFingerprint}}
+        <div style="position: relative;">
+          <pre class="code-block"
+               style="background: var(--bg-tertiary); border: 1px solid var(--border);
+                       border-radius: var(--radius-md); padding: var(--space-3);
+                       font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace);
+                       font-size: var(--font-size-xxs); color: var(--text-primary);
+                       overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+                       line-height: 1.6; margin: 0;">{{fingerprint}}</pre>
+          <button class="c-btn c-btn--sm" id="phc-copy-btn"
+                  style="position: absolute; top: var(--space-2); right: var(--space-2);
+                         background: var(--surface); border: 1px solid var(--border);
+                         padding: 4px 8px; display: flex; align-items: center; gap: 4px;
+                         font-size: var(--font-size-xxs);">
+            <span style="width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;">
+              {{#if copyFeedback}}{{{checkIcon}}}{{{else}}}{{{copyIcon}}}{{/if}}
+            </span>
+            {{#if copyFeedback}}Copied!{{else}}Copy{{/if}}
+          </button>
+        </div>
+        {{else}}
+        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3);
+                    background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-muted);">
+          <span style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{{helpIcon}}}</span>
+          No identity available.
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages Card -->
+  <div class="c-card" style="display: flex; flex-direction: column;">
+    <div class="c-card__header" style="flex-shrink: 0;">
+      <span style="display: flex; align-items: center; gap: var(--space-2);">
+        <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{messageIcon}}}</span>
+        <span class="c-card__title">Messages</span>
+      </span>
+      {{#if hasMessages}}
+      <span class="c-badge c-badge--default" id="phc-msg-count">{{messagesCount}}</span>
+      {{/if}}
+    </div>
+    <div class="c-card__body" style="padding: 0; flex: 1; display: flex; flex-direction: column; max-height: 400px; overflow-y: auto;" id="phc-messages-list">
+      {{{messagesListContent}}}
+    </div>
+  </div>
+</div>
+
+<!-- Send Message Card -->
+<div class="c-card" style="margin-top: var(--space-4);">
+  <div class="c-card__body" style="padding: var(--space-4);">
+    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-2);">
+      <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{arrowUpIcon}}}</span>
+      Send Message
+    </div>
+
+    <form id="phc-send-form">
+      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+        <textarea id="phc-msg-body" class="c-input" rows="3"
+                  placeholder="Type your message here&hellip;"
+                  style="resize: vertical; min-height: 60px; width: 100%;"
+                  required></textarea>
+
+        <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+          <input id="phc-msg-host" class="c-input" type="text"
+                 placeholder="Host (optional)" style="flex: 0 1 220px;">
+
+          <button type="submit" class="c-btn c-btn--primary" id="phc-send-btn"
+                  {{#if sending}}disabled{{/if}} style="display: flex; align-items: center; gap: var(--space-2);">
+            {{{sendBtnContent}}}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

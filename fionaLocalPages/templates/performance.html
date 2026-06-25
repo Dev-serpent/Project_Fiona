@@ -1,0 +1,121 @@
+<!-- performance.html — System Performance Metrics Page Template -->
+<style>
+  .chart-tooltip {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+  }
+</style>
+
+<!-- Page Header -->
+<div style="margin-bottom: var(--space-5);" id="perf-header">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Performance
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Real-time system resource monitoring
+      </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);" id="perf-timestamp">
+        {{timestamp}}
+      </span>
+      <span style="display: flex; align-items: center; gap: var(--space-1);">
+        <span style="font-size: var(--font-size-xs); color: var(--text-muted);">Interval:</span>
+        <select class="c-select c-select--sm" id="perf-interval"
+                style="width: auto; min-width: 80px; height: 30px; font-size: var(--font-size-xs); padding: 0 var(--space-3);">
+          {{{intervalOptions}}}
+        </select>
+      </span>
+      <button class="c-btn c-btn--sm c-btn--ghost" id="perf-refresh-btn" title="Refresh now">
+        <span class="c-btn__icon">{{{refreshIcon}}}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Top Row: 4 Metric Cards -->
+<div id="perf-metric-cards"
+     style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-5);">
+  {{{metricCards}}}
+</div>
+
+<!-- Middle: Time-Series Graphs -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-5);">
+  <div class="c-card" id="chart-cpu-container">
+    <div class="c-card__header">
+      <span class="c-card__title">CPU Usage</span>
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
+    </div>
+    <div class="c-card__body" style="position: relative;">
+      <canvas id="chart-cpu" style="width: 100%; height: 180px;"></canvas>
+      <div id="chart-cpu-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
+    </div>
+  </div>
+  <div class="c-card" id="chart-memory-container">
+    <div class="c-card__header">
+      <span class="c-card__title">Memory</span>
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
+    </div>
+    <div class="c-card__body" style="position: relative;">
+      <canvas id="chart-memory" style="width: 100%; height: 180px;"></canvas>
+      <div id="chart-memory-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
+    </div>
+  </div>
+  <div class="c-card" id="chart-network-container">
+    <div class="c-card__header">
+      <span class="c-card__title">Network</span>
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">last 60s</span>
+    </div>
+    <div class="c-card__body" style="position: relative;">
+      <canvas id="chart-network" style="width: 100%; height: 180px;"></canvas>
+      <div id="chart-network-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
+    </div>
+  </div>
+  <div class="c-card" id="chart-combined-container">
+    <div class="c-card__header">
+      <span class="c-card__title">Combined Overview</span>
+      <div style="display: flex; align-items: center; gap: var(--space-2);">
+        {{{timeRangeButtons}}}
+      </div>
+    </div>
+    <div class="c-card__body" style="position: relative;">
+      <canvas id="chart-combined" style="width: 100%; height: 180px;"></canvas>
+      <div id="chart-combined-tooltip" class="chart-tooltip" style="display: none; position: absolute; pointer-events: none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom: Process List -->
+<div class="c-card">
+  <div class="c-card__header">
+    <span class="c-card__title">Processes</span>
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      <div class="c-input-wrapper" style="width: 200px;">
+        <span class="c-input-wrapper__icon c-input-wrapper__icon--left">{{{searchIcon}}}</span>
+        <input type="text" class="c-input c-input--sm" id="perf-process-search"
+               placeholder="Filter by name…"
+               value="{{processSearch}}"
+               style="padding-left: 32px;">
+      </div>
+      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">
+        {{processCount}} processes
+      </span>
+    </div>
+  </div>
+  <div style="overflow-x: auto;">
+    <table class="c-table" id="perf-process-table">
+      <thead>
+        <tr>
+          {{{processHeaders}}}
+        </tr>
+      </thead>
+      <tbody id="perf-process-tbody">
+        {{{processTableRows}}}
+      </tbody>
+    </table>
+  </div>
+  {{{processPagination}}}
+</div>

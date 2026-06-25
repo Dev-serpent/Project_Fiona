@@ -1,0 +1,59 @@
+<!-- recall.html — RecallVault Page Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-1);">
+    <div style="width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--radius-lg); background: var(--accent-muted); color: var(--accent);">
+      {{{searchIcon}}}
+    </div>
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        RecallVault
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Persistent key-value memory
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="recall-error" class="c-alert c-alert--danger is-hidden" style="margin-bottom: var(--space-4);">
+  <span class="c-alert__icon">{{{errorIcon}}}</span>
+  <div class="c-alert__content">An error occurred.</div>
+  <button class="c-alert__dismiss" id="recall-error-retry" title="Dismiss and retry">
+    {{{refreshIcon}}}
+  </button>
+</div>
+
+<div id="recall-notification" class="is-hidden"></div>
+
+<div class="c-card" style="margin-bottom: var(--space-4);">
+  <div class="c-card__body">
+    <div class="c-input-wrapper">
+      <span class="c-input-wrapper__icon c-input-wrapper__icon--left">{{{searchIcon}}}</span>
+      <input type="text" class="c-input c-input--icon-left" id="recall-search-input"
+             placeholder="Search memories..." value="{{searchQuery}}"
+             autocomplete="off" aria-label="Search memories">
+    </div>
+    <div style="display: flex; align-items: center; justify-content: flex-end; margin-top: var(--space-2); min-height: 18px;">
+      <span id="recall-status-count" style="font-size: var(--font-size-xs); color: var(--text-muted);"></span>
+    </div>
+    <div id="recall-results">
+      {{{resultsContent}}}
+    </div>
+  </div>
+</div>
+
+<div class="c-card">
+  <div class="c-card__header" id="recall-toggle-add"
+       style="cursor: pointer; user-select: none;"
+       role="button" tabindex="0" aria-expanded="{{addFormExpanded}}" aria-label="Toggle add form">
+    <div style="display: flex; align-items: center; gap: var(--space-2);">
+      <span style="display: flex; align-items: center; width: 18px; height: 18px; color: var(--accent);">{{{plusIcon}}}</span>
+      <span class="c-card__title">Remember New</span>
+    </div>
+    <span id="recall-add-chevron" style="display: flex; align-items: center; width: 18px; height: 18px; color: var(--text-muted); transition: transform var(--transition-fast);">
+      {{#if addFormExpanded}}{{{chevronUpIcon}}}{{else}}{{{chevronDownIcon}}}{{/if}}
+    </span>
+  </div>
+  <div id="recall-add-body" class="{{#if addFormExpanded}}{{else}}is-hidden{{/if}}">
+  </div>
+</div>

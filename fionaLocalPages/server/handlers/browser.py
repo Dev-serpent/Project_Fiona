@@ -47,6 +47,13 @@ async def browser_start(_request: Request) -> Response:
             result = await manager.start()
         else:
             result = manager.start()
+
+        # Create default context so navigation/screenshot functions work.
+        try:
+            await manager.create_context()
+        except Exception as ctx_err:
+            logger.warning("Context creation after start: %s", ctx_err)
+
         return json_response({
             "ok": True,
             "data": _state_to_dict(manager.state),
@@ -76,10 +83,27 @@ async def browser_stop(_request: Request) -> Response:
 async def browser_status_handler(_request: Request) -> Response:
     """GET /api/v1/browser/status"""
     try:
-        state = browser_status()
+        manager = get_browser_manager()
+        state = manager.state
+
+        # Try to get page info from default context
+        page_url = ""
+        page_title = ""
+        try:
+            ctx = manager._require_default_context()
+            page_url = ctx.page.url if hasattr(ctx, "page") else ""
+            page_title = await ctx.page.title() if hasattr(ctx, "page") else ""
+        except Exception:
+            pass
+
         return json_response({
             "ok": True,
-            "data": _state_to_dict(state),
+            "data": {
+                "status": state.value,
+                "running": state == BrowserManagerState.RUNNING,
+                "url": page_url,
+                "title": page_title,
+            },
         })
     except Exception as exc:
         logger.exception("Browser status failed")
@@ -103,12 +127,19 @@ async def browser_navigate(request: Request) -> Response:
     timeout = float(body.get("timeout", 30))
 
     try:
-        result = navigate(url, timeout=timeout)
+        result = await navigate(url, timeout=timeout)
         final_url = getattr(result, "url", url)
         status_code = getattr(result, "status_code", None)
+        title = getattr(result, "title", None)
+        duration_ms = getattr(result, "duration_ms", None)
         return json_response({
             "ok": True,
-            "data": {"url": final_url, "status_code": status_code},
+            "data": {
+                "url": final_url,
+                "status_code": status_code,
+                "title": title,
+                "duration_ms": duration_ms,
+            },
         })
     except Exception as exc:
         logger.exception("Browser navigate failed")
@@ -132,7 +163,7 @@ async def browser_click(request: Request) -> Response:
     timeout = float(body.get("timeout", 5))
 
     try:
-        click_element(selector, timeout=timeout)
+        await click_element(selector, timeout=timeout)
         return json_response({
             "ok": True,
             "data": {"selector": selector},
@@ -158,7 +189,7 @@ async def browser_screenshot(request: Request) -> Response:
     save_path: str | None = body.get("path")
 
     try:
-        png_bytes = capture_screenshot(path=save_path, full_page=full_page)
+        png_bytes = await capture_screenshot(path=save_path, full_page=full_page)
         encoded = base64.b64encode(png_bytes).decode("ascii")
         return json_response({
             "ok": True,
@@ -171,3 +202,52 @@ async def browser_screenshot(request: Request) -> Response:
     except Exception as exc:
         logger.exception("Browser screenshot failed")
         raise ApiError(502, f"Screenshot failed: {exc}") from exc
+
+
+async def browser_type(request: Request) -> Response:
+    """POST /api/v1/browser/type
+    Body: { selector, text, timeout? }
+    """
+    try:
+        body: dict[str, Any] = await request.json()
+    except Exception:
+        raise ApiError(400, "Invalid JSON body")
+
+    selector: str | None = body.get("selector")
+    text: str | None = body.get("text")
+    if not selector or text is None:
+        raise ApiError(400, "Missing required fields: selector, text")
+
+    timeout = float(body.get("timeout", 5))
+    try:
+        from BrowserAutomation import type_text  # noqa: PLC0415
+
+        await type_text(selector, text, timeout=timeout)
+        return json_response({"ok": True, "data": {"selector": selector}})
+    except Exception as exc:
+        logger.exception("Browser type failed")
+        raise ApiError(502, f"Type failed: {exc}") from exc
+
+
+async def browser_get_text(request: Request) -> Response:
+    """POST /api/v1/browser/get_text
+    Body: { selector, timeout? }
+    """
+    try:
+        body: dict[str, Any] = await request.json()
+    except Exception:
+        raise ApiError(400, "Invalid JSON body")
+
+    selector: str | None = body.get("selector")
+    if not selector:
+        raise ApiError(400, "Missing required field: selector")
+
+    timeout = float(body.get("timeout", 5))
+    try:
+        from BrowserAutomation import get_text_content  # noqa: PLC0415
+
+        text = await get_text_content(selector, timeout=timeout)
+        return json_response({"ok": True, "data": {"text": text}})
+    except Exception as exc:
+        logger.exception("Browser get_text failed")
+        raise ApiError(502, f"Get text failed: {exc}") from exc

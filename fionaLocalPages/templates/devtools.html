@@ -1,0 +1,61 @@
+<!-- Developer Tools Page Template -->
+<!-- Dynamic content is filled by JS on mount; this provides the layout shell -->
+
+<!-- Page Header -->
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Developer Tools
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Debugging, inspection, and testing utilities
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="c-tabs" style="margin-bottom: var(--space-4);">
+  <div class="c-tab c-tab--active" data-action="switch-tab" data-tab="state-inspector" style="cursor: pointer;">
+    <span class="c-tab__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <span>State Inspector</span>
+  </div>
+  <div class="c-tab" data-action="switch-tab" data-tab="api-playground" style="cursor: pointer;">
+    <span class="c-tab__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+    </span>
+    <span>API Playground</span>
+  </div>
+  <div class="c-tab" data-action="switch-tab" data-tab="console" style="cursor: pointer;">
+    <span class="c-tab__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <polyline points="4 17 10 11 4 5"/>
+        <line x1="12" y1="19" x2="20" y2="19"/>
+      </svg>
+    </span>
+    <span>Console</span>
+  </div>
+  <div class="c-tab" data-action="switch-tab" data-tab="event-log" style="cursor: pointer;">
+    <span class="c-tab__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </span>
+    <span>Event Log</span>
+  </div>
+</div>
+
+<!-- Tab Content -->
+<div style="min-height: 400px;" id="devtools-tab-content">
+  <!-- Tab content rendered dynamically by JS -->
+</div>

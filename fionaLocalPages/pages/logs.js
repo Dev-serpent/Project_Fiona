@@ -10,6 +10,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 import {
   skeletonText,
   skeletonHeading,
@@ -870,9 +871,20 @@ export default function createPage(_routeInfo) {
     render() {
       return '<div id="logs-root"></div>';
     },
-    mount(container) {
+    async mount(container) {
       const root = container.querySelector('#logs-root') || container;
-      render(root);
+      try {
+        const templateHtml = await loadTemplate('logs', {
+          loading: true,
+          search: '',
+        });
+        root.innerHTML = templateHtml;
+      } catch (err) {
+        console.error('[Logs] Failed to load template:', err);
+      }
+      // Trigger data loading; renderPage() will replace the template content
+      _state.container = root;
+      loadInitialData();
     },
     destroy,
   };

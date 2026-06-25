@@ -14,6 +14,7 @@ import {
   skeletonText,
   skeletonHeading,
 } from '../js/components/LoadingSkeleton.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -122,7 +123,7 @@ function parseUptimeHours(str) {
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
-function renderDashboardHTML(container) {
+async function renderContent(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -144,120 +145,28 @@ function renderDashboardHTML(container) {
       ? 'var(--warning)'
       : 'var(--danger)';
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-6);">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Dashboard
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-            System Overview
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-          <div style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--text-muted);">
-            <span style="display: flex; align-items: center; gap: 4px;">
-              <span style="width: 7px; height: 7px; border-radius: 50%; background: ${connColor};"></span>
-              <span id="dash-conn-label">${connStatus.charAt(0).toUpperCase() + connStatus.slice(1)}</span>
-            </span>
-            <span>·</span>
-            <span id="dash-timestamp">Updated ${formatTimestamp(now)}</span>
-          </div>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="dash-refresh-btn" title="Refresh now">
-            <span class="c-btn__icon">${ICONS.refresh}</span>
-            Refresh
-          </button>
-        </div>
-      </div>
-    </div>
+  const data = {
+    connStatus: connStatus.charAt(0).toUpperCase() + connStatus.slice(1),
+    connColor: connColor,
+    timestamp: formatTimestamp(now),
+    refreshIcon: ICONS.refresh.html,
+    messageIcon: ICONS.message.html,
+    playIcon: ICONS.play.html,
+    terminalIcon: ICONS.terminal.html,
+    botIcon: ICONS.bot.html,
+  };
 
-    <!-- Quick Action Bar -->
-    <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-5); flex-wrap: wrap;">
-      <button class="c-btn c-btn--sm" data-action="quick-chat">
-        <span class="c-btn__icon">${ICONS.message}</span>
-        New Chat
-      </button>
-      <button class="c-btn c-btn--sm" data-action="quick-macro">
-        <span class="c-btn__icon">${ICONS.play}</span>
-        Run Macro
-      </button>
-      <button class="c-btn c-btn--sm" data-action="quick-terminal">
-        <span class="c-btn__icon">${ICONS.terminal}</span>
-        Open Terminal
-      </button>
-      <button class="c-btn c-btn--sm" data-action="quick-screenshot">
-        <span class="c-btn__icon">${ICONS.bot}</span>
-        Take Screenshot
-      </button>
-    </div>
-
-    <!-- Top Row: 4 Metric Cards -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-5);">
-      <div id="metric-cpu"></div>
-      <div id="metric-memory"></div>
-      <div id="metric-disk"></div>
-      <div id="metric-uptime"></div>
-    </div>
-
-    <!-- Middle Row: 2-Column -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
-      <!-- Active Agents -->
-      <div class="c-card">
-        <div class="c-card__header">
-          <span class="c-card__title">Active Agents</span>
-          <span class="c-badge c-badge--accent" id="agent-count-badge">0</span>
-        </div>
-        <div class="c-card__body" id="agents-list" style="padding: var(--space-2);">
-          <div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">
-            No agents connected.
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activity -->
-      <div class="c-card">
-        <div class="c-card__header">
-          <span class="c-card__title">Recent Activity</span>
-        </div>
-        <div class="c-card__body" id="activity-list" style="padding: var(--space-2); max-height: 320px; overflow-y: auto;">
-          <div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">
-            No recent activity.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom Row: System Info -->
-    <div class="c-card">
-      <div class="c-card__header">
-        <span class="c-card__title">System Information</span>
-      </div>
-      <div class="c-card__body" id="system-info-panel">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
-          <div>
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">OS</div>
-            <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-os">—</div>
-          </div>
-          <div>
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Hostname</div>
-            <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-hostname">—</div>
-          </div>
-          <div>
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Python</div>
-            <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-python">—</div>
-          </div>
-          <div>
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Fiona</div>
-            <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-fiona">v0.1.0</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  container.innerHTML = await loadTemplate('dashboard', data);
 
   mountComponents(container);
+  if (_state.systemStatus) {
+    updateMetricCards(_state.systemStatus);
+    updateSystemInfo(_state.systemStatus);
+    updateAgentsList(_state.systemStatus);
+  }
+  if (_state.activityHistory.length > 0) {
+    updateActivityList();
+  }
 }
 
 function renderSkeletons(container) {
@@ -427,7 +336,7 @@ async function loadData() {
     _state.error = true;
     _state.errorMessage = 'API client not available.';
     _state.loading = false;
-    if (_state.container) renderDashboardHTML(_state.container);
+    if (_state.container) await renderContent(_state.container);
     return;
   }
 
@@ -453,7 +362,7 @@ async function loadData() {
     appendSparklineData(status);
 
     if (!_state.destroyed && _state.container) {
-      renderDashboardHTML(_state.container);
+      await renderContent(_state.container);
     }
   } catch (err) {
     console.error('[dashboard] Failed to load data:', err);
@@ -461,7 +370,7 @@ async function loadData() {
     _state.errorMessage = err.message || 'Failed to fetch data from backend.';
     _state.loading = false;
     if (!_state.destroyed && _state.container) {
-      renderDashboardHTML(_state.container);
+      await renderContent(_state.container);
     }
   }
 }
@@ -692,16 +601,40 @@ async function silentPoll() {
 
   if (statusResult.status === 'fulfilled') {
     _state.error = false;
+
+    // Update status indicator previously set during full render
+    const connStatus = getStore()?.get('system.status') || 'disconnected';
+    const connLabel = _state.container?.querySelector('#dash-conn-label');
+    const connDot = _state.container?.querySelector('#dash-status-dot');
+    if (connLabel) {
+      connLabel.textContent = connStatus.charAt(0).toUpperCase() + connStatus.slice(1);
+    }
+    if (connDot) {
+      connDot.style.background = connStatus === 'connected'
+        ? 'var(--success)'
+        : connStatus === 'connecting'
+          ? 'var(--warning)'
+          : 'var(--danger)';
+    }
   }
 }
 
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */
 
 /**
- * Full render — called from outside the router or from mount().
+ * Render — returns a mount point for the SPA router.
+ * @returns {string} HTML placeholder
+ */
+export function render() {
+  return '<div id="dash-root"></div>';
+}
+
+/**
+ * Mount the dashboard page — initializes state, loads template, fetches data.
+ * Called by the router after render().
  * @param {Element} container
  */
-export function render(container) {
+export async function mount(container) {
   _state.destroyed = false;
   _state.loading = true;
   _state.error = false;
@@ -710,9 +643,9 @@ export function render(container) {
 
   renderSkeletons(container);
 
-  loadData().then(() => {
-    if (!_state.destroyed) startPolling();
-  });
+  await loadData();
+
+  if (!_state.destroyed) startPolling();
 }
 
 /**
@@ -746,12 +679,20 @@ export function destroy() {
  */
 export default function createPage(_routeInfo) {
   return {
-    render() {
-      return '<div id="dash-root"></div>';
-    },
-    mount(container) {
+    render,
+    async mount(container) {
       const root = container.querySelector('#dash-root') || container;
-      render(root);
+      _state.destroyed = false;
+      _state.loading = true;
+      _state.error = false;
+      _state.errorMessage = '';
+      _state.container = root;
+
+      renderSkeletons(root);
+
+      await loadData();
+
+      if (!_state.destroyed) startPolling();
     },
     destroy,
   };

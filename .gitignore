@@ -1,53 +1,44 @@
-# Python bytecode and caches
+# Runtime / Session Data
+.weave/
+.vids/
+.backups/
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-.coverage.*
-htmlcov/
-
-# Build, packaging, and editable-install output
 *.egg-info/
-build/
-dist/
-*.build/
-*.dist-info/
-pip-wheel-metadata/
+.mypy_cache/
+.pyre/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Node.js
 node_modules/
 
-# Virtual environments
-.venv/
-venv/
-env/
-.env/
-.conda/
+# Build Outputs
+build/
+dist/
 
-# Fiona local backups and generated project snapshots
-.backups/
-backup-*/
+# Environment & Secrets
+.env
+.env.*
+*.env
 
-# Local agent/editor metadata
-.codex
-.codex/
-.agents/
-**/.codex
-**/.codex/
-**/.agents/
+# IDEs
+.vscode/
+.idea/
 
-# Local runtime/debug output
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
+# OS Files
 .DS_Store
 Thumbs.db
 
-# IDE/editor settings
-.idea/
-.vscode/
-AGENTS.md
-bsh
+# Logs
+*.log
+
+# Separate deployment repository
+fionaDocsPage/

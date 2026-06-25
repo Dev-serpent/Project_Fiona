@@ -1,0 +1,189 @@
+<!-- Log Viewer Page Template -->
+<!-- Dynamic content is filled by JS on mount; this provides the layout shell -->
+
+<!-- Loading skeleton state -->
+{{#if loading}}
+<div style="padding: var(--space-2);">
+  <div style="margin-bottom: var(--space-6);">
+    <div class="c-skeleton c-skeleton--heading" style="width: 160px; height: 24px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 200px; height: 14px; margin-top: 4px;"></div>
+  </div>
+  <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-4);">
+    <div class="c-skeleton c-skeleton--button" style="width: 56px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 56px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 56px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 56px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 56px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 180px; height: 28px;"></div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 2px;">
+    <div style="display: flex; gap: var(--space-3); padding: 8px 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+      <div class="c-skeleton" style="width: 80px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 48px; height: 18px; border-radius: var(--radius-full); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 100px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="flex: 1; height: 14px; border-radius: var(--radius-sm);"></div>
+    </div>
+    <div style="display: flex; gap: var(--space-3); padding: 8px 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+      <div class="c-skeleton" style="width: 80px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 48px; height: 18px; border-radius: var(--radius-full); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 100px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="flex: 1; height: 14px; border-radius: var(--radius-sm);"></div>
+    </div>
+    <div style="display: flex; gap: var(--space-3); padding: 8px 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+      <div class="c-skeleton" style="width: 80px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 48px; height: 18px; border-radius: var(--radius-full); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 100px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="flex: 1; height: 14px; border-radius: var(--radius-sm);"></div>
+    </div>
+    <div style="display: flex; gap: var(--space-3); padding: 8px 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+      <div class="c-skeleton" style="width: 80px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 48px; height: 18px; border-radius: var(--radius-full); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 100px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="flex: 1; height: 14px; border-radius: var(--radius-sm);"></div>
+    </div>
+    <div style="display: flex; gap: var(--space-3); padding: 8px 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+      <div class="c-skeleton" style="width: 80px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 48px; height: 18px; border-radius: var(--radius-full); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="width: 100px; height: 14px; border-radius: var(--radius-sm); flex-shrink: 0;"></div>
+      <div class="c-skeleton" style="flex: 1; height: 14px; border-radius: var(--radius-sm);"></div>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Error state -->
+{{#if error}}
+<div class="empty-state" style="margin-top: 10vh;">
+  <div class="empty-state__icon" style="color: var(--danger);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">Failed to Load Logs</div>
+  <div class="empty-state__description">{{errorMessage}}</div>
+  <button class="c-btn c-btn--primary" id="logs-retry-btn" style="margin-top: var(--space-4);">
+    <span class="c-btn__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </span>
+    Retry
+  </button>
+</div>
+{{/if}}
+
+<!-- Data state (static layout shell; dynamic content filled by JS) -->
+{{#unless loading}}
+{{#unless error}}
+<!-- Page Header -->
+<div class="logs-header">
+  <div class="logs-header__top">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Logs
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        System activity and diagnostics
+      </p>
+    </div>
+    <div class="logs-header__controls">
+      <select class="logs-service-select" id="logs-service-select"
+              title="Filter by service"
+              style="padding: 4px 8px; font-size: var(--font-size-xs); background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <option value="all">All Services</option>
+      </select>
+      <button class="c-btn c-btn--sm c-btn--icon" id="logs-realtime-btn"
+              title="Toggle real-time streaming">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="logs-toolbar">
+  <div class="logs-toolbar__row">
+    <!-- Level filter buttons -->
+    <div class="logs-level-filters">
+      <button class="logs-level-btn logs-level-btn--active" data-level="ALL">ALL</button>
+      <button class="logs-level-btn" data-level="DEBUG">DEBUG</button>
+      <button class="logs-level-btn" data-level="INFO">INFO</button>
+      <button class="logs-level-btn" data-level="WARN">WARN</button>
+      <button class="logs-level-btn" data-level="ERROR">ERROR</button>
+    </div>
+
+    <!-- Search -->
+    <div class="logs-search-wrap">
+      <span class="logs-search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </span>
+      <input type="text" class="logs-search-input" id="logs-search-input"
+             placeholder="Search logs…" value="{{search}}"
+             style="padding-left: 28px;" />
+    </div>
+
+    <!-- Time presets -->
+    <select class="logs-time-preset" id="logs-time-preset"
+            style="padding: 4px 8px; font-size: var(--font-size-xs); background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-md);">
+      <option value="all" selected>All</option>
+      <option value="ms-300000">Last 5 min</option>
+      <option value="ms-900000">Last 15 min</option>
+      <option value="ms-3600000">Last 1 hour</option>
+      <option value="today">Today</option>
+    </select>
+
+    <!-- Action buttons -->
+    <button class="c-btn c-btn--sm c-btn--ghost" id="logs-clear-btn" title="Clear log view">
+      <span class="c-btn__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </span>
+      Clear
+    </button>
+    <button class="c-btn c-btn--sm c-btn--ghost" id="logs-export-btn" title="Export as .txt">
+      <span class="c-btn__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </span>
+      Export
+    </button>
+  </div>
+</div>
+
+<!-- New logs banner -->
+<div class="logs-new-banner" id="logs-new-banner" style="display: none;">
+  <button class="c-btn c-btn--sm c-btn--primary" id="logs-new-btn">
+    <span class="c-btn__icon" style="animation: pulseSoft 2s ease-in-out infinite;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <polyline points="19 12 12 19 5 12"/>
+      </svg>
+    </span>
+    New logs available
+  </button>
+</div>
+
+<!-- Log List -->
+<div class="logs-list" id="logs-list"></div>
+
+<!-- Status Bar -->
+<div class="logs-statusbar" id="logs-statusbar">
+  <span id="logs-count-total">Total: 0</span>
+  <span class="logs-statusbar__sep">·</span>
+  <span id="logs-count-visible">Visible: 0</span>
+</div>
+{{/unless}}
+{{/unless}}

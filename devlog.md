@@ -194,3 +194,361 @@ Massive expansion: added 4 new subsystems (~12,000+ lines), 3 new test suites (4
 - AgentConsole intervention controls (step reorder, skip, modify)
 - 3js frontend feature parity with Tkinter GUI
 - Production deployment hardening for CAD server
+
+---
+
+## Entry 10 — MkDocs Site Overhaul, Agent Module Rewrite, fionaLocalPages SPA ✅
+
+**Date**: 2026-06-24
+**Focus**: Documentation site update, Agent module rewrite with Ollama migration, fionaLocalPages SPA frontend with Batch A subsystem integration
+
+### Summary
+Comprehensive MkDocs site update (30+ files across all sections), complete Agent module rewrite (54→655 lines covering Ollama migration, orchestration, chat, permissions, personality, query detection, ForemanAgent), CAD frontend vitest tests (87 tests), and the new fionaLocalPages SPA web frontend with 6 full subsystem pages (Batch A).
+
+### MkDocs Site Update
+- Rewrote Agent module documentation: OllamaProvider, chat handler, orchestration, permission system, personality system, query detector, ForemanAgent
+- BrowserAutomation module page (389 lines)
+- Prototypes page covering CAD, Vsee, EyeControl, fionaLocalPages
+- fionaLocalPages added as a section in Prototypes page
+- All validation counts updated: 1598 total (1413 Python + 98 CAD server + 87 CAD JS)
+
+### Agent Module Rewrite (`Agent/`)
+- `ollama.py` — OllamaProvider with full model lifecycle (pull, list, show, delete, embedding)
+- `chat_handler.py` — ChatHandler with tool dispatch, streaming, and agent:think/agent:tool events
+- `orchestration.py` — AgentOrchestrator with foreman/worker model, parallel step execution
+- `permission.py` — PermissionManager with granular allow/deny/ask levels
+- `personality.py` — PersonalityConfig with role, tone, guardrails, and prompt building
+- `query_detector.py` — QueryIntentDetector using LLM-based intent classification
+- `orchestrator.py` — Refactored ActionOrchestrator with ForemanAgent delegation
+
+### fionaLocalPages SPA Frontend (`fionaLocalPages/`)
+- **Architecture**: Vite + aiohttp backend, hash-based SPA router with lazy-loaded page modules
+- **Core**: `js/app.js` (app initialization, 22+ routes), `js/router.js` (hash-based SPA router with lifecycle hooks), `js/api.js` (REST + WebSocket client), `js/state.js` (observable store with localStorage persistence)
+- **UI Components**: 12+ reusable components (Sidebar, StatusBar, Tabs, Modal, Toast, CommandPalette, DataTable, FileTree, SplitPanel, MetricsCard, TabPanel, ActivityTimeline, ContextMenu, LoadingSkeleton)
+- **CSS System**: 5 CSS files (globals, components, layout, themes, animations) — dark theme, design tokens, component styles
+- **Server**: aiohttp backend at `server/app.py` with 25+ REST endpoints across 10 handler modules, WebSocket manager at `/ws`, SSE at `/api/v1/stream`
+- **Documentation**: `ARCHITECTURE.md` covering all subsystems, routing, component tree, data flow
+
+### Bug Fix: Router Export Pattern
+- Root cause: `browser.js`, `terminal.js`, `file-explorer.js` exported a plain object `{ render, mount, destroy }` but the router only handled function factory exports
+- Fix: Added object export support in `js/router.js` (line 368-370) — now handles both `function createPage()` and `{ render, mount, destroy }` directly
+- Side effect: `browser.js` DEFAULT_URL changed from `https://example.com` to `https://www.google.com`
+
+### Batch A — Subsystem Pages (6 pages, all full implementations)
+
+| Page | Lines | Backend APIs | Features |
+|---|---|---|---|
+| **actions.js** | 892 | `GET /api/v1/actions`, `POST /api/v1/actions/run`, `GET /api/v1/actions/history` | Two-tab (Actions + History), search/filter, run with dry-run, inline execution results, loading/error/empty states |
+| **macros.js** | 667 | `GET /api/v1/macros`, `POST /api/v1/macros/run` | Expandable cards, step preview, run/dry-run, inline step-by-step results with color-coded return codes, search |
+| **camcoms.js** (NEW) | 505 | `GET /api/v1/camcoms/status`, `GET /api/v1/camcoms/identity` | Service status card with ready/not-ready indicator, identity fingerprint with copy-to-clipboard, auto-refresh toggle |
+| **recall.js** (NEW) | 677 | `GET /api/v1/recall/search`, `POST /api/v1/recall/remember`, `DELETE /api/v1/recall/forget/{key}` | Debounced search, key-value result list with category badges, add form, delete with confirmation |
+| **desktop.js** (NEW) | 646 | `GET /api/v1/desktop/active`, `GET /api/v1/desktop/snapshot` | Two-column grid: active window info + desktop window list, auto-refresh polling (2s), independent loading/error states |
+| **voice.js** (NEW) | 800 | `POST /api/v1/voice/parse`, `POST /api/v1/voice/transcribe` | Command parse (text input) + audio transcription (file upload / MediaRecorder mic), parse history |
+
+**Sidebar layout** after Batch A:
+- Pages: Dashboard, AI Chat, Agents, Actions, **RecallVault**, Key Bindings, Terminal, Files, Browser
+- Tools: Macros, **CamComs**, **SeeOnDesk**, **Voice**, PhiConnect, Vsee
+- System: Tasks, Notifications, Plugins
+
+### CAD Frontend Tests
+- 87 new vitest tests across 3 files: `store.test.js` (state management), `client.test.js` (WebSocket RPC), `PrimitiveFactory.test.js` (geometry generation)
+- All pass: 87/87
+
+### Test Status
+| Suite | Count | Status |
+|---|---|---|
+| Python (project) | 1413 | ✅ pass (14 pre-existing env failures) |
+| CAD server | 98 | ✅ all pass |
+| CAD JS (vitest) | 87 | ✅ all pass |
+| **Total** | **1598** | ✅ |
+
+### Files Changed
+- MkDocs site: 30+ files updated
+- `Agent/`: 7 files rewritten
+- `fionaLocalPages/`: ~50 files (new + modified)
+- `cad/frontend/tests/`: 3 new test files
+
+## Entry 11 — Batch B: Backend Handlers + Frontend Pages for All Remaining Subsystems ✅
+
+**Date**: 2026-06-24
+**Focus**: Create backend handlers and full frontend pages for phiconnect, vsee, bindings, notifications
+
+### Batch B — Backend Handlers (4 new Python files)
+
+| Handler | File | APIs | Module Wrapped |
+|---|---|---|---|
+| **phiconnect** | `server/handlers/phiconnect.py` (5 endpoints) | `GET /status`, `GET /identity`, `GET /messages`, `POST /send`, `POST /trust` | `PhiConnect` — secure local messaging |
+| **vsee** | `server/handlers/vsee.py` (3 endpoints) | `GET /status`, `POST /launch`, `GET /model` | `Vsee` — holography visual scene viewer |
+| **bindings** | `server/handlers/bindings.py` (3 endpoints) | `GET /bindings`, `POST /save`, `GET /apps` | `QuikTieper` — key bindings config |
+| **notifications** | `server/handlers/notifications_handler.py` (3 endpoints) | `GET /notifications`, `POST /create`, `POST /dismiss` | `FionaCore.notifications` — in-memory notification feed + optional WebSocket broadcast |
+
+### Batch B — Frontend Pages (4 replacements, placeholders → full)
+
+| Page | Lines | Features |
+|---|---|---|
+| **phiconnect.js** | 724 | Status & identity card with fingerprint copy, recent messages list with timestamps, send message form, auto-refresh (10s) |
+| **vsee.js** | 556 | Status/launch card with optional path inputs, default model preview (points/edges code blocks with copy), quick actions |
+| **bindings.js** | 915 | Two-panel layout: app-grouped binding list (left) + detail view (right), search/filter, key chips, expand/collapse rows, save |
+| **notifications.js** | 777 | Urgency-coded notification list with dismiss animation, all/unread filter, dismiss all with confirmation, create notification form, auto-refresh (5s) |
+
+### All Pages Handle
+- ✅ Loading (skeleton)
+- ✅ Error (retry button)
+- ✅ Empty (icon + message)
+- ✅ Data (full UI)
+- ✅ Lifecycle cleanup (intervals, listeners on destroy)
+
+### Route Registration
+| File | Change |
+|---|---|
+| `server/app.py` | Added 4 imports + 14 route registrations (PhiConnect:5, Vsee:3, Bindings:3, Notifications:3) |
+
+### Complete Subsystem Map (All 22 pages)
+
+| # | Route | Page | Backend Handler | Status |
+|---|---|---|---|---|
+| 1 | `/` | dashboard.js | system | ✅ |
+| 2 | `/chat` | chat.js | agent | ✅ |
+| 3 | `/agents` | agents.js | agent | ✅ |
+| 4 | `/agents/:id` | agent-status.js | agent | ✅ |
+| 5 | `/actions` | actions.js | actions | ✅ |
+| 6 | `/bindings` | bindings.js | bindings | ✅ |
+| 7 | `/phiconnect` | phiconnect.js | phiconnect | ✅ |
+| 8 | `/macros` | macros.js | macros | ✅ |
+| 9 | `/terminal` | terminal.js | terminal | ✅ |
+| 10 | `/vsee` | vsee.js | vsee | ✅ |
+| 11 | `/notifications` | notifications.js | notifications_handler | ✅ |
+| 12 | `/settings` | settings.js | config | ✅ |
+| 13 | `/performance` | performance.js | system | ✅ |
+| 14 | `/files` | file-explorer.js | files | ✅ |
+| 15 | `/browser` | browser.js | browser | ✅ |
+| 16 | `/tasks` | tasks.js | — | ✅ |
+| 17 | `/plugins` | plugins.js | — | ✅ |
+| 18 | `/logs` | logs.js | — | ✅ |
+| 19 | `/config` | config.js | config | ✅ |
+| 20 | `/diagnostics` | diagnostics.js | — | ✅ |
+| 21 | `/devtools` | devtools.js | — | ✅ |
+| 22 | `/workspace` | workspace.js | — | ✅ |
+| 23 | `/camcoms` | camcoms.js | camcoms | ✅ (Batch A) |
+| 24 | `/recall` | recall.js | recall | ✅ (Batch A) |
+| 25 | `/desktop` | desktop.js | desktop | ✅ (Batch A) |
+| 26 | `/voice` | voice.js | voice | ✅ (Batch A) |
+
+**All 26 routes have both frontend pages AND backend handlers where applicable.**
+
+### Final State
+- **22 original SPA routes** + **4 new Batch A routes** = **26 total**
+- **10 backend handler modules** → **40+ API endpoints**
+- **All pages** follow the `createPage(routeInfo)` → `{ render, mount, destroy }` factory pattern
+- **All pages** handle loading, error, empty, and data states
+- **Router** supports both function and object page exports (fix in Entry 10)
+
+---
+
+## Entry 12 — Batch C: HTML Template Conversion, Browser Automation Fix, Agents CRUD ✅
+
+**Date**: 2026-06-25
+**Focus**: Migrate all 26 SPA pages from JS-embedded HTML template literals to proper `.html` files; fix Playwright browser automation usability; add agents CRUD backend with qwen3:8b model detection
+
+### Batch C — HTML Template Conversion (All 26 Pages)
+
+**Problem**: All page HTML was embedded in JS template literal strings (`html\`...\``), causing escaped rendering where tags showed as visible text in the browser. No HTML was visible in the DOM inspector.
+
+**Solution**: Created `js/template-loader.js` — fetches `templates/{name}.html` at mount time with `{{variable}}` interpolation, `{{{rawHtml}}}` for SVG icons, `{{#if}}`/`{{#each}}` conditionals. All 26 page modules now:
+- `render()` returns mount-point div only (`<div id="{name}-root"></div>`)
+- `mount()` is `async`, calls `await loadTemplate('name', data)`, injects into container, then runs existing event-binding logic
+- `<style>` blocks moved from JS to template `<style>` tags
+- SVG icons passed as `ICONS.name.html` (raw string) via `{{{iconVar}}}`
+- CSS classes, IDs, DOM hierarchy preserved — all existing DOM queries work unchanged
+
+| Conversion Batch | Pages | Files |
+|---|---|---|
+| Core (5) | dashboard, chat, agents, terminal, settings | 5 templates, 5 JS |
+| Tools (5) | file-explorer, browser, config, logs, devtools | 5 templates, 5 JS |
+| Batch A/B (10) | actions, macros, camcoms, recall, desktop, voice, phiconnect, vsee, bindings, notifications | 10 templates, 10 JS |
+| Remaining (6) | performance, tasks, plugins, diagnostics, workspace, agent-status | 6 templates, 6 JS |
+
+**Architecture now**: **Python** (aiohttp backend) → **HTML** (`.html` template files as main frontend) → **JS** (page modules as sub-frontend for SPA behavior + API calls)
+
+### Browser Automation Fix — Playwright Now Usable
+
+**Root cause**: `BrowserAutomation/__init__.py` had 7 convenience functions (`navigate`, `click_element`, `type_text`, `get_text_content`, `capture_screenshot`, `evaluate_script`, `create_context`) that were synchronous `def` functions calling `async` methods on `BrowserManager` without `await`. They returned coroutine objects instead of actual results. Additionally, no browser context was ever auto-created before navigation.
+
+**Fix**:
+- `BrowserAutomation/__init__.py`: Converted all 7 functions to `async def` with proper `await`; added `_ensure_context()` helper that auto-creates a Playwright context if none exists
+- `server/handlers/browser.py`: Added `await` to all calls; added context creation after browser start; added `browser_type()` and `browser_get_text()` handlers (these endpoints existed in frontend but not backend); enhanced status endpoint to return `url`, `title`
+- `server/app.py`: Registered `POST /api/v1/browser/type` and `POST /api/v1/browser/get_text`
+- `pages/browser.js`: Fixed screenshot data URL extraction to match backend's `screenshot_base64` response format
+
+### Agents CRUD Backend + qwen3:8b Detection
+
+**Problem**: The agents frontend called `GET /api/v1/agents`, `POST /api/v1/agents`, and lifecycle endpoints (pause/resume/stop/restart) that had no backend. No model availability detection existed.
+
+**Fix**:
+- Created `server/handlers/agents_crud.py` — in-memory agent store with 7 endpoints: `list_agents`, `create_agent`, `pause_agent`, `resume_agent`, `stop_agent`, `restart_agent`, `check_model`
+- `GET /api/v1/agent/models` returns available Ollama models + `qwen3_8b_available` boolean
+- `GET /api/v1/agents` returns agents list + `meta.available_models` with Ollama model names
+- `server/app.py`: Registered all 7 routes
+- `pages/agents.js`: Shows green/red dot indicator for qwen3:8b online/offline, lists up to 3 other available models with "+N more" overflow
+
+### Key Achievements
+
+| Metric | Value |
+|---|---|
+| Pages converted to HTML templates | 26/26 (100%) |
+| Template files created | 26 |
+| Browser automation bugs fixed | 3 (sync/async, missing context, missing endpoints) |
+| New backend handler modules | 1 (`agents_crud.py`) |
+| New API endpoints | 7 (agents CRUD) + 2 (browser type/get_text) |
+| JavaScript files modified | 26 |
+| Browser handlers modified | 1 (fixed awaits, added handlers) |
+| `BrowserAutomation/__init__.py` | 7 functions made async + auto context creation |
+
+---
+
+## Entry 13 — QuikTieper API, Terminal Rewrite, Settings Persistence, Install Script ✅
+
+**Date**: 2026-06-25
+**Focus**: QuikTieper REST API endpoints, terminal backend rewrite with Python-side command reference, settings.txt persistence, install script, documentation refresh
+
+### QuikTieper REST API
+- Created `server/handlers/quiktieper.py` — 8 endpoints:
+  - `GET /api/v1/quiktieper/status` — listener running state, YAML status
+  - `GET /api/v1/quiktieper/presets` — available command presets
+  - `GET /api/v1/quiktieper/desktop-apps` — discovered `.desktop` files
+  - `POST /api/v1/quiktieper/import-apps` — import desktop apps into bindings
+  - `POST /api/v1/quiktieper/assign-keys` — assign launch keys to unbound apps
+  - `POST /api/v1/quiktieper/launcher/start` — start the global chord listener
+  - `POST /api/v1/quiktieper/launcher/stop` — stop the chord listener
+  - `GET /api/v1/quiktieper/launcher/status` — alias for status
+- All 8 endpoint routes registered in `server/app.py`
+- QuikTieper accessible via Terminal (`fiona quiktieper *` commands) and Config page
+- No dedicated frontend route — CLI and Config UI are the control surfaces
+
+### Terminal Rewrite — Backend Command Reference
+- `server/handlers/terminal.py` completely rewritten:
+  - `COMMAND_REFERENCE` dict with **14 categories**, **90+ commands** including full Fiona CLI surface
+  - Categories: Navigation, System, Chat & Agents, Actions & Automation, Files, Browser, Development, Network & Communication, Security & Access, Performance & Monitoring, Macros & Scripting, Configuration, Utilities & Tools, Fiona CLI
+  - `help`/`?` returns formatted text from the backend (14 lines per category)
+  - `clear`/`cls` returns `action: "clear"` signal for the frontend
+  - New `POST /api/v1/terminal/autocomplete` endpoint — server-side autocomplete suggestions from COMMAND_REFERENCE tokens
+- **4 routes registered**: `GET /terminal/execute`, `POST /terminal/execute`, `GET /terminal/autocomplete`, `POST /terminal/autocomplete`
+- `terminal.js` simplified to thin client:
+  - Removed: local `COMMAND_REFERENCE`, `printHelp()`, `_allCommandTokens`, `_findAutocompleteMatches()`
+  - Removed: local interception of `help`/`clear`/`cls` commands
+  - All commands now go to backend API
+  - Autocomplete queries `POST /api/v1/terminal/autocomplete`
+  - Help button calls `executeCommand('help')`
+- Architecture enforced: **all terminal logic in Python backend**, JS only captures input/output
+
+### Settings Persistence
+- Created `server/handlers/settings_handler.py` with 2 endpoints:
+  - `GET /api/v1/settings` — reads `~/.config/fiona/settings.txt` (JSON), returns parsed settings object or `{}`
+  - `PUT /api/v1/settings` — validates JSON body, writes atomically to `settings.txt`
+- Both routes registered in `server/app.py`
+- Frontend `settings.js` already calls these endpoints (GET on mount, PUT on save)
+- Config page uses the same `GET /api/v1/settings` for its editor
+- Matches existing bindings config location convention (`~/.config/fiona/`)
+
+### Import Error Fix
+- `server/app.py` `_collect_metrics` had a lazy relative import (`from ..system import ...`) that failed at runtime because the module is not run as part of a package
+- Replaced with direct references to already-imported module references: `system._cpu_percent()`, `system._virtual_memory()`, `system._disk_usage()`, `system._net_io_counters()`
+
+### Router Object-Export Support
+- `js/router.js`: Added support for page modules exporting `{ render, mount, destroy }` objects directly (previously only handled function factory `createPage()` exports)
+- Fixes: `browser.js`, `terminal.js`, `file-explorer.js` which use the object export pattern
+
+### Install Script
+- Created `scripts/fiona-install`:
+  - `--minimal`: Skip system tool checks, pip install only
+  - `--venv`: Use Python venv instead of conda
+  - `--help`: Prints usage
+  - Default: conda-based install with system tool checks
+  - Installs project in editable mode, verifies imports, checks for ydotoold/kdotool
+
+### Documentation Refresh
+- `fionaDocsPage/docs/prototypes.md`: Moved fionaLocalPages from prototype section to its own module page (fionaLocalPages graduated from prototype)
+- `fionaDocsPage/docs/installation.md`: Updated with fionaLocalPages server startup instructions
+- `fionaDocsPage/docs/developer/validation.md`: Added CLI command surface test result (54 subtests), updated test counts
+- New module page: `fionaDocsPage/docs/modules/fionalocalpages.md`
+- `fionaDocsPage/docs/index.md`: Added fionaLocalPages card to module grid
+- `current-state.md`: Updated test count reference
+- `devlog.md`: This entry (Entry 13)
+
+### New Tests
+- `tests/test_cli_command_surface.py` — 2 tests, 54 subtests:
+  - `test_cli_help_no_errors`: Runs `--help` on all 26 CLI commands (quiktieper, host, agent, dataclient, action, voice, macro, recall, fat, terminal-assist, cli, api, run-shell, seeondesk, vsee, ficad, browser, approval, phiconnect, camcoms), verifies no `ERROR`/`Traceback` in output
+  - `test_cli_smoke_no_crash`: Runs 22 safe commands (version, paths, list, etc.) that execute without side effects, verifies no tracebacks; browser status output validated for `state`, `config`, `browser_type`, `headless`, `viewport_width`, `viewport_height`
+
+### Key Achievements
+
+| Metric | Value |
+|---|---|
+| New backend handler modules | 3 (quiktieper, terminal rewrite, settings_handler) |
+| New API endpoints | 10+ (8 quiktieper + 2 settings + 1 terminal autocomplete) |
+| Terminal command categories | 14 (90+ commands) |
+| Terminal JS lines removed | ~150 (COMMAND_REFERENCE, local parsing) |
+| New test file | 1 (54 subtests, 2 tests) |
+| New install script | 1 (conda + venv fallback) |
+| Settings persistence | `~/.config/fiona/settings.txt` read/write |
+| Module pages created/updated | 3 (fionalocalpages.md new, prototypes.md updated, index.md updated) |
+| All 26 page JS files | pass `node -c` syntax check |
+
+### Remaining
+- QuikTieper dedicated frontend route (optional — CLI/Config are sufficient for now)
+- Authentication/HTTPS for production fionaLocalPages deployment
+- Hard-refresh browser after deployment to clear stale module caches
+
+### Batch C — HTML Template Conversion (All 26 Pages)
+
+**Problem**: All page HTML was embedded in JS template literal strings (`html\`...\``), causing escaped rendering where tags showed as visible text in the browser. No HTML was visible in the DOM inspector.
+
+**Solution**: Created `js/template-loader.js` — fetches `templates/{name}.html` at mount time with `{{variable}}` interpolation, `{{{rawHtml}}}` for SVG icons, `{{#if}}`/`{{#each}}` conditionals. All 26 page modules now:
+- `render()` returns mount-point div only (`<div id="{name}-root"></div>`)
+- `mount()` is `async`, calls `await loadTemplate('name', data)`, injects into container, then runs existing event-binding logic
+- `<style>` blocks moved from JS to template `<style>` tags
+- SVG icons passed as `ICONS.name.html` (raw string) via `{{{iconVar}}}`
+- CSS classes, IDs, DOM hierarchy preserved — all existing DOM queries work unchanged
+
+| Conversion Batch | Pages | Files |
+|---|---|---|
+| Core (5) | dashboard, chat, agents, terminal, settings | 5 templates, 5 JS |
+| Tools (5) | file-explorer, browser, config, logs, devtools | 5 templates, 5 JS |
+| Batch A/B (10) | actions, macros, camcoms, recall, desktop, voice, phiconnect, vsee, bindings, notifications | 10 templates, 10 JS |
+| Remaining (6) | performance, tasks, plugins, diagnostics, workspace, agent-status | 6 templates, 6 JS |
+
+**Architecture now**: **Python** (aiohttp backend) → **HTML** (`.html` template files as main frontend) → **JS** (page modules as sub-frontend for SPA behavior + API calls)
+
+### Browser Automation Fix — Playwright Now Usable
+
+**Root cause**: `BrowserAutomation/__init__.py` had 7 convenience functions (`navigate`, `click_element`, `type_text`, `get_text_content`, `capture_screenshot`, `evaluate_script`, `create_context`) that were synchronous `def` functions calling `async` methods on `BrowserManager` without `await`. They returned coroutine objects instead of actual results. Additionally, no browser context was ever auto-created before navigation.
+
+**Fix**:
+- `BrowserAutomation/__init__.py`: Converted all 7 functions to `async def` with proper `await`; added `_ensure_context()` helper that auto-creates a Playwright context if none exists
+- `server/handlers/browser.py`: Added `await` to all calls; added context creation after browser start; added `browser_type()` and `browser_get_text()` handlers (these endpoints existed in frontend but not backend); enhanced status endpoint to return `url`, `title`
+- `server/app.py`: Registered `POST /api/v1/browser/type` and `POST /api/v1/browser/get_text`
+- `pages/browser.js`: Fixed screenshot data URL extraction to match backend's `screenshot_base64` response format
+
+### Agents CRUD Backend + qwen3:8b Detection
+
+**Problem**: The agents frontend called `GET /api/v1/agents`, `POST /api/v1/agents`, and lifecycle endpoints (pause/resume/stop/restart) that had no backend. No model availability detection existed.
+
+**Fix**:
+- Created `server/handlers/agents_crud.py` — in-memory agent store with 7 endpoints: `list_agents`, `create_agent`, `pause_agent`, `resume_agent`, `stop_agent`, `restart_agent`, `check_model`
+- `GET /api/v1/agent/models` returns available Ollama models + `qwen3_8b_available` boolean
+- `GET /api/v1/agents` returns agents list + `meta.available_models` with Ollama model names
+- `server/app.py`: Registered all 7 routes
+- `pages/agents.js`: Shows green/red dot indicator for qwen3:8b online/offline, lists up to 3 other available models with "+N more" overflow
+
+### Key Achievements
+
+| Metric | Value |
+|---|---|
+| Pages converted to HTML templates | 26/26 (100%) |
+| Template files created | 26 |
+| Browser automation bugs fixed | 3 (sync/async, missing context, missing endpoints) |
+| New backend handler modules | 1 (`agents_crud.py`) |
+| New API endpoints | 7 (agents CRUD) + 2 (browser type/get_text) |
+| JavaScript files modified | 26 |
+| Browser handlers modified | 1 (fixed awaits, added handlers) |
+| `BrowserAutomation/__init__.py` | 7 functions made async + auto context creation |

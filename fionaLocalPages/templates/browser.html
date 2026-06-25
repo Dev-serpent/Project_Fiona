@@ -1,0 +1,777 @@
+<div class="browser-page">
+  <style>
+    /* ── Browser Page Styles ─────────────────────────────────────────── */
+    .browser-page {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+    }
+
+    /* ── Page Header ─────────────────────────────────────────────────── */
+    .browser-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      min-height: 48px;
+      background: var(--bg-secondary);
+    }
+
+    .browser-header__left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .browser-header__title {
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .browser-header__status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
+    .browser-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+      transition: background var(--transition-fast);
+    }
+
+    .browser-header__right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* ── Error Banner ────────────────────────────────────────────────── */
+    .browser-error-banner {
+      display: none;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-4);
+      background: var(--danger-muted);
+      border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+      font-size: var(--font-size-xs);
+      flex-shrink: 0;
+    }
+
+    /* ── Toolbar ─────────────────────────────────────────────────────── */
+    .browser-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+      flex-wrap: wrap;
+      min-height: 42px;
+    }
+
+    .browser-toolbar__group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .browser-toolbar__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .browser-toolbar__btn:hover:not(:disabled) {
+      background: var(--surface-hover);
+      color: var(--text-primary);
+    }
+
+    .browser-toolbar__btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .browser-toolbar__btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* URL Bar */
+    .browser-url-bar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .browser-url-bar__input {
+      width: 100%;
+      height: 30px;
+      padding: 0 var(--space-3);
+      padding-left: 32px;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      outline: none;
+      transition: all var(--transition-fast);
+    }
+
+    .browser-url-bar__input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .browser-url-bar__input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .browser-url-bar__icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .browser-url-bar__icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .browser-url-bar__go {
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-full);
+      color: var(--accent);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .browser-url-bar__go:hover:not(:disabled) {
+      background: var(--accent-muted);
+    }
+
+    .browser-url-bar__go:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .browser-url-bar__go svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Status text */
+    .browser-status-text {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    /* ── Tab Bar ─────────────────────────────────────────────────────── */
+    .browser-tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      padding: 0 var(--space-2);
+    }
+
+    /* ── Tab Content ─────────────────────────────────────────────────── */
+    .browser-tab-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Browser View ────────────────────────────────────────────────── */
+    .browser-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow: hidden;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .browser-screenshot-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
+
+    .browser-screenshot {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+    }
+
+    .browser-viewport-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--text-muted);
+      padding: var(--space-8);
+    }
+
+    .browser-viewport-placeholder__icon {
+      width: 48px;
+      height: 48px;
+      opacity: 0.5;
+    }
+
+    .browser-viewport-placeholder__text {
+      font-size: var(--font-size-sm);
+      color: var(--text-muted);
+    }
+
+    .browser-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    /* Page Info Bar */
+    .browser-page-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-tertiary);
+      flex-shrink: 0;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .browser-page-info__item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-size: var(--font-size-xs);
+      white-space: nowrap;
+    }
+
+    .browser-page-info__label {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .browser-page-info__value {
+      color: var(--text-secondary);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .browser-page-info__value--url {
+      color: var(--accent);
+      max-width: 300px;
+    }
+
+    .browser-page-info__value--error {
+      color: var(--danger);
+    }
+
+    .browser-page-info__value--success {
+      color: var(--success);
+    }
+
+    /* Element Interaction */
+    .browser-element-interaction {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-tertiary);
+      flex-shrink: 0;
+    }
+
+    .browser-element-interaction__row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .browser-element-interaction__row .browser-selector-input {
+      flex: 1;
+    }
+
+    .browser-element-interaction__input-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-2);
+    }
+
+    .browser-element-interaction__input-row input {
+      flex: 1;
+    }
+
+    .browser-element-action-result {
+      margin-top: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      word-break: break-all;
+      max-height: 60px;
+      overflow-y: auto;
+    }
+
+    /* ── Console Tab ─────────────────────────────────────────────────── */
+    .browser-console-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+    }
+
+    .browser-console-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .browser-console-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    .browser-console-messages {
+      flex: 1;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      padding: var(--space-1) 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .browser-console-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .browser-console-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .browser-console-messages::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .browser-console-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+      font-family: var(--font-family);
+    }
+
+    .browser-console-message {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: 3px var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+      line-height: 1.5;
+      transition: background var(--transition-fast);
+    }
+
+    .browser-console-message:hover {
+      background: var(--surface);
+    }
+
+    .browser-console-message__level {
+      font-weight: var(--font-weight-semibold);
+      font-size: 9px;
+      min-width: 36px;
+      flex-shrink: 0;
+      letter-spacing: 0.05em;
+    }
+
+    .browser-console-message__text {
+      flex: 1;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .browser-console-message__time {
+      color: var(--text-muted);
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+
+    .browser-console-message--warn {
+      background: rgba(234, 179, 8, 0.04);
+    }
+
+    .browser-console-message--error {
+      background: rgba(239, 68, 68, 0.04);
+    }
+
+    /* ── Screenshots Tab ─────────────────────────────────────────────── */
+    .browser-screenshots-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+    }
+
+    .browser-screenshots-count {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      margin-right: auto;
+    }
+
+    .browser-screenshots-grid {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: var(--space-3);
+      padding: var(--space-4);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .browser-screenshots-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .browser-screenshots-grid::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .browser-screenshots-grid::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .browser-screenshots-empty {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .browser-screenshot-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all var(--transition-fast);
+    }
+
+    .browser-screenshot-card:hover {
+      border-color: var(--border-subtle);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .browser-screenshot-card__preview {
+      width: 100%;
+      height: 160px;
+      overflow: hidden;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .browser-screenshot-card__preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+
+    .browser-screenshot-card__preview img:hover {
+      transform: scale(1.02);
+    }
+
+    .browser-screenshot-card__info {
+      padding: var(--space-2) var(--space-3);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .browser-screenshot-card__url {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .browser-screenshot-card__meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-xxs);
+      color: var(--text-muted);
+    }
+
+    .browser-screenshot-card__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-2);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* ── Sessions Tab ────────────────────────────────────────────────── */
+    .browser-sessions-toolbar {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      background: var(--bg-tertiary);
+    }
+
+    .browser-sessions-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-2);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .browser-sessions-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .browser-sessions-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .browser-sessions-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .browser-sessions-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .browser-session-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      margin-bottom: var(--space-2);
+      background: var(--surface);
+      transition: all var(--transition-fast);
+    }
+
+    .browser-session-item:hover {
+      border-color: var(--border-subtle);
+      background: var(--surface-hover);
+    }
+
+    .browser-session-item--active {
+      border-color: var(--accent);
+      background: var(--accent-muted);
+    }
+
+    .browser-session-item__info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .browser-session-item__title {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+    }
+
+    .browser-session-item__url {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .browser-session-item__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      flex-shrink: 0;
+    }
+
+    /* ── Loading overlay ─────────────────────────────────────────────── */
+    .browser-loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 17, 26, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      backdrop-filter: blur(2px);
+    }
+  </style>
+
+  <!-- Page Header -->
+  <div class="browser-header">
+    <div class="browser-header__left">
+      <h1 class="browser-header__title">Browser Automation</h1>
+      <div class="browser-header__status">
+        <span class="browser-status-dot" id="browser-status-dot"></span>
+        <span id="browser-status-label">Stopped</span>
+      </div>
+    </div>
+    <div class="browser-header__right">
+      <button class="c-btn c-btn--sm c-btn--primary" id="browser-start-stop-btn">
+        {{{playIcon}}} Start Browser
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Banner -->
+  <div class="browser-error-banner" id="browser-error-banner"></div>
+
+  <!-- Control Toolbar -->
+  <div class="browser-toolbar">
+    <div class="browser-toolbar__group">
+      <button class="browser-toolbar__btn" id="browser-back-btn"
+              title="Back" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <button class="browser-toolbar__btn" id="browser-forward-btn"
+              title="Forward" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+      <button class="browser-toolbar__btn" id="browser-refresh-btn"
+              title="Refresh" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- URL Bar -->
+    <div class="browser-url-bar">
+      <span class="browser-url-bar__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </span>
+      <input type="text" class="browser-url-bar__input" id="browser-url-input"
+             placeholder="Enter URL…"
+             value="{{defaultUrl}}"
+             autocomplete="off"
+             spellcheck="false" />
+      <button class="browser-url-bar__go" id="browser-go-btn" title="Go"
+              disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="browser-toolbar__group">
+      <button class="browser-toolbar__btn" id="browser-screenshot-btn"
+              title="Take screenshot" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+      </button>
+    </div>
+
+    <span class="browser-status-text" id="browser-status-text"></span>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="browser-tab-bar" id="browser-tab-bar" role="tablist"></div>
+
+  <!-- Tab Content -->
+  <div class="browser-tab-content" id="browser-tab-content"></div>
+</div>

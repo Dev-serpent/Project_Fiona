@@ -333,6 +333,7 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     voice_run.add_argument("phrase", nargs="+")
     voice_run.add_argument("--dry-run", action="store_true")
     voice_run.add_argument("--profile", default="local", dest="permission_profile")
+    voice_run.add_argument("--trace-path", type=Path, default=None)
     
     voice_listen = voice_subparsers.add_parser("listen", help="Listen to microphone and run detected action.")
     voice_listen.add_argument("--duration", type=float, default=5.0, help="Recording duration in seconds.")
@@ -1032,7 +1033,8 @@ def _run_voice(args: argparse.Namespace) -> None:
         print(_pretty_json(parsed.to_dict()))
         return
     if args.voice_command == "run":
-        result = ActionRouter().run(
+        router = ActionRouter(**({"trace_path": args.trace_path} if args.trace_path else {}))
+        result = router.run(
             parsed.action,
             source="voice",
             permission_profile=args.permission_profile,
@@ -1318,6 +1320,12 @@ def _run_browser(args: argparse.Namespace) -> None:
             return
         print("Starting browser...", file=sys.stderr)
         asyncio.run(manager.start())
+        # Create a default context so navigation/screenshot work immediately
+        try:
+            asyncio.run(manager.create_context())
+            print("Default context created.", file=sys.stderr)
+        except Exception as exc:
+            print(f"Warning: Could not create default context: {exc}", file=sys.stderr)
         print("Browser started.", file=sys.stderr)
 
     elif cmd == "stop":
@@ -1330,10 +1338,13 @@ def _run_browser(args: argparse.Namespace) -> None:
         info = {
             "state": state.value,
             "config": {
+                "browser_type": manager.config.browser_type,
                 "headless": manager.config.headless,
-                "slow_mo": manager.config.slow_mo,
                 "viewport_width": manager.config.viewport_width,
                 "viewport_height": manager.config.viewport_height,
+                "data_dir": manager.config.data_dir,
+                "proxy": manager.config.proxy,
+                "args": list(manager.config.args),
             },
         }
         print(json.dumps(info, indent=2, default=str))

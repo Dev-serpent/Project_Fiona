@@ -19,6 +19,7 @@ import {
   skeletonButton,
   skeletonTableRow,
 } from '../js/components/LoadingSkeleton.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -154,7 +155,7 @@ function esc(str) {
 
 /* ── Render ─────────────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -172,77 +173,41 @@ function renderPage(container) {
   const enabled = _state.plugins.filter((p) => p.status === 'enabled').length;
   const filtered = applyFilters();
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Plugin Manager
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-            ${total} plugin${total !== 1 ? 's' : ''} installed · ${enabled} enabled
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-          <button class="c-btn c-btn--primary c-btn--sm" id="plugin-install-btn">
-            <span class="c-btn__icon">${ICONS.plus}</span>
-            Install Plugin
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="plugin-check-updates" title="Check for updates">
-            <span class="c-btn__icon">${ICONS.refresh}</span>
-            Check Updates
-          </button>
-        </div>
-      </div>
-      ${_state.useMockData ? html`
-        <div class="c-alert c-alert--info" style="margin-top: var(--space-3);">
-          <span class="c-alert__icon">${ICONS.info}</span>
-          <div class="c-alert__content">Backend API not available — showing sample plugin data.</div>
-        </div>
-      ` : ''}
-    </div>
+  // Build raw HTML sections
+  const categoryTabs = CATEGORIES.map((cat) =>
+    `<div class="c-tab ${cat.id === _state.category ? 'c-tab--active' : ''}" data-action="filter-category" data-category="${cat.id}" style="cursor: pointer; font-size: var(--font-size-xs);">${esc(cat.label)}</div>`
+  ).join('');
 
-    <!-- Filters & Search -->
-    <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
-      <!-- Category Tabs -->
-      <div class="c-tabs" style="flex-shrink: 0;">
-        ${html.raw(CATEGORIES.map((cat) => html`
-          <div class="c-tab ${cat.id === _state.category ? 'c-tab--active' : ''}"
-               data-action="filter-category" data-category="${cat.id}"
-               style="cursor: pointer; font-size: var(--font-size-xs);">
-            ${esc(cat.label)}
-          </div>
-        `).join(''))}
-      </div>
-      <!-- Search -->
-      <div class="c-input-wrapper" style="flex: 1; min-width: 180px; max-width: 300px;">
-        <span class="c-input-wrapper__icon c-input-wrapper__icon--left">${ICONS.search}</span>
-        <input type="text" class="c-input c-input--sm" id="plugin-search"
-               placeholder="Search plugins…"
-               value="${esc(_state.searchQuery)}"
-               style="padding-left: 32px; font-size: var(--font-size-xs);">
-      </div>
-      <span style="font-size: var(--font-size-xs); color: var(--text-muted);">
-        ${filtered.length} displayed
-      </span>
-    </div>
+  let pluginCards;
+  if (filtered.length === 0) {
+    pluginCards = `<div style="text-align: center; padding: var(--space-8); color: var(--text-muted); font-size: var(--font-size-sm);">${
+      _state.searchQuery
+        ? `No plugins matching "${esc(_state.searchQuery)}".`
+        : 'No plugins in this category.'
+    }</div>`;
+  } else {
+    pluginCards = filtered.map((plugin) => String(renderPluginRow(plugin))).join('');
+  }
 
-    <!-- Plugin List -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
-      ${filtered.length === 0 ? html`
-        <div style="text-align: center; padding: var(--space-8); color: var(--text-muted); font-size: var(--font-size-sm);">
-          ${_state.searchQuery
-            ? `No plugins matching "${esc(_state.searchQuery)}".`
-            : 'No plugins in this category.'}
-        </div>
-      ` : html.raw(filtered.map((plugin) => renderPluginRow(plugin)).join(''))}
-    </div>
+  const installModal = _state.showInstallModal ? renderInstallModal().html : '';
 
-    <!-- Install Modal -->
-    ${_state.showInstallModal ? renderInstallModal() : ''}
-  `;
+  const data = {
+    pluginCount: total,
+    pluginPlural: total !== 1 ? 's' : '',
+    enabledCount: enabled,
+    showMockAlert: _state.useMockData,
+    plusIcon: ICONS.plus.html,
+    refreshIcon: ICONS.refresh.html,
+    infoIcon: ICONS.info.html,
+    searchIcon: ICONS.search.html,
+    categoryTabs,
+    searchQuery: esc(_state.searchQuery),
+    filteredCount: filtered.length,
+    pluginCards,
+    installModal,
+  };
 
+  container.innerHTML = await loadTemplate('plugins', data);
   mountHandlers(container);
 }
 
@@ -479,26 +444,26 @@ function applyFilters() {
 function mountHandlers(container) {
   // Category filter tabs
   container.querySelectorAll('[data-action="filter-category"]').forEach((el) => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', async () => {
       _state.category = el.dataset.category;
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     });
   });
 
   // Search
   const searchInput = container.querySelector('#plugin-search');
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener('input', async (e) => {
       _state.searchQuery = e.target.value;
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     });
   }
 
   // Install button
-  container.querySelector('#plugin-install-btn')?.addEventListener('click', () => {
+  container.querySelector('#plugin-install-btn')?.addEventListener('click', async () => {
     _state.showInstallModal = true;
     _state.installPath = '';
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     // Focus path input after render
     setTimeout(() => {
       const el = _state.container?.querySelector('#install-plugin-path');
@@ -538,11 +503,11 @@ function mountHandlers(container) {
 
   // Expand/collapse
   container.querySelectorAll('[data-action="expand-plugin"]').forEach((el) => {
-    el.addEventListener('click', (e) => {
+    el.addEventListener('click', async (e) => {
       const pluginId = e.target.closest('[data-plugin-id]')?.dataset.pluginId
         || e.target.dataset.pluginId;
       _state.expandedId = _state.expandedId === pluginId ? null : pluginId;
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
     });
   });
 
@@ -574,7 +539,7 @@ async function togglePlugin(pluginId, enabled) {
 
   // Optimistic update
   plugin.status = enabled ? 'enabled' : 'disabled';
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   if (api && !_state.useMockData) {
     try {
@@ -582,7 +547,7 @@ async function togglePlugin(pluginId, enabled) {
     } catch (err) {
       // Revert on failure
       plugin.status = enabled ? 'disabled' : 'enabled';
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
       showToast('error', `Failed to toggle plugin: ${err.message}`);
     }
   } else {
@@ -656,7 +621,7 @@ async function doUninstall(pluginId) {
 
   // Optimistic removal
   _state.plugins.splice(idx, 1);
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   if (api && !_state.useMockData) {
     try {
@@ -665,7 +630,7 @@ async function doUninstall(pluginId) {
     } catch (err) {
       // Revert
       _state.plugins.splice(idx, 0, plugin);
-      if (_state.container) renderPage(_state.container);
+      if (_state.container) await renderPage(_state.container);
       showToast('error', `Failed to uninstall: ${err.message}`);
     }
   } else {
@@ -686,7 +651,7 @@ async function openConfig(pluginId) {
 
   // Show config in expanded view
   _state.expandedId = pluginId;
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
   showToast('info', `Configuration for ${plugin.name} — edit in expanded view.`);
 }
 

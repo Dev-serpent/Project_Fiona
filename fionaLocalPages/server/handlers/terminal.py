@@ -1,12 +1,17 @@
-"""Terminal API endpoints.
+"""Terminal API endpoints — shell execution, built-in commands, autocomplete.
 
-Wraps FionaCore.shell_safety.safe_subprocess_run() and
-TerminalAssist.terminal_assist_status().
+All terminal logic lives server-side.  The frontend is a thin client that
+sends user input to ``POST /api/v1/terminal/exec`` and displays whatever
+``stdout`` / ``stderr`` the backend returns.
+
+Built-in commands (``help``, ``clear``) are handled entirely in Python
+so the frontend never needs to know about them.
 """
 
 from __future__ import annotations
 
 import logging
+import shlex
 from typing import Any
 
 from aiohttp.web import Request, Response, json_response
@@ -18,14 +23,190 @@ from fionaLocalPages.server.middleware import ApiError
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Categorized command reference (server-side)
+# ---------------------------------------------------------------------------
 
-# ── Handlers ───────────────────────────────────────────────────────────────
+COMMAND_REFERENCE: dict[str, list[dict[str, str]]] = {
+    "File Navigation": [
+        {"cmd": "pwd", "desc": "Show current directory"},
+        {"cmd": "ls", "desc": "List files"},
+        {"cmd": "ls -la", "desc": "Detailed listing including hidden files"},
+        {"cmd": "cd <dir>", "desc": "Change directory"},
+        {"cmd": "cd ..", "desc": "Go up one directory"},
+        {"cmd": "cd ~", "desc": "Go to home directory"},
+    ],
+    "File Operations": [
+        {"cmd": "touch <file>", "desc": "Create empty file"},
+        {"cmd": "mkdir <dir>", "desc": "Create directory"},
+        {"cmd": "cp <src> <dest>", "desc": "Copy file"},
+        {"cmd": "cp -r <dir1> <dir2>", "desc": "Copy directory"},
+        {"cmd": "mv <old> <new>", "desc": "Move/rename"},
+        {"cmd": "rm <file>", "desc": "Delete file"},
+        {"cmd": "rm -r <dir>", "desc": "Delete directory"},
+    ],
+    "Viewing Files": [
+        {"cmd": "cat <file>", "desc": "Display file"},
+        {"cmd": "less <file>", "desc": "Scroll through file"},
+        {"cmd": "head <file>", "desc": "First 10 lines"},
+        {"cmd": "tail <file>", "desc": "Last 10 lines"},
+        {"cmd": "tail -f <log>", "desc": "Follow log updates"},
+    ],
+    "Searching": [
+        {"cmd": 'find . -name "<pattern>"', "desc": "Find files"},
+        {"cmd": 'grep "<text>" <file>', "desc": "Search text"},
+        {"cmd": 'grep -r "<text>" .', "desc": "Recursive search"},
+        {"cmd": "which <cmd>", "desc": "Locate executable"},
+    ],
+    "System Information": [
+        {"cmd": "uname -a", "desc": "System information"},
+        {"cmd": "hostname", "desc": "Hostname"},
+        {"cmd": "whoami", "desc": "Current user"},
+        {"cmd": "uptime", "desc": "System uptime"},
+        {"cmd": "df -h", "desc": "Disk usage"},
+        {"cmd": "free -h", "desc": "Memory usage"},
+    ],
+    "Processes": [
+        {"cmd": "ps aux", "desc": "List processes"},
+        {"cmd": "top", "desc": "Interactive process viewer"},
+        {"cmd": "htop", "desc": "Better process viewer (if installed)"},
+        {"cmd": "kill <PID>", "desc": "Kill process"},
+        {"cmd": "kill -9 <PID>", "desc": "Force kill"},
+    ],
+    "Networking": [
+        {"cmd": "ping <host>", "desc": "Ping host"},
+        {"cmd": "ip addr", "desc": "Show IP addresses"},
+        {"cmd": "ss -tulpn", "desc": "Listening ports"},
+        {"cmd": "curl <url>", "desc": "HTTP request"},
+        {"cmd": "wget <url>", "desc": "Download file"},
+    ],
+    "Permissions": [
+        {"cmd": "chmod +x <script>", "desc": "Make executable"},
+        {"cmd": "chmod 755 <file>", "desc": "Set permissions"},
+        {"cmd": "chown <user>:<group> <file>", "desc": "Change owner"},
+    ],
+    "Archives": [
+        {"cmd": "tar -czf <archive>.tar.gz <folder>/", "desc": "Create tar.gz"},
+        {"cmd": "tar -xzf <archive>.tar.gz", "desc": "Extract tar.gz"},
+        {"cmd": "zip -r <archive>.zip <folder>/", "desc": "Create zip"},
+        {"cmd": "unzip <archive>.zip", "desc": "Extract zip"},
+    ],
+    "Package Management (Debian/Kali)": [
+        {"cmd": "sudo apt update", "desc": "Update package index"},
+        {"cmd": "sudo apt upgrade", "desc": "Upgrade packages"},
+        {"cmd": "sudo apt install <pkg>", "desc": "Install package"},
+        {"cmd": "sudo apt remove <pkg>", "desc": "Remove package"},
+    ],
+    "Package Management (Arch)": [
+        {"cmd": "sudo pacman -Syu", "desc": "Full system update"},
+        {"cmd": "sudo pacman -S <pkg>", "desc": "Install package"},
+        {"cmd": "sudo pacman -R <pkg>", "desc": "Remove package"},
+    ],
+    "Shell Utilities": [
+        {"cmd": "help", "desc": "Show this command reference"},
+        {"cmd": "?", "desc": "Shortcut for help"},
+        {"cmd": "clear", "desc": "Clear terminal"},
+        {"cmd": "history", "desc": "Command history"},
+        {"cmd": "man <cmd>", "desc": "Manual page"},
+        {"cmd": "<cmd> --help", "desc": "Quick help"},
+        {"cmd": 'echo "<text>"', "desc": "Print text"},
+    ],
+    "Pipes & Redirection": [
+        {"cmd": "<cmd> > <file>", "desc": "Redirect output (overwrite)"},
+        {"cmd": "<cmd> >> <file>", "desc": "Append output"},
+        {"cmd": "<cmd> < <file>", "desc": "Input from file"},
+        {"cmd": "<cmd1> | <cmd2>", "desc": "Pipe output"},
+    ],
+    "Fiona CLI": [
+        {"cmd": "fiona --help", "desc": "Fiona CLI help"},
+        {"cmd": "fiona status", "desc": "Fiona system status"},
+        {"cmd": "fiona shell <cmd>", "desc": "Run shell command"},
+        {"cmd": 'fiona agent ask "..."', "desc": "Ask the agent"},
+        {"cmd": 'fiona agent goal "..."', "desc": "Set agent goal"},
+        {"cmd": "fiona listen", "desc": "Start voice listener"},
+        {"cmd": "fiona macro list", "desc": "List macros"},
+        {"cmd": "fiona macro run <name>", "desc": "Run macro"},
+        {"cmd": "fiona bind", "desc": "Show QuikTieper bindings"},
+        {"cmd": "fiona camcoms status", "desc": "CamComs connection status"},
+        {"cmd": 'fiona voice parse "..."', "desc": "Parse voice command"},
+        {"cmd": 'fiona recall search "..."', "desc": "Search recall vault"},
+        {"cmd": "fiona desktop snapshot", "desc": "Desktop snapshot"},
+        {"cmd": "fiona browser start", "desc": "Start browser automation"},
+        {"cmd": "fiona quiktieper init", "desc": "Initialize QuikTieper config"},
+        {"cmd": "fiona quiktieper import-apps", "desc": "Import desktop apps"},
+        {"cmd": "fiona quiktieper assign-keys", "desc": "Assign launch keys"},
+        {"cmd": "fiona quiktieper list", "desc": "List QuikTieper bindings"},
+        {"cmd": "fiona dashboard", "desc": "TerminalAssist dashboard"},
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_help_text() -> str:
+    """Return the full command reference as a plain-text string."""
+    lines: list[str] = [
+        "",
+        "== Fiona Terminal -- Command Reference ==",
+        "",
+    ]
+    for category, entries in COMMAND_REFERENCE.items():
+        lines.append(f"  {category}:")
+        for entry in entries:
+            padded = (entry["cmd"] + " " * 50)[:42]
+            lines.append(f"    {padded} {entry['desc']}")
+        lines.append("")
+    lines.append("Tip: Type any command above -- it runs on the Fiona host.")
+    lines.append("     Use Up/Down for history, Tab for autocomplete, Ctrl+L to clear.")
+    return "\n".join(lines)
+
+
+def _autocomplete_tokens() -> list[str]:
+    """Return every unique first-token across all command reference entries."""
+    tokens: set[str] = set()
+    for entries in COMMAND_REFERENCE.values():
+        for entry in entries:
+            first = entry["cmd"].split(None, 1)[0] if entry["cmd"] else ""
+            if first:
+                tokens.add(first)
+    return sorted(tokens)
+
+
+def _find_autocomplete_matches(partial: str) -> list[str]:
+    """Return up to 10 autocomplete suggestions for *partial*."""
+    if not partial:
+        return []
+    lower = partial.lower()
+    tokens = _autocomplete_tokens()
+    exact = [t for t in tokens if t.startswith(lower)]
+    fuzzy = [t for t in tokens if t != lower and lower in t and not t.startswith(lower)]
+    return (exact + fuzzy)[:10]
+
+
+# ---------------------------------------------------------------------------
+# Handlers
+# ---------------------------------------------------------------------------
 
 
 async def terminal_exec(request: Request) -> Response:
     """POST /api/v1/terminal/exec
 
-    Body: { command, args?, timeout? }
+    Body
+    ----
+    .. code-block:: json
+
+        { "command": "string", "timeout": 30 }
+
+    Built-in commands
+    -----------------
+    ``help`` / ``?``
+        Returns the full categorized command reference as ``stdout``.
+    ``clear``
+        Clears the terminal (returns ``"action": "clear"``).
+
+    Everything else is forwarded to :func:`safe_subprocess_run`.
     """
     try:
         body: dict[str, Any] = await request.json()
@@ -36,15 +217,43 @@ async def terminal_exec(request: Request) -> Response:
     if not command_input:
         raise ApiError(400, "Missing required field: command")
 
+    # Normalise to a stripped string.
+    raw = command_input.strip() if isinstance(command_input, str) else " ".join(command_input).strip()
+    raw_lower = raw.lower()
+
+    # ── Built-in: help ────────────────────────────────────────────────
+    if raw_lower in ("help", "?"):
+        return json_response({
+            "ok": True,
+            "data": {
+                "returncode": 0,
+                "stdout": _build_help_text(),
+                "stderr": "",
+                "command": raw,
+            },
+        })
+
+    # ── Built-in: clear ───────────────────────────────────────────────
+    if raw_lower in ("clear", "cls"):
+        return json_response({
+            "ok": True,
+            "data": {
+                "action": "clear",
+                "returncode": 0,
+                "stdout": "",
+                "stderr": "",
+                "command": raw,
+            },
+        })
+
+    # ── Shell execution ───────────────────────────────────────────────
     timeout = min(float(body.get("timeout", 30)), 120)
 
-    # Normalize to list[str].
-    if isinstance(command_input, str):
-        args: list[str] = command_input.split()
-    elif isinstance(command_input, list):
-        args = [str(a) for a in command_input]
-    else:
-        raise ApiError(400, "command must be a string or list of strings")
+    # Split into args for safe_subprocess_run.
+    try:
+        args: list[str] = shlex.split(raw)
+    except ValueError:
+        args = raw.split()
 
     try:
         completed = safe_subprocess_run(
@@ -57,9 +266,9 @@ async def terminal_exec(request: Request) -> Response:
             "ok": True,
             "data": {
                 "returncode": completed.returncode,
-                "stdout": completed.stdout,
-                "stderr": completed.stderr,
-                "command": args,
+                "stdout": completed.stdout or "",
+                "stderr": completed.stderr or "",
+                "command": raw,
             },
         })
     except ShellCommandError as exc:
@@ -67,6 +276,34 @@ async def terminal_exec(request: Request) -> Response:
     except Exception as exc:
         logger.exception("Terminal exec failed")
         raise ApiError(500, str(exc)) from exc
+
+
+async def terminal_autocomplete(request: Request) -> Response:
+    """POST /api/v1/terminal/autocomplete
+
+    Body
+    ----
+    .. code-block:: json
+
+        { "partial": "p" }
+
+    Returns matching command base-names.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise ApiError(400, "Invalid JSON body")
+
+    partial = (body.get("partial") or "").strip()
+    matches = _find_autocomplete_matches(partial)
+
+    return json_response({
+        "ok": True,
+        "data": {
+            "partial": partial,
+            "matches": matches,
+        },
+    })
 
 
 async def terminal_status(_request: Request) -> Response:

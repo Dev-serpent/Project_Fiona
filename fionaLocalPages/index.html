@@ -46,18 +46,6 @@
     <!-- ─── App Header ──────────────────────────────────────────────── -->
     <header class="app-header" role="banner">
       <div class="app-header__left">
-        <!-- Sidebar toggle (visible when sidebar is collapsed) -->
-        <button class="c-btn c-btn--icon c-btn--ghost sidebar-toggle"
-                aria-label="Toggle sidebar"
-                data-action="toggle-sidebar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-
         <!-- Breadcrumb navigation -->
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <span class="breadcrumb__item breadcrumb__item--current" id="breadcrumb-current">
@@ -126,54 +114,149 @@
     <main class="app-main" id="app-main" role="main">
 
       <!-- Sidebar -->
-      <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
-        <!-- Sidebar Header -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Header -->
         <div class="sidebar__header">
           <div class="sidebar__logo">
             <span class="sidebar__logo-icon">F</span>
             <span>Fiona</span>
           </div>
-          <button class="sidebar__collapse-btn" id="sidebar-collapse-btn"
-                  aria-label="Collapse sidebar"
-                  data-action="collapse-sidebar"
-                  title="Collapse sidebar (⌘B)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                 stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-            </svg>
-          </button>
         </div>
 
-        <!-- Sidebar Navigation -->
-        <nav class="sidebar__nav" id="sidebar-nav" aria-label="Page navigation">
-          <!-- Nav sections are populated by JS -->
-          <div id="sidebar-nav-content"></div>
+        <!-- Navigation -->
+        <nav class="sidebar__nav" id="sidebar-nav">
+          <!-- Primary -->
+          <div class="sidebar__nav-section">
+            <a class="nav-item" href="#/" data-nav-path="/">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+              <span class="nav-item__label">Dashboard</span>
+            </a>
+            <a class="nav-item" href="#/chat" data-nav-path="/chat">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+              <span class="nav-item__label">AI Chat</span>
+            </a>
+            <a class="nav-item" href="#/terminal" data-nav-path="/terminal">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+              <span class="nav-item__label">Terminal</span>
+            </a>
+            <a class="nav-item" href="#/files" data-nav-path="/files">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+              <span class="nav-item__label">Files</span>
+            </a>
+            <a class="nav-item" href="#/browser" data-nav-path="/browser">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+              <span class="nav-item__label">Browser</span>
+            </a>
+          </div>
+
+          <!-- Intelligence -->
+          <div class="sidebar__nav-section" data-section-id="intelligence">
+            <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="intelligence" role="button" tabindex="0" aria-expanded="true">
+              <span>Intelligence</span>
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div class="sidebar__nav-section-content">
+              <a class="nav-item" href="#/agents" data-nav-path="/agents">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 5v6"/><path d="M8 11l-2 5"/><path d="M16 11l2 5"/></svg></span>
+                <span class="nav-item__label">Agents</span>
+              </a>
+              <a class="nav-item" href="#/actions" data-nav-path="/actions">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                <span class="nav-item__label">Actions</span>
+              </a>
+              <a class="nav-item" href="#/recall" data-nav-path="/recall">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                <span class="nav-item__label">RecallVault</span>
+              </a>
+              <a class="nav-item" href="#/voice" data-nav-path="/voice">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
+                <span class="nav-item__label">Voice Commands</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Tools -->
+          <div class="sidebar__nav-section" data-section-id="tools">
+            <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="tools" role="button" tabindex="0" aria-expanded="true">
+              <span>Tools</span>
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div class="sidebar__nav-section-content">
+              <a class="nav-item" href="#/macros" data-nav-path="/macros">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+                <span class="nav-item__label">Macros</span>
+              </a>
+              <a class="nav-item" href="#/camcoms" data-nav-path="/camcoms">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
+                <span class="nav-item__label">CamComs</span>
+              </a>
+              <a class="nav-item" href="#/desktop" data-nav-path="/desktop">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                <span class="nav-item__label">SeeOnDesk</span>
+              </a>
+              <a class="nav-item" href="#/bindings" data-nav-path="/bindings">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01"/></svg></span>
+                <span class="nav-item__label">Key Bindings</span>
+              </a>
+              <a class="nav-item" href="#/phiconnect" data-nav-path="/phiconnect">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <span class="nav-item__label">PhiConnect</span>
+              </a>
+              <a class="nav-item" href="#/vsee" data-nav-path="/vsee">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="nav-item__label">Vsee</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- System -->
+          <div class="sidebar__nav-section" data-section-id="system">
+            <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="system" role="button" tabindex="0" aria-expanded="true">
+              <span>System</span>
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div class="sidebar__nav-section-content">
+              <a class="nav-item" href="#/tasks" data-nav-path="/tasks">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+                <span class="nav-item__label">Tasks</span>
+              </a>
+              <a class="nav-item" href="#/notifications" data-nav-path="/notifications">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                <span class="nav-item__label">Notifications</span>
+              </a>
+              <a class="nav-item" href="#/workspace" data-nav-path="/workspace">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                <span class="nav-item__label">Workspace</span>
+              </a>
+              <a class="nav-item" href="#/performance" data-nav-path="/performance">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                <span class="nav-item__label">Performance</span>
+              </a>
+              <a class="nav-item" href="#/plugins" data-nav-path="/plugins">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
+                <span class="nav-item__label">Plugins</span>
+              </a>
+              <a class="nav-item" href="#/diagnostics" data-nav-path="/diagnostics">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                <span class="nav-item__label">Diagnostics</span>
+              </a>
+              <a class="nav-item" href="#/settings" data-nav-path="/settings">
+                <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                <span class="nav-item__label">Settings</span>
+              </a>
+            </div>
+          </div>
         </nav>
 
-        <!-- Sidebar Footer -->
+        <!-- Footer -->
         <div class="sidebar__footer">
-          <span class="sidebar__footer-version" id="sidebar-version">v0.1.0</span>
+          <span class="sidebar__footer-version">v0.1.0</span>
           <div class="sidebar__footer-actions">
-            <button class="sidebar__footer-btn" aria-label="Help"
-                    data-action="open-help" title="Help">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                   stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
+            <button class="sidebar__footer-btn" data-nav-path="/settings" title="Settings" aria-label="Settings">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
-            <button class="sidebar__footer-btn" aria-label="Settings"
-                    data-action="open-settings" title="Settings">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                   stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
+            <button class="sidebar__footer-btn" data-action="help" title="Help" aria-label="Help">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </button>
           </div>
         </div>
@@ -327,13 +410,6 @@
     (function() {
       // Apply dark theme immediately to prevent flash
       document.documentElement.style.colorScheme = 'dark';
-      // Restore sidebar state from localStorage
-      try {
-        var sidebarCollapsed = localStorage.getItem('fiona_sidebar_collapsed');
-        if (sidebarCollapsed === 'true') {
-          document.getElementById('app-main').classList.add('app-main--sidebar-collapsed');
-        }
-      } catch(e) { /* ignore */ }
     })();
   </script>
 

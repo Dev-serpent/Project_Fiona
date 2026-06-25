@@ -365,6 +365,9 @@ export function createRouter(config) {
           let pageInstance;
           if (typeof pageFactory === 'function') {
             pageInstance = pageFactory(routeInfo);
+          } else if (typeof pageFactory === 'object' && pageFactory !== null) {
+            // Direct object export: { render, mount, destroy }
+            pageInstance = pageFactory;
           }
 
           // Support both { render(container) } and { mount(container) } and direct function

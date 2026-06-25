@@ -11,6 +11,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 import {
   skeletonCard,
   skeletonText,
@@ -97,9 +98,144 @@ function formatNumber(n) {
   return String(n);
 }
 
+/* ── Helpers for dynamic sections ────────────────────────────────────────── */
+
+function buildRecentFilesHtml() {
+  if (_state.recentFiles.length === 0) {
+    return html`<div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">No recent files yet.</div>`.html;
+  }
+  return html.raw(_state.recentFiles.map((file) => html`
+    <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2);
+                border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);"
+         data-action="open-file" data-path="${esc(file.path || file.name || '')}">
+      <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+        ${ICONS.fileText}
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${esc(file.name || file.path?.split('/').pop() || 'unknown')}
+        </div>
+        <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
+          ${esc(file.path || '')}
+        </div>
+      </div>
+      <span style="font-size: var(--font-size-xxs); color: var(--text-muted); flex-shrink: 0;">
+        ${file.timestamp ? timeAgo(file.timestamp) : ''}
+      </span>
+    </div>
+  `).join('')).html;
+}
+
+function buildBookmarksHtml() {
+  if (_state.bookmarks.length === 0) {
+    return html`<div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">No bookmarks yet.</div>`.html;
+  }
+  return html.raw(_state.bookmarks.map((bm) => html`
+    <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2);
+                border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);"
+         data-action="open-folder" data-path="${esc(bm.path || '')}">
+      <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--warning);">
+        ${ICONS.folder}
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${esc(bm.name || bm.path?.split('/').pop() || 'folder')}
+        </div>
+        <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
+          ${esc(bm.path || '')}
+        </div>
+      </div>
+    </div>
+  `).join('')).html;
+}
+
+function buildActivityHtml() {
+  if (_state.recentActivity.length === 0) {
+    return html`<div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">No recent activity.</div>`.html;
+  }
+  return html.raw(_state.recentActivity.map((act) => {
+    const type = act.type || act.action_type || 'action';
+    const label = (type.charAt(0).toUpperCase() + type.slice(1));
+    const iconKey = {
+      macro: 'play',
+      command: 'bolt',
+      chat: 'message',
+      terminal: 'terminal',
+      file: 'file',
+      browser: 'globe',
+      system: 'gear',
+      agent: 'bot',
+      recall: 'search',
+    }[type] || 'activity';
+
+    return html`
+      <div style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-2);
+                  border-radius: var(--radius-md); transition: background var(--transition-fast);">
+        <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-muted);">
+          ${ICONS[iconKey] || ICONS.activity}
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${esc(act.name || act.action_name || label || 'Action')}
+          </div>
+          ${act.description ? html`
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted);">${esc(act.description)}</div>
+          ` : ''}
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 1px;">
+            ${act.timestamp ? timeAgo(act.timestamp) : ''}
+          </div>
+        </div>
+        <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px; flex-shrink: 0;">
+          ${esc(label)}
+        </span>
+      </div>
+    `;
+  }).join('')).html;
+}
+
+function buildHealthHtml() {
+  // Dependencies
+  const depSection = _state.depIssues.length === 0
+    ? html`<div style="display: flex; align-items: center; gap: var(--space-1); color: var(--success); font-size: var(--font-size-sm);">
+        <span>${ICONS['check-circle']}</span>
+        <span>All dependencies satisfied</span>
+      </div>`.html
+    : html`<div style="display: flex; align-items: center; gap: var(--space-1); color: var(--warning); font-size: var(--font-size-sm);">
+        <span>${ICONS.warning}</span>
+        <span>${_state.depIssues.length} issue(s)</span>
+      </div>
+      <ul style="margin: var(--space-1) 0 0 0; padding-left: var(--space-4); font-size: var(--font-size-xs); color: var(--text-muted);">
+        ${html.raw(_state.depIssues.map((issue) => html`<li>${esc(issue)}</li>`).join(''))}
+      </ul>`.html;
+
+  // Lint
+  const lintSection = _state.lintIssues.length === 0
+    ? html`<div style="display: flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--font-size-sm);">
+        <span>${ICONS.info}</span>
+        <span>No lint data available</span>
+      </div>`.html
+    : html`<div style="display: flex; align-items: center; gap: var(--space-1); color: ${_state.lintIssues.length > 10 ? 'var(--danger)' : 'var(--warning)'}; font-size: var(--font-size-sm);">
+        <span>${ICONS.warning}</span>
+        <span>${_state.lintIssues.length} issue(s)</span>
+      </div>`.html;
+
+  return html`
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-3);">
+      <div style="padding: var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-md);">
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Dependencies</div>
+        ${html.raw(depSection)}
+      </div>
+      <div style="padding: var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-md);">
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Lint</div>
+        ${html.raw(lintSection)}
+      </div>
+    </div>
+  `.html;
+}
+
 /* ── Render ─────────────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -113,307 +249,47 @@ function renderPage(container) {
     return;
   }
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Workspace
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;
-                    font-family: var(--font-mono);">
-            ${esc(_state.projectPath || 'No project open')}
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-2);">
-          <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-explorer" title="Open in file explorer">
-            <span class="c-btn__icon">${ICONS.folder}</span>
-            Open Folder
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="ws-refresh" title="Refresh">
-            <span class="c-btn__icon">${ICONS.refresh}</span>
-            Refresh
-          </button>
-        </div>
-      </div>
-    </div>
+  // Build raw HTML sections
+  const recentFilesHtml = buildRecentFilesHtml();
+  const bookmarksHtml = buildBookmarksHtml();
+  const activityHtml = buildActivityHtml();
+  const healthHtml = buildHealthHtml();
 
-    <!-- Top Row: Project Info Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">
-      <!-- Project Name -->
-      <div class="c-card">
-        <div class="c-card__body" style="padding: var(--space-4);">
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-            <div style="width: 24px; height: 24px; border-radius: var(--radius-md); background: var(--accent-muted); display: flex; align-items: center; justify-content: center; color: var(--accent);">
-              ${ICONS.folder}
-            </div>
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Project</span>
-          </div>
-          <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${esc(_state.projectName || 'Untitled')}
-          </div>
-          ${_state.projectDescription ? html`
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px;">
-              ${esc(_state.projectDescription)}
-            </div>
-          ` : ''}
-        </div>
-      </div>
+  const gitBoxStyle = _state.gitBranch
+    ? 'background: var(--success-muted, rgba(34,197,94,0.15));'
+    : 'background: var(--bg-tertiary);';
+  const gitColorStyle = _state.gitBranch
+    ? 'color: var(--success);'
+    : 'color: var(--text-muted);';
 
-      <!-- File Stats -->
-      <div class="c-card">
-        <div class="c-card__body" style="padding: var(--space-4);">
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-            <div style="width: 24px; height: 24px; border-radius: var(--radius-md); background: var(--info-muted, rgba(56,189,248,0.15)); display: flex; align-items: center; justify-content: center; color: var(--info);">
-              ${ICONS.fileText}
-            </div>
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Files</span>
-          </div>
-          <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary);">
-            ${formatNumber(_state.fileCount)} files
-          </div>
-          <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px;">
-            ${formatNumber(_state.dirCount)} directories · ${formatNumber(_state.linesOfCode)} lines of code
-          </div>
-        </div>
-      </div>
+  const data = {
+    projectPath: esc(_state.projectPath || 'No project open'),
+    folderIcon: ICONS.folder.html,
+    refreshIcon: ICONS.refresh.html,
+    projectIcon: ICONS.folder.html,
+    projectName: esc(_state.projectName || 'Untitled'),
+    projectDescription: esc(_state.projectDescription || ''),
+    filesIcon: ICONS.fileText.html,
+    fileCount: formatNumber(_state.fileCount),
+    dirCount: formatNumber(_state.dirCount),
+    linesOfCode: formatNumber(_state.linesOfCode),
+    gitIcon: ICONS.activity.html,
+    gitIconBoxStyle: gitBoxStyle,
+    gitIconColor: gitColorStyle,
+    gitBranch: esc(_state.gitBranch || ''),
+    gitLastCommit: esc(_state.gitLastCommit || 'No commits'),
+    gitLastAuthor: esc(_state.gitLastAuthor || ''),
+    gitTimestamp: _state.gitLastTimestamp ? timeAgo(_state.gitLastTimestamp) : '',
+    terminalIcon: ICONS.terminal.html,
+    activityIcon: ICONS.activity.html,
+    fileTextIcon: ICONS.fileText.html,
+    recentFilesHtml,
+    bookmarksHtml,
+    activityHtml,
+    healthHtml,
+  };
 
-      <!-- Git Info -->
-      <div class="c-card">
-        <div class="c-card__body" style="padding: var(--space-4);">
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-            <div style="width: 24px; height: 24px; border-radius: var(--radius-md);
-                        background: ${_state.gitBranch ? 'var(--success-muted, rgba(34,197,94,0.15))' : 'var(--bg-tertiary)'};
-                        display: flex; align-items: center; justify-content: center;
-                        color: ${_state.gitBranch ? 'var(--success)' : 'var(--text-muted)'};">
-              ${ICONS.activity}
-            </div>
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Git</span>
-          </div>
-          ${_state.gitBranch ? html`
-            <div style="display: flex; align-items: center; gap: var(--space-2);">
-              <span class="c-badge c-badge--accent" style="font-family: var(--font-mono); font-size: 10px;">
-                ${esc(_state.gitBranch)}
-              </span>
-            </div>
-            <div style="font-size: var(--font-size-xs); color: var(--text-primary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              ${esc(_state.gitLastCommit || 'No commits')}
-            </div>
-            <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 1px;">
-              ${esc(_state.gitLastAuthor)} ${_state.gitLastTimestamp ? '· ' + timeAgo(_state.gitLastTimestamp) : ''}
-            </div>
-          ` : html`
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted);">
-              Not a git repository
-            </div>
-          `}
-        </div>
-      </div>
-    </div>
-
-    <!-- Middle Section: 2 Columns -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
-      <!-- Recent Files & Bookmarks -->
-      <div>
-        <!-- Recent Files -->
-        <div class="c-card" style="margin-bottom: var(--space-4);">
-          <div class="c-card__header">
-            <span class="c-card__title">Recent Files</span>
-            ${_state.recentFiles.length > 0 ? html`
-              <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-file-manager" title="Open file manager">
-                <span class="c-btn__icon">${ICONS.folder}</span>
-                Browse
-              </button>
-            ` : ''}
-          </div>
-          <div class="c-card__body" style="padding: var(--space-2); max-height: 260px; overflow-y: auto;">
-            ${_state.recentFiles.length === 0 ? html`
-              <div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">
-                No recent files yet.
-              </div>
-            ` : html.raw(_state.recentFiles.map((file) => html`
-              <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2);
-                          border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);"
-                   data-action="open-file" data-path="${esc(file.path || file.name || '')}">
-                <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
-                  ${ICONS.fileText}
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${esc(file.name || file.path?.split('/').pop() || 'unknown')}
-                  </div>
-                  <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
-                    ${esc(file.path || '')}
-                  </div>
-                </div>
-                <span style="font-size: var(--font-size-xxs); color: var(--text-muted); flex-shrink: 0;">
-                  ${file.timestamp ? timeAgo(file.timestamp) : ''}
-                </span>
-              </div>
-            `).join(''))}
-          </div>
-        </div>
-
-        <!-- Bookmarks -->
-        <div class="c-card">
-          <div class="c-card__header">
-            <span class="c-card__title">Bookmarked Folders</span>
-          </div>
-          <div class="c-card__body" style="padding: var(--space-2); max-height: 160px; overflow-y: auto;">
-            ${_state.bookmarks.length === 0 ? html`
-              <div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">
-                No bookmarks yet.
-              </div>
-             ` : html.raw(_state.bookmarks.map((bm) => html`
-              <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-2);
-                          border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);"
-                   data-action="open-folder" data-path="${esc(bm.path || '')}">
-                <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--warning);">
-                  ${ICONS.folder}
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${esc(bm.name || bm.path?.split('/').pop() || 'folder')}
-                  </div>
-                  <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
-                    ${esc(bm.path || '')}
-                  </div>
-                </div>
-              </div>
-            `).join(''))}
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions & Recent Activity -->
-      <div>
-        <!-- Quick Actions -->
-        <div class="c-card" style="margin-bottom: var(--space-4);">
-          <div class="c-card__header">
-            <span class="c-card__title">Quick Actions</span>
-          </div>
-          <div class="c-card__body" style="padding: var(--space-3);">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
-              <button class="c-btn c-btn--sm" data-action="open-terminal" style="justify-content: flex-start;">
-                <span class="c-btn__icon">${ICONS.terminal}</span>
-                Open Terminal
-              </button>
-              <button class="c-btn c-btn--sm" data-action="open-explorer-page" style="justify-content: flex-start;">
-                <span class="c-btn__icon">${ICONS.folder}</span>
-                File Explorer
-              </button>
-              <button class="c-btn c-btn--sm" data-action="run-diagnostics" style="justify-content: flex-start;">
-                <span class="c-btn__icon">${ICONS.activity}</span>
-                Run Diagnostic
-              </button>
-              <button class="c-btn c-btn--sm" data-action="view-logs" style="justify-content: flex-start;">
-                <span class="c-btn__icon">${ICONS.fileText}</span>
-                View Logs
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="c-card">
-          <div class="c-card__header">
-            <span class="c-card__title">Recent Activity</span>
-          </div>
-          <div class="c-card__body" style="padding: var(--space-2); max-height: 260px; overflow-y: auto;">
-            ${_state.recentActivity.length === 0 ? html`
-              <div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">
-                No recent activity.
-              </div>
-             ` : html.raw(_state.recentActivity.map((act) => {
-              const type = act.type || act.action_type || 'action';
-              const label = (type.charAt(0).toUpperCase() + type.slice(1));
-              const iconKey = {
-                macro: 'play',
-                command: 'bolt',
-                chat: 'message',
-                terminal: 'terminal',
-                file: 'file',
-                browser: 'globe',
-                system: 'gear',
-                agent: 'bot',
-                recall: 'search',
-              }[type] || 'activity';
-
-              return html`
-                <div style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-2) var(--space-2);
-                            border-radius: var(--radius-md); transition: background var(--transition-fast);">
-                  <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-muted);">
-                    ${ICONS[iconKey] || ICONS.activity}
-                  </div>
-                  <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                      ${esc(act.name || act.action_name || label || 'Action')}
-                    </div>
-                    ${act.description ? html`
-                      <div style="font-size: var(--font-size-xs); color: var(--text-muted);">${esc(act.description)}</div>
-                    ` : ''}
-                    <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 1px;">
-                      ${act.timestamp ? timeAgo(act.timestamp) : ''}
-                    </div>
-                  </div>
-                  <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px; flex-shrink: 0;">
-                    ${esc(label)}
-                  </span>
-                </div>
-              `;
-            }).join(''))}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom: Project Health -->
-    <div class="c-card">
-      <div class="c-card__header">
-        <span class="c-card__title">Project Health</span>
-      </div>
-      <div class="c-card__body" style="padding: var(--space-3);">
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-3);">
-          <!-- Dependencies -->
-          <div style="padding: var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-md);">
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Dependencies</div>
-            ${_state.depIssues.length === 0 ? html`
-              <div style="display: flex; align-items: center; gap: var(--space-1); color: var(--success); font-size: var(--font-size-sm);">
-                <span>${ICONS['check-circle']}</span>
-                <span>All dependencies satisfied</span>
-              </div>
-            ` : html`
-              <div style="display: flex; align-items: center; gap: var(--space-1); color: var(--warning); font-size: var(--font-size-sm);">
-                <span>${ICONS.warning}</span>
-                <span>${_state.depIssues.length} issue(s)</span>
-              </div>
-              <ul style="margin: var(--space-1) 0 0 0; padding-left: var(--space-4); font-size: var(--font-size-xs); color: var(--text-muted);">
-                ${html.raw(_state.depIssues.map((issue) => html`<li>${esc(issue)}</li>`).join(''))}
-              </ul>
-            `}
-          </div>
-
-          <!-- Lint Issues -->
-          <div style="padding: var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-md);">
-            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Lint</div>
-            ${_state.lintIssues.length === 0 ? html`
-              <div style="display: flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: var(--font-size-sm);">
-                <span>${ICONS.info}</span>
-                <span>No lint data available</span>
-              </div>
-            ` : html`
-              <div style="display: flex; align-items: center; gap: var(--space-1); color: ${_state.lintIssues.length > 10 ? 'var(--danger)' : 'var(--warning)'}; font-size: var(--font-size-sm);">
-                <span>${ICONS.warning}</span>
-                <span>${_state.lintIssues.length} issue(s)</span>
-              </div>
-            `}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
+  container.innerHTML = await loadTemplate('workspace', data);
   mountHandlers(container);
 }
 
@@ -611,7 +487,7 @@ async function loadData() {
     _state.loading = false;
 
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch (err) {
     console.error('[workspace] Failed to load data:', err);
@@ -619,7 +495,7 @@ async function loadData() {
     _state.errorMessage = err.message || 'Failed to load workspace data.';
     _state.loading = false;
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   }
 }
@@ -661,12 +537,12 @@ export function render(container) {
   loadData();
 }
 
-export function mount(container) {
+export async function mount(container) {
   if (container && !_state.container) {
     _state.container = container;
   }
   if (!_state.loading && _state.container) {
-    renderPage(_state.container);
+    await renderPage(_state.container);
   }
 }
 

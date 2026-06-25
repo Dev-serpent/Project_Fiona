@@ -1,0 +1,136 @@
+<!-- notifications.html — Notifications Page Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <div style="display: flex; align-items: center; gap: var(--space-2);">
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Notifications
+        </h1>
+        {{#if hasUnread}}
+        <span class="c-badge c-badge--danger" id="notif-unread-badge" style="font-size: 11px;">
+          {{unreadCount}}
+        </span>
+        {{/if}}
+      </div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        System event center
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Filter & Actions Toolbar -->
+<div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
+  <div style="display: flex; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;">
+    <button class="c-btn c-btn--sm {{#if unreadOnly}}c-btn--ghost{{else}}c-btn--primary{{/if}}" id="notif-filter-all"
+            style="border-radius: 0; {{#if unreadOnly}}background: transparent; color: var(--text-secondary);{{/if}}">
+      All
+    </button>
+    <button class="c-btn c-btn--sm {{#if unreadOnly}}c-btn--primary{{else}}c-btn--ghost{{/if}}" id="notif-filter-unread"
+            style="border-radius: 0; {{#if unreadOnly}}{{else}}background: transparent; color: var(--text-secondary);{{/if}}">
+      Unread only
+    </button>
+  </div>
+
+  <button class="c-btn c-btn--sm c-btn--ghost" id="notif-dismiss-all-btn"
+          title="Dismiss all notifications"
+          style="color: var(--text-secondary);">
+    <span class="c-btn__icon">{{{trashIcon}}}</span>
+    Dismiss All
+  </button>
+
+  <button class="c-btn c-btn--sm c-btn--ghost" id="notif-refresh-btn"
+          title="Refresh now"
+          style="color: var(--text-secondary);">
+    <span class="c-btn__icon">{{{refreshIcon}}}</span>
+    Refresh
+  </button>
+
+  <div style="flex: 1;"></div>
+
+  <label class="c-toggle" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: var(--space-2);" title="Auto-refresh every 5 seconds">
+    <input type="checkbox" class="c-toggle__input" id="notif-auto-refresh-toggle"
+           {{#if autoRefresh}}checked{{/if}} />
+    <span class="c-toggle__track">
+      <span class="c-toggle__thumb"></span>
+    </span>
+    <span style="font-size: var(--font-size-xs); color: var(--text-muted); white-space: nowrap;">Auto-refresh</span>
+  </label>
+</div>
+
+<!-- Dismiss All Confirmation -->
+{{#if confirmingDismissAll}}
+<div class="c-card" style="margin-bottom: var(--space-4); border-color: var(--danger);">
+  <div class="c-card__body" style="padding: var(--space-4); display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      <span style="color: var(--danger); display: flex;">{{{warningIcon}}}</span>
+      <span style="font-size: var(--font-size-sm); color: var(--text-primary);">
+        Dismiss all {{itemsCount}} notification{{#unless singularItems}}s{{/unless}}?
+      </span>
+    </div>
+    <div style="display: flex; gap: var(--space-2);">
+      <button class="c-btn c-btn--sm c-btn--ghost" id="notif-dismiss-all-cancel">Cancel</button>
+      <button class="c-btn c-btn--sm c-btn--danger" id="notif-dismiss-all-confirm">
+        <span class="c-btn__icon">{{{trashIcon}}}</span>
+        Dismiss All
+      </button>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Create Notification (collapsible) -->
+<div class="c-card" style="margin-bottom: var(--space-4);">
+  <div class="c-card__header" id="notif-create-header"
+       style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;">
+    <span class="c-card__title">
+      <span style="display: flex; align-items: center; gap: var(--space-2);">
+        {{{plusIcon}}}
+        Create Notification
+      </span>
+    </span>
+    <span style="display: flex; transition: transform var(--transition-fast); {{#if createOpen}}transform: rotate(180deg);{{/if}}">
+      {{{chevronDownIcon}}}
+    </span>
+  </div>
+  {{#if createOpen}}
+  <div class="c-card__body" id="notif-create-body" style="padding: var(--space-4);">
+    <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-1);">Title</label>
+        <input type="text" class="c-input" id="notif-create-title"
+               placeholder="e.g. System alert"
+               value="{{formTitle}}"
+               autocomplete="off" />
+      </div>
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-1);">Body</label>
+        <textarea class="c-input" id="notif-create-body-input"
+                  placeholder="Notification body text&hellip;"
+                  rows="3"
+                  style="resize: vertical; font-family: inherit;">{{formBody}}</textarea>
+      </div>
+      <div style="display: flex; align-items: flex-end; gap: var(--space-3);">
+        <div style="flex: 1;">
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-1);">Urgency</label>
+          <select class="c-select" id="notif-create-urgency" style="width: 100%;">
+            <option value="critical" {{#if isCritical}}selected{{/if}}>Critical</option>
+            <option value="normal" {{#if isNormal}}selected{{/if}}>Normal</option>
+            <option value="low" {{#if isLow}}selected{{/if}}>Low</option>
+          </select>
+        </div>
+        <button class="c-btn c-btn--primary" id="notif-create-send-btn"
+                {{#if creating}}disabled{{/if}}
+                style="{{#if creating}}opacity: 0.7;{{/if}}">
+          {{{createBtnContent}}}
+        </button>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+<!-- Notification List -->
+<div id="notif-list">
+  {{{notificationListContent}}}
+</div>

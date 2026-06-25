@@ -1,0 +1,152 @@
+<!-- camcoms.html — CamComs Status Page Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        CamComs
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Service connectivity and identity
+      </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+      <label style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--text-muted); cursor: pointer; user-select: none;">
+        <input type="checkbox" id="camcoms-auto-refresh" {{#if autoRefresh}}checked{{/if}}
+               style="accent-color: var(--accent); cursor: pointer;">
+        Auto-refresh
+      </label>
+      <button class="c-btn c-btn--sm c-btn--ghost" id="camcoms-refresh-btn"
+              title="Refresh CamComs status">
+        <span class="c-btn__icon">{{{refreshIcon}}}</span>
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: var(--space-4);">
+
+  <!-- Service Status Card -->
+  <div class="c-card">
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+        <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{eyeIcon}}}</span>
+        Service Status
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
+        <div style="width: 72px; height: 72px; border-radius: 50%;
+                    background: {{#if statusReady}}var(--success){{else}}var(--danger){{/if}}18;
+                    display: flex; align-items: center; justify-content: center;
+                    color: {{#if statusReady}}var(--success){{else}}var(--danger){{/if}};">
+          <span style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+            {{#if statusReady}}{{{checkCircleIcon}}}{{else}}{{{errorIcon}}}{{/if}}
+          </span>
+        </div>
+        <span style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--text-primary);">
+          {{#if statusReady}}Ready{{else}}Not Ready{{/if}}
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+        {{#if hasStatusError}}
+        <div style="display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+                    background: var(--danger)10; border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--danger);">
+          <span style="width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px;">{{{errorIcon}}}</span>
+          <span>{{statusErrorText}}</span>
+        </div>
+        {{/if}}
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3);
+                    background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-secondary);">
+          <span>Config file</span>
+          <span style="display: flex; align-items: center; gap: 4px; color: {{#if configExists}}var(--success){{else}}var(--text-muted){{/if}};">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
+            {{#if configExists}}Exists{{else}}Not found{{/if}}
+          </span>
+        </div>
+
+        {{#if hasConfigPath}}
+        <div style="padding: var(--space-2) var(--space-3); background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-muted); font-family: var(--font-mono); word-break: break-all;">
+          {{configPath}}
+        </div>
+        {{/if}}
+
+        {{#if hasDevice}}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3);
+                    background: var(--bg-tertiary); border-radius: var(--radius-sm);
+                    font-size: var(--font-size-xs); color: var(--text-secondary);">
+          <span>Device</span>
+          <span style="color: var(--text-primary); font-family: var(--font-mono);">{{device}}</span>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Identity Card -->
+  <div class="c-card">
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+        <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{lockIcon}}}</span>
+        Identity
+      </div>
+
+      {{#if hasFingerprint}}
+      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted);">
+          Device fingerprint used for secure pairing and identity verification.
+        </div>
+        <div style="position: relative;">
+          <pre class="code-block"
+               style="background: var(--bg-tertiary); border: 1px solid var(--border);
+                       border-radius: var(--radius-md); padding: var(--space-3);
+                       font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace);
+                       font-size: var(--font-size-xs); color: var(--text-primary);
+                       overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+                       line-height: 1.6; margin: 0;">{{fingerprint}}</pre>
+          <button class="c-btn c-btn--sm" id="camcoms-copy-btn"
+                  style="position: absolute; top: var(--space-2); right: var(--space-2);
+                         background: var(--surface); border: 1px solid var(--border);
+                         padding: 4px 8px; display: flex; align-items: center; gap: 4px;
+                         font-size: var(--font-size-xxs);">
+            <span style="width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;">
+              {{#if copyFeedback}}{{{checkIcon}}}{{{else}}}{{{copyIcon}}}{{/if}}
+            </span>
+            {{#if copyFeedback}}Copied!{{else}}Copy{{/if}}
+          </button>
+        </div>
+      </div>
+      {{else}}
+        {{#if hasIdentityError}}
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
+          <div style="width: 48px; height: 48px; border-radius: 50%;
+                      background: var(--warning)18;
+                      display: flex; align-items: center; justify-content: center;
+                      color: var(--warning);">
+            <span style="width: 24px; height: 24px;">{{{warningIcon}}}</span>
+          </div>
+          <div style="font-size: var(--font-size-xs); color: var(--danger); text-align: center;">
+            {{identityError}}
+          </div>
+        </div>
+        {{else}}
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
+          <div style="width: 48px; height: 48px; border-radius: 50%;
+                      background: var(--bg-tertiary);
+                      display: flex; align-items: center; justify-content: center;
+                      color: var(--text-muted);">
+            <span style="width: 24px; height: 24px;">{{{helpIcon}}}</span>
+          </div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center;">
+            Identity information unavailable.
+          </div>
+        </div>
+        {{/if}}
+      {{/if}}
+    </div>
+  </div>
+</div>

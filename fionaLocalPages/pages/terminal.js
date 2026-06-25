@@ -9,6 +9,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── API Helper ─────────────────────────────────────────────────────────── */
 
@@ -21,6 +22,8 @@ function getApi() {
 const PROMPT_BASE = 'user@fiona';
 const INITIAL_DIR = '~';
 const MAX_OUTPUT_HEIGHT = 10000; // max lines in output buffer
+
+
 
 /* ── ANSI Color Rendering ───────────────────────────────────────────────── */
 
@@ -216,6 +219,7 @@ let _outputEl = null;
 let _tabsEl = null;
 let _clearBtn = null;
 let _copyBtn = null;
+let _helpBtn = null;
 let _resizeHandler = null;
 let _popstateHandler = null;
 let _isDestroyed = false;
@@ -225,8 +229,8 @@ let _isDestroyed = false;
 function createSession() {
   const id = ++_sessionCounter;
   const session = new TerminalSession(id);
-  session.addOutput(`Fiona Terminal v0.1.0 — Shell commands on the Fiona host`, 'system');
-  session.addOutput(`Type 'help' for available commands. Press ↑/↓ for history.\n`, 'system');
+  session.addOutput(`Fiona Terminal v0.2.0 — Shell commands on the Fiona host`, 'system');
+  session.addOutput(`Type 'help' or press ? for command reference. Press ↑/↓ for history, Tab for autocomplete.\n`, 'system');
   session.addPrompt(session.cwd);
   _sessions.push(session);
   if (_sessions.length === 1) {
@@ -335,6 +339,8 @@ async function executeCommand(command) {
   const session = getActiveSession();
   if (!session || !command.trim() || session.isLoading) return;
 
+  const trimmed = command.trim();
+
   const api = getApi();
   if (!api) {
     session.addOutput('Error: API client not available', 'stderr');
@@ -343,7 +349,7 @@ async function executeCommand(command) {
   }
 
   // Add command to history
-  session.addCommand(command.trim());
+  session.addCommand(trimmed);
 
   // Show command in output
   session.addOutput(`${PROMPT_BASE}:${session.cwd}$ ${command}`, 'stdout');
@@ -354,11 +360,19 @@ async function executeCommand(command) {
 
   try {
     const result = await api.post('/api/v1/terminal/exec', {
-      command: command.trim(),
+      command: trimmed,
     });
 
     // Handle response
     const data = result.data || result;
+
+    // Built-in: clear terminal
+    if (data.action === 'clear') {
+      session.output = [];
+      session.addPrompt(session.cwd);
+      renderOutput();
+      return;
+    }
 
     if (data.stdout) {
       session.addOutput(data.stdout, 'stdout');
@@ -377,9 +391,9 @@ async function executeCommand(command) {
       session.addOutput(`[Completed in ${formatDuration(data.duration_ms)}]`, 'system');
     }
 
-    // If command was 'cd', track it and try to get new dir
-    if (command.trim().startsWith('cd ')) {
-      const dirArg = command.trim().slice(3).trim();
+    // Track cwd changes
+    if (trimmed.startsWith('cd ')) {
+      const dirArg = trimmed.slice(3).trim();
       if (dirArg.startsWith('/')) {
         session.cwd = dirArg;
       } else if (dirArg === '..') {
@@ -389,11 +403,10 @@ async function executeCommand(command) {
       } else if (dirArg === '~' || dirArg === '') {
         session.cwd = INITIAL_DIR;
       } else {
-        // Relative path — simple join
         const base = session.cwd === INITIAL_DIR ? '/home' : session.cwd;
         session.cwd = base.replace(/\/$/, '') + '/' + dirArg;
       }
-      // Try pwd to get actual directory
+      // Verify with pwd
       try {
         const pwdResult = await api.post('/api/v1/terminal/exec', { command: 'pwd' });
         const pwdData = pwdResult.data || pwdResult;
@@ -401,18 +414,13 @@ async function executeCommand(command) {
           const actualDir = pwdData.stdout.trim();
           if (actualDir) session.cwd = actualDir;
         }
-      } catch {
-        // Silently fail
-      }
-      session.currentDir = session.cwd;
+      } catch { /* silent */ }
     }
 
-    // If command starts with 'pwd', extract the directory
-    if (command.trim() === 'pwd') {
+    if (trimmed === 'pwd') {
       const pwdData = data.stdout?.trim();
       if (pwdData && pwdData.startsWith('/')) {
         session.cwd = pwdData;
-        session.currentDir = session.cwd;
       }
     }
 
@@ -472,6 +480,32 @@ function handleInputKeydown(e) {
   if (e.key === 'l' && e.ctrlKey) {
     e.preventDefault();
     clearTerminal();
+    return;
+  }
+
+  // Tab autocomplete — queries the Python backend
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const partial = _inputEl.value.trim();
+    if (!partial) return;
+    const api = getApi();
+    if (!api) return;
+    api.post('/api/v1/terminal/autocomplete', { partial })
+      .then((result) => {
+        const data = result.data || result;
+        const matches = data.matches || [];
+        if (matches.length === 0) return;
+        const session = getActiveSession();
+        if (session) {
+          session.addOutput(`\x1b[2m⤷ ${matches.join(', ')}\x1b[0m`, 'system');
+          renderOutput();
+        }
+        _inputEl.value = matches[0] + ' ';
+        setTimeout(() => {
+          _inputEl.selectionStart = _inputEl.selectionEnd = _inputEl.value.length;
+        }, 0);
+      })
+      .catch(() => { /* autocomplete silently fails */ });
     return;
   }
 }
@@ -601,6 +635,14 @@ function bindEvents() {
     _copyBtn.addEventListener('click', copyOutput);
   }
 
+  // Help button — sends "help" to the backend
+  if (_helpBtn) {
+    _helpBtn._listener = () => {
+      executeCommand('help');
+    };
+    _helpBtn.addEventListener('click', _helpBtn._listener);
+  }
+
   // Click anywhere in output to focus input
   if (_outputEl) {
     _outputEl.addEventListener('click', _focusInput);
@@ -637,6 +679,11 @@ function unbindEvents() {
     _copyBtn.removeEventListener('click', copyOutput);
   }
 
+  if (_helpBtn && _helpBtn._listener) {
+    _helpBtn.removeEventListener('click', _helpBtn._listener);
+    _helpBtn._listener = null;
+  }
+
   if (_outputEl) {
     _outputEl.removeEventListener('click', _focusInput);
   }
@@ -650,425 +697,38 @@ function unbindEvents() {
 /* ── Page Lifecycle ─────────────────────────────────────────────────────── */
 
 /**
- * Render the terminal page HTML into the given container.
- * Called by the router with routeInfo.
- * @param {Object} routeInfo - Route info from router
- * @returns {string} HTML string
+ * Render the terminal page — returns a mount point for the SPA router.
+ * @param {Object} _routeInfo - Route info from router (unused)
+ * @returns {string} HTML placeholder
  */
-function render(routeInfo) {
+function render(_routeInfo) {
+  return '<div id="terminal-root"></div>';
+}
+
+/**
+ * Mount the terminal page — called after HTML is inserted into the DOM.
+ * Loads the HTML template, initializes sessions, and binds events.
+ * @param {Element} container - The page container element
+ */
+async function mount(container) {
+  _container = container;
+  _isDestroyed = false;
+
   // Reset state
   _sessions = [];
   _sessionCounter = 0;
   _activeSessionId = 0;
 
-  // Create initial session
-  createSession();
-
-  return html`
-    <div class="terminal-page">
-      <style>
-        /* ── Terminal Page Styles ─────────────────────────────────────── */
-        .terminal-page {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          background: #0d1117;
-          color: #e6edf3;
-          font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
-          font-size: 13px;
-          line-height: 1.5;
-          overflow: hidden;
-          position: relative;
-        }
-
-        /* Terminal CSS Variables for ANSI colors */
-        .terminal-page {
-          --terminal-black:   #1a1a1a;
-          --terminal-red:     #ff6b6b;
-          --terminal-green:   #69db7c;
-          --terminal-yellow:  #ffd43b;
-          --terminal-blue:    #74c0fc;
-          --terminal-magenta: #da77f2;
-          --terminal-cyan:    #66d9e8;
-          --terminal-white:   #e6edf3;
-          --terminal-gray:    #808080;
-        }
-
-        /* ── Tab Bar ──────────────────────────────────────────────────── */
-        .terminal-toolbar {
-          display: flex;
-          align-items: center;
-          flex-shrink: 0;
-          background: #161b22;
-          border-bottom: 1px solid #21262d;
-          min-height: 36px;
-        }
-
-        .terminal-tabs {
-          display: flex;
-          align-items: stretch;
-          flex: 1;
-          overflow-x: auto;
-          overflow-y: hidden;
-          scrollbar-width: thin;
-          scrollbar-color: #30363d transparent;
-        }
-
-        .terminal-tabs::-webkit-scrollbar {
-          height: 3px;
-        }
-        .terminal-tabs::-webkit-scrollbar-thumb {
-          background: #30363d;
-          border-radius: 2px;
-        }
-
-        .terminal-tab {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 14px;
-          font-size: 12px;
-          color: #8b949e;
-          cursor: pointer;
-          border-bottom: 2px solid transparent;
-          white-space: nowrap;
-          user-select: none;
-          transition: all 120ms ease;
-          flex-shrink: 0;
-          min-width: 0;
-          position: relative;
-        }
-
-        .terminal-tab:hover {
-          color: #c9d1d9;
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        .terminal-tab--active {
-          color: #c9d1d9;
-          border-bottom-color: #58a6ff;
-          background: rgba(88, 166, 255, 0.08);
-        }
-
-        .terminal-tab__label {
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .terminal-tab__close {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 18px;
-          height: 18px;
-          border-radius: 3px;
-          color: #8b949e;
-          cursor: pointer;
-          flex-shrink: 0;
-          opacity: 0;
-          transition: all 120ms ease;
-        }
-
-        .terminal-tab:hover .terminal-tab__close {
-          opacity: 0.7;
-        }
-
-        .terminal-tab__close:hover {
-          opacity: 1 !important;
-          background: rgba(255, 255, 255, 0.08);
-          color: #f85149;
-        }
-
-        .terminal-tab--new {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 6px 10px;
-          color: #8b949e;
-          cursor: pointer;
-          flex-shrink: 0;
-          border-bottom: 2px solid transparent;
-          transition: all 120ms ease;
-        }
-
-        .terminal-tab--new:hover {
-          color: #c9d1d9;
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        /* ── Terminal Actions ──────────────────────────────────────────── */
-        .terminal-actions {
-          display: flex;
-          align-items: center;
-          gap: 2px;
-          padding: 0 8px;
-          flex-shrink: 0;
-          border-left: 1px solid #21262d;
-        }
-
-        .terminal-action-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 28px;
-          border-radius: 4px;
-          color: #8b949e;
-          cursor: pointer;
-          transition: all 120ms ease;
-        }
-
-        .terminal-action-btn:hover {
-          color: #c9d1d9;
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .terminal-action-btn svg {
-          width: 14px;
-          height: 14px;
-        }
-
-        /* ── Output Area ───────────────────────────────────────────────── */
-        .terminal-output {
-          flex: 1;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 12px 16px;
-          scrollbar-width: thin;
-          scrollbar-color: #30363d transparent;
-          background: #0d1117;
-        }
-
-        .terminal-output::-webkit-scrollbar {
-          width: 6px;
-        }
-        .terminal-output::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .terminal-output::-webkit-scrollbar-thumb {
-          background: #30363d;
-          border-radius: 3px;
-        }
-        .terminal-output::-webkit-scrollbar-thumb:hover {
-          background: #484f58;
-        }
-
-        .terminal-line {
-          white-space: pre-wrap;
-          word-break: break-all;
-          min-height: 1em;
-          padding: 0;
-          line-height: 1.5;
-        }
-
-        .terminal-line--stdout {
-          color: #e6edf3;
-        }
-
-        .terminal-line--stderr {
-          color: #f85149;
-        }
-
-        .terminal-line--system {
-          color: #8b949e;
-          font-style: italic;
-        }
-
-        .terminal-line--prompt {
-          color: #58a6ff;
-        }
-
-        /* ── Input Row ─────────────────────────────────────────────────── */
-        .terminal-input-row {
-          display: flex;
-          align-items: center;
-          gap: 0;
-          padding: 4px 16px 10px;
-          background: #0d1117;
-          border-top: 1px solid #21262d;
-          flex-shrink: 0;
-        }
-
-        .terminal-prompt {
-          color: #58a6ff;
-          font-size: 13px;
-          white-space: nowrap;
-          flex-shrink: 0;
-          padding-right: 8px;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .terminal-input {
-          flex: 1;
-          background: transparent;
-          border: none;
-          outline: none;
-          color: #e6edf3;
-          font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
-          font-size: 13px;
-          line-height: 1.5;
-          padding: 2px 0;
-          caret-color: #58a6ff;
-          resize: none;
-        }
-
-        .terminal-input::placeholder {
-          color: #484f58;
-        }
-
-        .terminal-input:focus {
-          box-shadow: none;
-          border: none;
-        }
-
-        /* ── Loading Skeleton ──────────────────────────────────────────── */
-        .terminal-skeleton {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          background: #0d1117;
-          padding: 16px;
-          gap: 12px;
-        }
-
-        .terminal-skeleton__bar {
-          display: flex;
-          gap: 8px;
-          padding: 8px 0;
-          border-bottom: 1px solid #21262d;
-        }
-
-        .terminal-skeleton__line {
-          height: 12px;
-          background: linear-gradient(90deg, #21262d 25%, #30363d 37%, #21262d 63%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s ease-in-out infinite;
-          border-radius: 4px;
-        }
-
-        /* ── Error State ───────────────────────────────────────────────── */
-        .terminal-error {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          gap: 16px;
-          color: #8b949e;
-          text-align: center;
-          padding: 32px;
-        }
-
-        .terminal-error__icon {
-          color: #f85149;
-          width: 48px;
-          height: 48px;
-          opacity: 0.6;
-        }
-
-        .terminal-error__title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #c9d1d9;
-        }
-
-        .terminal-error__desc {
-          font-size: 13px;
-          max-width: 360px;
-          line-height: 1.6;
-        }
-
-        .terminal-retry-btn {
-          padding: 8px 20px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #c9d1d9;
-          background: #21262d;
-          border: 1px solid #30363d;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 120ms ease;
-        }
-
-        .terminal-retry-btn:hover {
-          background: #30363d;
-          border-color: #484f58;
-        }
-
-        /* ── Empty terminal message ────────────────────────────────────── */
-        .terminal-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          gap: 12px;
-          color: #484f58;
-          font-size: 14px;
-          text-align: center;
-        }
-
-        .terminal-empty__icon {
-          width: 48px;
-          height: 48px;
-          opacity: 0.4;
-        }
-      </style>
-
-      <div class="terminal-toolbar">
-        <div class="terminal-tabs" id="terminal-tabs"></div>
-        <div class="terminal-actions">
-          <button class="terminal-action-btn" id="terminal-clear-btn"
-                  title="Clear terminal" aria-label="Clear terminal output">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
-          <button class="terminal-action-btn" id="terminal-copy-btn"
-                  title="Copy output" aria-label="Copy terminal output">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="terminal-output" id="terminal-output">
-        <div class="terminal-empty">
-          <div class="terminal-empty__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="4 17 10 11 4 5"/>
-              <line x1="12" y1="19" x2="20" y2="19"/>
-            </svg>
-          </div>
-          <div>Starting terminal session…</div>
-        </div>
-      </div>
-
-      <div class="terminal-input-row">
-        <span class="terminal-prompt" id="terminal-prompt">${PROMPT_BASE}:${INITIAL_DIR}$ </span>
-        <input type="text" class="terminal-input" id="terminal-input"
-               placeholder="Enter command…"
-               autofocus
-               autocomplete="off"
-               spellcheck="false" />
-      </div>
-    </div>
-  `;
-}
-
-/**
- * Mount the terminal page — called after HTML is inserted into the DOM.
- * Binds event listeners and populates tabs/output.
- * @param {Element} container - The page container element
- */
-function mount(container) {
-  _container = container;
+  // Load the template
+  try {
+    const rootEl = container.querySelector('#terminal-root') || container;
+    const data = {
+      initialPrompt: `${PROMPT_BASE}:${INITIAL_DIR}$ `,
+    };
+    rootEl.innerHTML = await loadTemplate('terminal', data);
+  } catch (err) {
+    console.error('[Terminal] Failed to load template:', err);
+  }
 
   // Cache DOM references
   _tabsEl = container.querySelector('#terminal-tabs');
@@ -1076,6 +736,10 @@ function mount(container) {
   _inputEl = container.querySelector('#terminal-input');
   _clearBtn = container.querySelector('#terminal-clear-btn');
   _copyBtn = container.querySelector('#terminal-copy-btn');
+  _helpBtn = container.querySelector('#terminal-help-btn');
+
+  // Create initial session
+  createSession();
 
   // Render initial state
   renderTabs();
@@ -1102,6 +766,7 @@ function destroy() {
   _tabsEl = null;
   _clearBtn = null;
   _copyBtn = null;
+  _helpBtn = null;
   _resizeHandler = null;
 }
 

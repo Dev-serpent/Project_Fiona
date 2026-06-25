@@ -1,0 +1,55 @@
+<!-- voice.html — Voice Command Page Template -->
+<div style="margin-bottom: var(--space-6);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Voice Commands
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Parse and transcribe voice input
+      </p>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
+
+  <!-- Card: Command Parse -->
+  <div class="c-card" id="voice-parse-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Command Parse</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3);">
+        <input type="text"
+               class="c-input"
+               id="voice-parse-input"
+               placeholder="e.g. open browser"
+               value="{{parsePhrase}}"
+               style="flex: 1;"
+               autocomplete="off"
+               spellcheck="false">
+        <button class="c-btn c-btn--primary"
+                id="voice-parse-btn"
+                {{#if parseDisabled}}disabled{{/if}}>
+          <span class="c-btn__icon">{{{parseBtnIcon}}}</span>
+          {{parseBtnText}}
+        </button>
+      </div>
+      {{{parseResultHTML}}}
+      {{{parseHistoryHTML}}}
+    </div>
+  </div>
+
+  <!-- Card: Audio Transcription -->
+  <div class="c-card" id="voice-transcribe-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Audio Transcription</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-4);">
+      {{{transcribeCardHTML}}}
+    </div>
+  </div>
+</div>
+
+{{{historyListHTML}}}

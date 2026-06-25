@@ -9,6 +9,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -975,91 +976,47 @@ function updateError() {
  * Render the full chat page into the container.
  * @param {Element} container
  */
-function renderFullPage(container) {
+async function renderFullPage(container) {
   _state.container = container;
 
-  container.innerHTML = html`
-    <div id="chat-layout" style="display: flex; height: 100%; overflow: hidden;">
+  const data = {
+    sendIcon: ICONS.check.html,
+  };
 
-      <!-- Session Sidebar -->
-      <div id="chat-sidebar"
-           style="width: 280px; min-width: 280px; display: flex; flex-direction: column;
-                  border-right: 1px solid var(--border); background: var(--bg-tertiary);
-                  ${_state.sidebarOpen ? '' : 'display: none;'}">
-      </div>
+  container.innerHTML = await loadTemplate('chat', data);
 
-      <!-- Main Chat Area -->
-      <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
+  // Apply sidebar visibility
+  const sidebarEl = container.querySelector('#chat-sidebar');
+  if (sidebarEl) {
+    sidebarEl.style.display = _state.sidebarOpen ? 'flex' : 'none';
+  }
 
-        <!-- Header -->
-        <div id="chat-header"
-             style="display: flex; align-items: center; justify-content: space-between;
-                    padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle);
-                    min-height: 48px; flex-shrink: 0;">
-        </div>
+  // Apply settings values from state
+  const modelSelect = container.querySelector('#chat-model-select');
+  if (modelSelect) {
+    for (const opt of modelSelect.options) {
+      if (opt.value === _state.model) {
+        opt.selected = true;
+        break;
+      }
+    }
+  }
+  const tempSlider = container.querySelector('#chat-temp-slider');
+  if (tempSlider) tempSlider.value = String(_state.temperature);
+  const tempValue = container.querySelector('#chat-temp-value');
+  if (tempValue) tempValue.textContent = String(_state.temperature);
+  const maxTokens = container.querySelector('#chat-max-tokens');
+  if (maxTokens) maxTokens.value = String(_state.maxTokens);
 
-        <!-- Error Alert -->
-        <div id="chat-error" style="display: none; flex-shrink: 0;"></div>
-
-        <!-- Message List -->
-        <div id="chat-messages"
-             class="scrollable"
-             style="flex: 1; overflow-y: auto; padding: var(--space-2) 0;
-                    scrollbar-width: thin; scrollbar-color: var(--border) transparent;">
-        </div>
-
-        <!-- Input Area -->
-        <div id="chat-input-wrapper"
-             style="border-top: 1px solid var(--border); padding: var(--space-3) var(--space-4);
-                    background: var(--bg-secondary); flex-shrink: 0;">
-          <!-- Settings row -->
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-            <select id="chat-model-select" class="c-select" style="width: auto; min-width: 120px; height: 28px; font-size: var(--font-size-xs);">
-              <option value="llama3.2" ${_state.model === 'llama3.2' ? 'selected' : ''}>Llama 3.2</option>
-              <option value="llama3.1" ${_state.model === 'llama3.1' ? 'selected' : ''}>Llama 3.1</option>
-              <option value="mistral" ${_state.model === 'mistral' ? 'selected' : ''}>Mistral</option>
-              <option value="codellama" ${_state.model === 'codellama' ? 'selected' : ''}>CodeLlama</option>
-              <option value="phi3" ${_state.model === 'phi3' ? 'selected' : ''}>Phi-3</option>
-            </select>
-
-            <div style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-xxs); color: var(--text-muted);">
-              <span>Temp:</span>
-              <input type="range" id="chat-temp-slider" min="0" max="2" step="0.1" value="${_state.temperature}"
-                     style="width: 60px; height: 4px; accent-color: var(--accent);">
-              <span id="chat-temp-value">${_state.temperature}</span>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-xxs); color: var(--text-muted);">
-              <span>Max:</span>
-              <input type="number" id="chat-max-tokens" value="${_state.maxTokens}" min="64" max="8192" step="64"
-                     style="width: 60px; height: 24px; font-size: var(--font-size-xxs); padding: 0 4px; text-align: center;">
-            </div>
-
-            <div style="margin-left: auto; display: flex; align-items: center; gap: var(--space-1);">
-              <label style="font-size: var(--font-size-xxs); color: var(--text-muted); cursor: pointer;">
-                <input type="checkbox" id="chat-auto-scroll" checked style="accent-color: var(--accent);">
-                Auto-scroll
-              </label>
-            </div>
-          </div>
-
-          <!-- Input row -->
-          <div style="display: flex; gap: var(--space-2); align-items: flex-end;">
-            <textarea id="chat-input"
-                      class="c-textarea c-textarea--no-resize"
-                      placeholder="${_state.isStreaming ? 'Waiting for response…' : 'Type a message… (Enter to send, Shift+Enter for newline)'}"
-                      style="flex: 1; min-height: 40px; max-height: 200px; resize: none;"
-                      ${_state.isStreaming ? 'disabled' : ''}></textarea>
-            <button class="c-btn c-btn--primary" id="chat-send-btn"
-                    style="height: 40px; min-width: 40px; padding: 0 12px;"
-                    ${_state.isStreaming ? 'disabled' : ''}>
-              <span class="c-btn__icon">${ICONS.check}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  // Apply input streaming state
+  const inputEl = container.querySelector('#chat-input');
+  if (inputEl) {
+    inputEl.placeholder = _state.isStreaming
+      ? 'Waiting for response…'
+      : 'Type a message… (Enter to send, Shift+Enter for newline)';
+    if (_state.isStreaming) inputEl.setAttribute('disabled', '');
+    else inputEl.removeAttribute('disabled');
+  }
 
   // Store refs
   _state.messageListEl = container.querySelector('#chat-messages');
@@ -1184,7 +1141,11 @@ function _loadChatCSS() {
  * Full render — called by the router or from mount().
  * @param {Element} container
  */
-export function render(container) {
+export function render() {
+  return '<div id="chat-root"></div>';
+}
+
+export async function mount(container) {
   _state.destroyed = false;
   _state.container = container;
 
@@ -1199,7 +1160,7 @@ export function render(container) {
     createNewSession();
   }
 
-  renderFullPage(container);
+  await renderFullPage(container);
 }
 
 /**
@@ -1231,12 +1192,24 @@ export function destroy() {
  */
 export default function createPage(_routeInfo) {
   return {
-    render() {
-      return '<div id="chat-root"></div>';
-    },
-    mount(container) {
+    render,
+    async mount(container) {
       const root = container.querySelector('#chat-root') || container;
-      render(root);
+      _state.destroyed = false;
+      _state.container = root;
+
+      // Load page-specific CSS
+      _loadChatCSS();
+
+      // Load persisted state
+      loadState();
+
+      // Ensure at least one session exists
+      if (_state.sessions.length === 0) {
+        createNewSession();
+      }
+
+      await renderFullPage(root);
     },
     destroy,
   };

@@ -1,0 +1,63 @@
+<!-- plugins.html — Plugin Manager Page Template -->
+<style>
+  .plugin-row-card {
+    overflow: visible;
+  }
+</style>
+
+<!-- Page Header -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Plugin Manager
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        {{pluginCount}} plugin{{pluginPlural}} installed · {{enabledCount}} enabled
+      </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      <button class="c-btn c-btn--primary c-btn--sm" id="plugin-install-btn">
+        <span class="c-btn__icon">{{{plusIcon}}}</span>
+        Install Plugin
+      </button>
+      <button class="c-btn c-btn--sm c-btn--ghost" id="plugin-check-updates" title="Check for updates">
+        <span class="c-btn__icon">{{{refreshIcon}}}</span>
+        Check Updates
+      </button>
+    </div>
+  </div>
+  {{#if showMockAlert}}
+  <div class="c-alert c-alert--info" style="margin-top: var(--space-3);">
+    <span class="c-alert__icon">{{{infoIcon}}}</span>
+    <div class="c-alert__content">Backend API not available — showing sample plugin data.</div>
+  </div>
+  {{/if}}
+</div>
+
+<!-- Filters & Search -->
+<div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
+  <!-- Category Tabs -->
+  <div class="c-tabs" style="flex-shrink: 0;">
+    {{{categoryTabs}}}
+  </div>
+  <!-- Search -->
+  <div class="c-input-wrapper" style="flex: 1; min-width: 180px; max-width: 300px;">
+    <span class="c-input-wrapper__icon c-input-wrapper__icon--left">{{{searchIcon}}}</span>
+    <input type="text" class="c-input c-input--sm" id="plugin-search"
+           placeholder="Search plugins…"
+           value="{{searchQuery}}"
+           style="padding-left: 32px; font-size: var(--font-size-xs);">
+  </div>
+  <span style="font-size: var(--font-size-xs); color: var(--text-muted);">
+    {{filteredCount}} displayed
+  </span>
+</div>
+
+<!-- Plugin List -->
+<div style="display: flex; flex-direction: column; gap: var(--space-2);">
+  {{{pluginCards}}}
+</div>
+
+<!-- Install Modal -->
+{{{installModal}}}

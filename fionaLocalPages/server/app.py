@@ -53,15 +53,22 @@ from fionaLocalPages.server.websocket import WebSocketManager
 from fionaLocalPages.server.handlers import (
     actions,
     agent,
+    agents_crud,
+    bindings,
     browser,
     camcoms,
     config,
     desktop,
     files,
     macros,
+    notifications_handler as notifications,
+    phiconnect,
+    quiktieper,
     recall,
+    settings_handler as settings,
     system,
     terminal,
+    vsee,
     voice,
 )
 
@@ -193,6 +200,15 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_post("/api/v1/agent/goal", agent.agent_goal)
     app.router.add_get("/api/v1/agent/status", agent.agent_status)
     app.router.add_get("/api/v1/agent/commands", agent.agent_commands)
+    app.router.add_get("/api/v1/agent/models", agents_crud.check_model)
+
+    # ── Agents CRUD ────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/agents", agents_crud.list_agents)
+    app.router.add_post("/api/v1/agents", agents_crud.create_agent)
+    app.router.add_post("/api/v1/agents/{id}/pause", agents_crud.pause_agent)
+    app.router.add_post("/api/v1/agents/{id}/resume", agents_crud.resume_agent)
+    app.router.add_post("/api/v1/agents/{id}/stop", agents_crud.stop_agent)
+    app.router.add_post("/api/v1/agents/{id}/restart", agents_crud.restart_agent)
 
     # ── Actions ────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/actions", actions.list_actions)
@@ -205,6 +221,7 @@ def _setup_api_routes(app: web.Application) -> None:
 
     # ── Terminal ───────────────────────────────────────────────────────
     app.router.add_post("/api/v1/terminal/exec", terminal.terminal_exec)
+    app.router.add_post("/api/v1/terminal/autocomplete", terminal.terminal_autocomplete)
     app.router.add_get("/api/v1/terminal/status", terminal.terminal_status)
 
     # ── Files ──────────────────────────────────────────────────────────
@@ -225,6 +242,8 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_post("/api/v1/browser/navigate", browser.browser_navigate)
     app.router.add_post("/api/v1/browser/click", browser.browser_click)
     app.router.add_post("/api/v1/browser/screenshot", browser.browser_screenshot)
+    app.router.add_post("/api/v1/browser/type", browser.browser_type)
+    app.router.add_post("/api/v1/browser/get_text", browser.browser_get_text)
 
     # ── Desktop ────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/desktop/active", desktop.desktop_active)
@@ -242,6 +261,42 @@ def _setup_api_routes(app: web.Application) -> None:
     # ── CamComs ────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/camcoms/status", camcoms.camcoms_status)
     app.router.add_get("/api/v1/camcoms/identity", camcoms.camcoms_identity)
+
+    # ── PhiConnect ─────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/phiconnect/status", phiconnect.phiconnect_status)
+    app.router.add_get("/api/v1/phiconnect/identity", phiconnect.phiconnect_identity)
+    app.router.add_get("/api/v1/phiconnect/messages", phiconnect.phiconnect_messages)
+    app.router.add_post("/api/v1/phiconnect/send", phiconnect.phiconnect_send)
+    app.router.add_post("/api/v1/phiconnect/trust", phiconnect.phiconnect_trust_key)
+
+    # ── Vsee ───────────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/vsee/status", vsee.vsee_status)
+    app.router.add_post("/api/v1/vsee/launch", vsee.vsee_launch)
+    app.router.add_get("/api/v1/vsee/model", vsee.vsee_default_model)
+
+    # ── Bindings ───────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/bindings", bindings.list_bindings)
+    app.router.add_post("/api/v1/bindings/save", bindings.save_bindings)
+    app.router.add_get("/api/v1/bindings/apps", bindings.get_apps)
+
+    # ── QuikTieper ─────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/quiktieper/status", quiktieper.quiktieper_status)
+    app.router.add_get("/api/v1/quiktieper/presets", quiktieper.list_presets)
+    app.router.add_get("/api/v1/quiktieper/desktop-apps", quiktieper.list_desktop_apps)
+    app.router.add_post("/api/v1/quiktieper/import-apps", quiktieper.import_desktop_apps)
+    app.router.add_post("/api/v1/quiktieper/assign-keys", quiktieper.assign_launch_keys)
+    app.router.add_post("/api/v1/quiktieper/launcher/start", quiktieper.launcher_start)
+    app.router.add_post("/api/v1/quiktieper/launcher/stop", quiktieper.launcher_stop)
+    app.router.add_get("/api/v1/quiktieper/launcher/status", quiktieper.launcher_status)
+
+    # ── Notifications ──────────────────────────────────────────────────
+    app.router.add_get("/api/v1/notifications", notifications.list_notifications)
+    app.router.add_post("/api/v1/notifications/create", notifications.create_notification)
+    app.router.add_post("/api/v1/notifications/dismiss", notifications.dismiss_notifications)
+
+    # ── Settings ───────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/settings", settings.get_settings)
+    app.router.add_put("/api/v1/settings", settings.put_settings)
 
 
 def _setup_websocket(app: web.Application) -> None:
@@ -318,14 +373,13 @@ def _setup_periodic_tasks(app: web.Application) -> None:
     """Start periodic system metrics pushes via WebSocket."""
 
     async def _collect_metrics() -> dict[str, object]:
-        from .handlers.system import _cpu_percent, _disk_info, _loadavg, _memory_info, _uptime
         return {
             "timestamp": time.time(),
-            "cpu_percent": _cpu_percent(),
-            "memory": _memory_info(),
-            "disk": _disk_info(),
-            "loadavg": _loadavg(),
-            "uptime": _uptime(),
+            "cpu_percent": system._cpu_percent(),
+            "memory": system._memory_info(),
+            "disk": system._disk_info(),
+            "loadavg": system._loadavg(),
+            "uptime": system._uptime(),
         }
 
     async def _start_metrics_push(app: web.Application) -> None:

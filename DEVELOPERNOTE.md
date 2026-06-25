@@ -18,6 +18,7 @@ Fiona is the umbrella project. It exposes the following subsystems:
 - `BrowserAutomation`: Playwright-based browser automation with state machine management
 - `FionaCore`: shared modules (approval system, action router, macros, permissions, ACL, DI)
 - `cad`: CAD platform — parametric 3D modeling core + JSON-RPC 2.0 server + 3js frontend
+- `fionaLocalPages`: Web dashboard SPA — aiohttp REST API backend + 26 HTML/JS frontend pages served as a browser-based control surface alongside the CLI and Tkinter GUI
 
 Current file structure:
 
@@ -87,6 +88,14 @@ Fiona/
 │   ├── cad_server/         CAD server tests (140)
 │   ├── contracts/          Interface contract tests (140)
 │   └── ...                 Existing test suite
+├── fionaLocalPages/        Web dashboard SPA (aiohttp + HTML + vanilla JS)
+│   ├── server/app.py       API server (aiohttp, 10+ handler modules, 40+ endpoints)
+│   ├── server/handlers/    REST handler modules (agents_crud, browser, terminal, quiktieper, settings, etc.)
+│   ├── js/                 Frontend JS (app.js, router.js, api.js, state.js, template-loader.js, components/)
+│   ├── css/                Stylesheets (globals, components, layout, themes, animations)
+│   ├── pages/              26 page modules (SPA pages, one per route)
+│   ├── templates/          26 HTML template files (loaded via template-loader.js)
+│   └── index.html          SPA shell with static sidebar HTML
 ├── scripts/                local launch wrappers
 ├── fionaDocsPage/          Documentation site
 ├── .backups/               timestamped backup snapshots
@@ -555,11 +564,27 @@ Run all current tests:
 python -m unittest discover -s tests -v
 ```
 
-Latest result, run on 2026-06-22:
+Latest result, run on 2026-06-25:
 
 ```text
-1407 passed, 16 subtests passed in 44s (pytest)
-13 pre-existing environment failures (numpy.rec, no camera, no network)
+Tests run via python -m pytest tests/ -v:
+  Passed: 1413+ (pytest, includes CLI surface suite)
+  Pre-existing env failures: ~14 (numpy.rec, no camera, no network)
+
+BrowserAutomation:
+  52 tests pass (state machine, crash handling, navigation, interaction)
+
+CAD server + contracts:
+  98 + 140 = 238 tests pass
+
+CAD frontend (vitest):
+  87 tests pass
+
+CLI command surface (new):
+  2 tests, 54 subtests — all CLI --help output clean, 22 smoke commands pass
+
+Compile check:
+  python -m compileall passes for all packages
 ```
 
 Test suites can be run independently:
@@ -622,6 +647,45 @@ Latest result, run on 2026-05-26:
 ```text
 Compiled without syntax errors.
 ```
+
+## fionaLocalPages — Web Dashboard
+
+The `fionaLocalPages/` directory is a self-contained web dashboard SPA served from an aiohttp backend.
+
+### Start the server
+
+```bash
+./scripts/fiona-pages-start              # default port 8765
+./scripts/fiona-pages-start --port 8080  # custom port
+./scripts/fiona-pages-start --debug      # verbose logging
+```
+
+### Architecture
+
+**Python backend** (aiohttp) → **HTML templates** (`.html` files in `templates/`) → **JS modules** (thin SPA layer)
+
+- **Backend**: `server/app.py` — aiohttp server with 10+ handler modules, 40+ REST endpoints at `/api/v1/`, WebSocket at `/ws`, SSE at `/api/v1/stream`
+- **Frontend**: 26 page modules in `pages/`, each with `render()` + `mount()` + `destroy()`. Templates loaded at runtime via `js/template-loader.js` using `{{variable}}` interpolation.
+- **Router**: Hash-based SPA router (`js/router.js`) with lazy-loaded pages, lifecycle hooks, active nav tracking
+- **State**: Observable store (`js/state.js`) with localStorage persistence
+- **Styling**: Dark-first glassmorphism design system — 5 CSS files (globals, components, layout, themes, animations)
+
+### Backend Handler Modules
+
+| Module | Endpoints |
+|---|---|
+| `handlers/agents_crud.py` | 7 (list/create/pause/resume/stop/restart agents + model check) |
+| `handlers/browser.py` | 7+ (start/stop/status/navigate/click/type/screenshot/get_text) |
+| `handlers/terminal.py` | 4 (execute + autocomplete, GET/POST) |
+| `handlers/quiktieper.py` | 8 (status/presets/desktop-apps/import-apps/assign-keys/launcher) |
+| `handlers/settings_handler.py` | 2 (GET/PUT settings.txt) |
+| `handlers/bindings.py` | 3 (get/save bindings, list apps) |
+| `handlers/notifications_handler.py` | 3 (list/create/dismiss) |
+| `handlers/phiconnect.py` | 5 (status/identity/messages/send/trust) |
+| `handlers/vsee.py` | 3 (status/launch/model) |
+| Plus: system, agent, actions, voice, files, config, desktop, recall, macros, camcoms (routed directly in app.py) |
+
+**26 routes total** in the SPA — every page handles loading, error, empty, and data states.
 
 ## Debugging Files
 

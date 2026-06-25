@@ -16,6 +16,7 @@ import {
   skeletonHeading,
 } from '../js/components/LoadingSkeleton.js';
 import { toast } from '../js/components/Toast.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -32,6 +33,8 @@ const _state = {
   error: false,
   errorMessage: '',
   agents: [],
+  availableModels: [],
+  modelStatusHtml: '',
   pollTimer: null,
   wsUnsub: null,
   _boundListeners: [],
@@ -101,7 +104,43 @@ function statusLabel(status) {
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+function renderModelStatus() {
+  const models = _state.availableModels || [];
+  const qwenAvailable = models.some(m => m.includes('qwen3:8b'));
+  const otherModels = models.filter(m => !m.includes('qwen3:8b')).slice(0, 3);
+
+  let html = `<div class="model-status" style="display:flex;align-items:center;gap:var(--space-3);font-size:var(--font-size-xs);color:var(--text-muted);flex-wrap:wrap;">`;
+
+  // qwen3:8b indicator
+  if (qwenAvailable) {
+    html += `<span style="display:flex;align-items:center;gap:4px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--success);"></span>
+      <strong>qwen3:8b</strong> <span style="color:var(--text-muted)">online</span>
+    </span>`;
+  } else {
+    html += `<span style="display:flex;align-items:center;gap:4px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--danger);"></span>
+      <strong>qwen3:8b</strong> <span style="color:var(--text-muted)">offline</span>
+    </span>`;
+  }
+
+  // Other models
+  if (otherModels.length > 0) {
+    html += `<span style="color:var(--border-subtle)">|</span>`;
+    html += otherModels.map(m =>
+      `<span style="color:var(--text-muted);font-size:10px;">${esc(m)}</span>`
+    ).join('');
+  }
+
+  if (models.length > 3) {
+    html += `<span style="color:var(--text-muted);font-size:10px;">+${models.length - 3} more</span>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -116,38 +155,19 @@ function renderPage(container) {
   }
 
   const count = _state.agents.length;
+  const hasAgents = count > 0;
+  const agentCardsHtml = hasAgents ? _state.agents.map((a) => renderAgentCard(a)).join('') : '';
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);">
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Active Agents
-          </h1>
-          <span class="c-badge c-badge--accent" id="agent-count-badge">${count}</span>
-        </div>
-        <button class="c-btn c-btn--primary c-btn--sm" id="btn-new-agent">
-          <span class="c-btn__icon">${ICONS.plus}</span>
-          New Agent
-        </button>
-      </div>
-      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-        Monitor and manage running agent instances
-      </p>
-    </div>
+  const data = {
+    agentCount: count,
+    hasAgents,
+    agentCardsHtml,
+    plusIcon: ICONS.plus.html,
+    botIcon: ICONS.bot.html,
+    modelStatusHtml: _state.modelStatusHtml || '',
+  };
 
-    <!-- Agent Grid -->
-    <div id="agents-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-4);">
-      ${count === 0 ? html`
-        <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-12); color: var(--text-muted);">
-          <div style="font-size: 36px; margin-bottom: var(--space-4); opacity: 0.3;">${ICONS.bot}</div>
-          <div style="font-size: var(--font-size-md); font-weight: var(--font-weight-medium); margin-bottom: var(--space-2);">No agents running</div>
-          <div style="font-size: var(--font-size-sm); color: var(--text-muted);">Start an agent to see it here.</div>
-        </div>
-      ` : html.raw(_state.agents.map((agent) => renderAgentCard(agent)).join(''))}
-    </div>
-  `;
+  container.innerHTML = await loadTemplate('agents', data);
 
   mountComponents(container);
 }
@@ -450,13 +470,20 @@ async function loadData() {
     _state.error = true;
     _state.errorMessage = 'API client not available.';
     _state.loading = false;
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     return;
   }
 
   try {
     const result = await api.get('/api/v1/agents');
     const agents = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
+
+    // Fetch available models from meta
+    _state.availableModels = [];
+    if (result?.meta?.available_models) {
+      _state.availableModels = result.meta.available_models;
+    }
+    _state.modelStatusHtml = renderModelStatus();
 
     // Update store if available
     const store = getStore();
@@ -469,7 +496,7 @@ async function loadData() {
     _state.loading = false;
 
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch (err) {
     console.error('[agents] Failed to load agents:', err);
@@ -477,12 +504,12 @@ async function loadData() {
     _state.errorMessage = err.message || 'Failed to fetch agents.';
     _state.loading = false;
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   }
 }
 
-function handleWebSocketUpdate(data) {
+async function handleWebSocketUpdate(data) {
   if (_state.destroyed || !data) return;
 
   // data could be a single agent update or an array
@@ -504,7 +531,7 @@ function handleWebSocketUpdate(data) {
   }
 
   if (_state.container && !_state.loading) {
-    renderPage(_state.container);
+    await renderPage(_state.container);
   }
 }
 
@@ -528,11 +555,20 @@ async function silentPoll() {
   if (!api) return;
 
   try {
+    // Also fetch available models during poll
+    try {
+      const modelsRes = await api.get('/api/v1/agent/models');
+      if (modelsRes?.data?.models) {
+        _state.availableModels = modelsRes.data.models;
+        _state.modelStatusHtml = renderModelStatus();
+      }
+    } catch { /* best effort */ }
+
     const result = await api.get('/api/v1/agents');
     const agents = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
     _state.agents = agents.slice(0, MAX_VISIBLE_AGENTS);
     if (_state.container && !_state.loading) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch {
     // Silent fail during poll
@@ -574,7 +610,11 @@ function unsubscribeWebSocket() {
  * Full render — called from outside the router or from mount().
  * @param {Element} container
  */
-export function render(container) {
+export function render() {
+  return '<div id="agents-root"></div>';
+}
+
+export async function mount(container) {
   _state.destroyed = false;
   _state.loading = true;
   _state.error = false;
@@ -583,9 +623,8 @@ export function render(container) {
 
   renderSkeletons(container);
   subscribeWebSocket();
-  loadData().then(() => {
-    if (!_state.destroyed) startPolling();
-  });
+  await loadData();
+  if (!_state.destroyed) startPolling();
 }
 
 /**
@@ -616,12 +655,19 @@ export function destroy() {
  */
 export default function createPage(_routeInfo) {
   return {
-    render() {
-      return '<div id="agents-root"></div>';
-    },
-    mount(container) {
+    render,
+    async mount(container) {
       const root = container.querySelector('#agents-root') || container;
-      render(root);
+      _state.destroyed = false;
+      _state.loading = true;
+      _state.error = false;
+      _state.errorMessage = '';
+      _state.container = root;
+
+      renderSkeletons(root);
+      subscribeWebSocket();
+      await loadData();
+      if (!_state.destroyed) startPolling();
     },
     destroy,
   };

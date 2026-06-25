@@ -16,6 +16,7 @@ import {
   skeletonHeading,
 } from '../js/components/LoadingSkeleton.js';
 import { toast } from '../js/components/Toast.js';
+import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -119,7 +120,7 @@ function loadPersistedState() {
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -150,43 +151,19 @@ function renderPage(container) {
 
   const totalCount = _state.tasks.length;
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);">
-      <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Task Queue
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-            ${totalCount} total task${totalCount !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <button class="c-btn c-btn--primary c-btn--sm" id="btn-new-task">
-          <span class="c-btn__icon">${ICONS.plus}</span>
-          New Task
-        </button>
-      </div>
-    </div>
+  // Build raw kanban content
+  const kanbanContent = COLUMNS.map((col) => renderColumn(col, grouped[col] || [])).join('');
 
-    <!-- Search Bar -->
-    <div style="position: relative; margin-bottom: var(--space-4); max-width: 360px;">
-      <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
-        ${ICONS.search}
-      </span>
-      <input type="text" class="c-input" id="tasks-search-input"
-             placeholder="Search tasks…"
-             value="${esc(_state.searchQuery)}"
-             style="padding-left: 32px; height: 34px;"
-             autocomplete="off" />
-    </div>
+  const data = {
+    taskCount: totalCount,
+    taskPlural: totalCount !== 1 ? 's' : '',
+    plusIcon: ICONS.plus.html,
+    searchIcon: ICONS.search.html,
+    searchQuery: esc(_state.searchQuery),
+    kanbanContent,
+  };
 
-    <!-- Kanban Columns -->
-    <div id="tasks-kanban" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); min-height: 400px;">
-      ${html.raw(COLUMNS.map((col) => renderColumn(col, grouped[col] || [])).join(''))}
-    </div>
-  `;
-
+  container.innerHTML = await loadTemplate('tasks', data);
   mountComponents(container);
 }
 
@@ -336,10 +313,10 @@ function mountComponents(container) {
   // Search input
   const searchEl = container.querySelector('#tasks-search-input');
   if (searchEl) {
-    const handler = (e) => {
+    const handler = async (e) => {
       _state.searchQuery = e.target.value;
       persistState();
-      renderPage(container);
+      await renderPage(container);
     };
     searchEl.addEventListener('input', handler);
     listeners.push(() => searchEl.removeEventListener('input', handler));
@@ -457,7 +434,7 @@ async function moveTask(taskId, newStatus) {
   task.status = newStatus;
 
   // Re-render optimistically
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   try {
     await api.put(`/api/v1/tasks/${encodeURIComponent(taskId)}`, { status: newStatus });
@@ -465,7 +442,7 @@ async function moveTask(taskId, newStatus) {
   } catch (err) {
     // Revert on failure
     task.status = prevStatus;
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     toast.showToast('error', 'Failed', err.message || 'Could not update task.');
   }
 }
@@ -479,7 +456,7 @@ async function deleteTask(taskId) {
 
   // Optimistic removal
   _state.tasks = _state.tasks.filter((t) => t.id !== taskId);
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   try {
     await api.del(`/api/v1/tasks/${encodeURIComponent(taskId)}`);
@@ -487,7 +464,7 @@ async function deleteTask(taskId) {
   } catch (err) {
     // Revert: re-add the task
     _state.tasks.push(task);
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     toast.showToast('error', 'Failed', err.message || 'Could not delete task.');
   }
 }
@@ -580,7 +557,7 @@ async function showNewTaskModal() {
     created_at: Date.now(),
   };
   _state.tasks.unshift(newTask);
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   try {
     const result = await api.post('/api/v1/tasks', {
@@ -602,7 +579,7 @@ async function showNewTaskModal() {
   } catch (err) {
     // Remove optimistic task
     _state.tasks = _state.tasks.filter((t) => t.id !== tempId);
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     toast.showToast('error', 'Failed', err.message || 'Could not create task.');
   }
 }
@@ -616,7 +593,7 @@ async function loadData() {
     _state.error = true;
     _state.errorMessage = 'API client not available.';
     _state.loading = false;
-    if (_state.container) renderPage(_state.container);
+    if (_state.container) await renderPage(_state.container);
     return;
   }
 
@@ -629,7 +606,7 @@ async function loadData() {
     _state.loading = false;
 
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch (err) {
     console.error('[tasks] Failed to load tasks:', err);
@@ -637,7 +614,7 @@ async function loadData() {
     _state.errorMessage = err.message || 'Failed to fetch tasks.';
     _state.loading = false;
     if (!_state.destroyed && _state.container) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   }
 }
@@ -666,7 +643,7 @@ async function silentPoll() {
     const tasks = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
     _state.tasks = tasks;
     if (_state.container && !_state.loading) {
-      renderPage(_state.container);
+      await renderPage(_state.container);
     }
   } catch {
     // Silent fail during poll

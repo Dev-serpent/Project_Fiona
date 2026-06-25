@@ -1,0 +1,30 @@
+<!-- actions.html — Actions Page Template -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Actions
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Browse and run registered actions
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="c-tabs" style="margin-bottom: var(--space-4);">
+  <div class="c-tab {{#if actionsTabActive}}c-tab--active{{/if}}" data-tab="actions">
+    <span class="c-tab__icon">{{{boltIcon}}}</span>
+    Actions
+    <span class="c-tab__count">{{actionsCount}}</span>
+  </div>
+  <div class="c-tab {{#if historyTabActive}}c-tab--active{{/if}}" data-tab="history">
+    <span class="c-tab__icon">{{{clockIcon}}}</span>
+    History
+    <span class="c-tab__count">{{historyCount}}</span>
+  </div>
+</div>
+
+<div id="actions-tab-content">
+  {{{tabContent}}}
+</div>

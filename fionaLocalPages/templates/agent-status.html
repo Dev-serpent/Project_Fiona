@@ -1,0 +1,86 @@
+<!-- agent-status.html — Agent Status Detail Page Template -->
+<div id="agent-status-content">
+  <style>
+    /* No page-specific styles needed — all use design-token inline styles */
+  </style>
+
+  <!-- Back Button -->
+  <div style="margin-bottom: var(--space-3);">
+    <button class="c-btn c-btn--sm c-btn--ghost" id="agent-back-btn" style="padding-left: 4px;">
+      <span class="c-btn__icon">{{{backIcon}}}</span>
+      Back to Agents
+    </button>
+  </div>
+
+  <!-- Agent Header -->
+  <div class="c-card" style="margin-bottom: var(--space-5);">
+    <div class="c-card__body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+      <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <div class="c-avatar c-avatar--lg c-avatar--accent">
+          {{avatarLetter}}
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <h2 style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+              {{agentName}}
+            </h2>
+            <span style="display: flex; align-items: center; gap: 4px; font-size: var(--font-size-xs); color: {{statusColor}};">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: {{statusColor}};
+                   {{#if isWorking}}animation: pulse 1.5s ease-in-out infinite;{{/if}}"></span>
+              {{statusLabel}}
+            </span>
+          </div>
+          <div style="display: flex; gap: var(--space-4); margin-top: var(--space-1); font-size: var(--font-size-xs); color: var(--text-muted);">
+            <span>Model: {{model}}</span>
+            <span>ID: {{agentIdShort}}</span>
+            <span>Uptime: {{uptime}}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div style="display: flex; gap: var(--space-2);">
+        <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="toggle-pause" title="{{ctrlToggleTitle}}">
+          <span class="c-btn__icon">{{{ctrlToggleIcon}}}</span>
+          {{ctrlToggleLabel}}
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="stop" title="Stop" style="color: var(--danger);">
+          <span class="c-btn__icon">{{{stopIcon}}}</span>
+          Stop
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost agent-ctrl-btn" data-action="restart" title="Restart">
+          <span class="c-btn__icon">{{{restartIcon}}}</span>
+          Restart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="c-tabs" style="margin-bottom: var(--space-4);">
+    <button class="c-tab {{#if isThoughtsActive}}c-tab--active{{/if}}" data-tab="thoughts">
+      <span class="c-tab__icon">{{{thoughtsTabIcon}}}</span>
+      Thought Stream
+      <span class="c-tab__count">{{thoughtsCount}}</span>
+    </button>
+    <button class="c-tab {{#if isConversationActive}}c-tab--active{{/if}}" data-tab="conversation">
+      <span class="c-tab__icon">{{{conversationTabIcon}}}</span>
+      Conversation
+      <span class="c-tab__count">{{conversationCount}}</span>
+    </button>
+    <button class="c-tab {{#if isToolsActive}}c-tab--active{{/if}}" data-tab="tools">
+      <span class="c-tab__icon">{{{toolsTabIcon}}}</span>
+      Tool Calls
+      <span class="c-tab__count">{{toolsCount}}</span>
+    </button>
+    <button class="c-tab {{#if isPerfActive}}c-tab--active{{/if}}" data-tab="performance">
+      <span class="c-tab__icon">{{{perfTabIcon}}}</span>
+      Performance
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div id="agent-tab-content">
+    {{{tabContent}}}
+  </div>
+</div>

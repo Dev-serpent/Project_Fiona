@@ -1,0 +1,58 @@
+<!-- agents.html — Active Agents Page Template -->
+<div id="agents-content">
+  <style>
+    .agents-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-5);
+    }
+    .agents-title-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: var(--space-4);
+    }
+    .agent-card {
+      position: relative;
+    }
+  </style>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: var(--space-5);">
+    <div class="agents-header">
+      <div class="agents-title-row">
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Active Agents
+        </h1>
+        <span class="c-badge c-badge--accent" id="agent-count-badge">{{agentCount}}</span>
+      </div>
+      <button class="c-btn c-btn--primary c-btn--sm" id="btn-new-agent">
+        <span class="c-btn__icon">{{{plusIcon}}}</span>
+        New Agent
+      </button>
+    </div>
+    <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+      Monitor and manage running agent instances
+    </p>
+    {{{modelStatusHtml}}}
+  </div>
+
+  <!-- Agent Grid -->
+  <div class="agents-grid" id="agents-grid">
+    {{#if hasAgents}}
+      {{{agentCardsHtml}}}
+    {{/if}}
+    {{#unless hasAgents}}
+    <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-12); color: var(--text-muted);">
+      <div style="font-size: 36px; margin-bottom: var(--space-4); opacity: 0.3;">{{{botIcon}}}</div>
+      <div style="font-size: var(--font-size-md); font-weight: var(--font-weight-medium); margin-bottom: var(--space-2);">No agents running</div>
+      <div style="font-size: var(--font-size-sm); color: var(--text-muted);">Start an agent to see it here.</div>
+    </div>
+    {{/unless}}
+  </div>
+</div>

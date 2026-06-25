@@ -1,0 +1,25 @@
+<!-- desktop.html — SeeOnDesk Desktop Awareness Template -->
+<div style="margin-bottom: var(--space-6);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        SeeOnDesk
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Desktop awareness
+      </p>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+  <!-- Left Column: Active Window -->
+  <div id="desktop-active-column">
+    {{{activeColumnContent}}}
+  </div>
+
+  <!-- Right Column: Desktop Snapshot -->
+  <div id="desktop-snapshot-column">
+    {{{snapshotColumnContent}}}
+  </div>
+</div>

@@ -1,0 +1,780 @@
+<div class="file-explorer">
+  <style>
+    /* ══════════════════════════════════════════════════════════════════
+       File Explorer Styles
+       ══════════════════════════════════════════════════════════════════ */
+
+    .file-explorer {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--bg-secondary, #14161f);
+      overflow: hidden;
+    }
+
+    /* ── Toolbar ────────────────────────────────────────────────────── */
+    .fe-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      background: var(--surface, #1e202b);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .fe-toolbar__group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .fe-toolbar__sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border, #2e3140);
+      margin: 0 4px;
+    }
+
+    .fe-toolbar__path {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text-muted, #64748b);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0 8px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* ── Breadcrumb ─────────────────────────────────────────────────── */
+    .fe-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      background: var(--bg-tertiary, #1a1c25);
+      flex-shrink: 0;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .fe-breadcrumb::-webkit-scrollbar {
+      height: 3px;
+    }
+    .fe-breadcrumb::-webkit-scrollbar-thumb {
+      background: var(--border, #2e3140);
+      border-radius: 2px;
+    }
+
+    .fe-breadcrumb__item {
+      font-size: 12px;
+      color: var(--text-secondary, #94a3b8);
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 2px 4px;
+      border-radius: 3px;
+      transition: all 120ms ease;
+    }
+
+    .fe-breadcrumb__item:hover {
+      color: var(--text-primary, #e2e8f0);
+      background: var(--surface-hover, #262836);
+    }
+
+    .fe-breadcrumb__item--active {
+      color: var(--accent, #00f0ff);
+      font-weight: 500;
+      cursor: default;
+    }
+
+    .fe-breadcrumb__item--active:hover {
+      background: transparent;
+    }
+
+    .fe-breadcrumb__sep {
+      display: flex;
+      align-items: center;
+      color: var(--text-muted, #64748b);
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .fe-breadcrumb__sep svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ── Body (split panel) ─────────────────────────────────────────── */
+    .fe-body {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Tree Panel ─────────────────────────────────────────────────── */
+    .fe-tree-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border, #2e3140);
+      background: var(--bg-tertiary, #1a1c25);
+      overflow: hidden;
+    }
+
+    .fe-tree-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .fe-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border, #2e3140) transparent;
+    }
+
+    .fe-tree::-webkit-scrollbar {
+      width: 5px;
+    }
+    .fe-tree::-webkit-scrollbar-thumb {
+      background: var(--border, #2e3140);
+      border-radius: 3px;
+    }
+
+    .fe-tree-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--text-secondary, #94a3b8);
+      cursor: pointer;
+      transition: all 80ms ease;
+      user-select: none;
+      position: relative;
+    }
+
+    .fe-tree-item:hover {
+      background: var(--surface, #1e202b);
+      color: var(--text-primary, #e2e8f0);
+    }
+
+    .fe-tree-item--selected {
+      background: var(--accent-muted, rgba(0, 240, 255, 0.12));
+      color: var(--accent, #00f0ff);
+    }
+
+    .fe-tree-item__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: currentColor;
+      opacity: 0.7;
+    }
+
+    .fe-tree-item__icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .fe-tree-item__label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fe-tree-item__chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      transition: transform 120ms ease;
+      opacity: 0.5;
+    }
+
+    .fe-tree-item__chevron svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .fe-tree-item__chevron--open {
+      transform: rotate(0deg);
+    }
+
+    .fe-tree-item__chevron:not(.fe-tree-item__chevron--open) {
+      transform: rotate(-90deg);
+    }
+
+    .fe-tree-item--root {
+      font-weight: 600;
+      color: var(--text-primary, #e2e8f0);
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      padding-bottom: 6px;
+      margin-bottom: 2px;
+    }
+
+    .fe-tree__error {
+      padding: 16px;
+      text-align: center;
+      color: var(--danger, #ef4444);
+      font-size: 12px;
+    }
+
+    /* ── Content Panel ──────────────────────────────────────────────── */
+    .fe-content-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-secondary, #14161f);
+    }
+
+    /* ── File Toolbar ───────────────────────────────────────────────── */
+    .fe-file-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      flex-shrink: 0;
+    }
+
+    .fe-file-search {
+      position: relative;
+      flex: 1;
+      max-width: 280px;
+    }
+
+    .fe-file-search__icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      color: var(--text-muted, #64748b);
+      width: 14px;
+      height: 14px;
+      pointer-events: none;
+    }
+
+    .fe-file-search__icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .fe-file-search__input {
+      width: 100%;
+      height: 28px;
+      padding: 0 8px 0 28px;
+      font-size: 12px;
+      color: var(--text-primary, #e2e8f0);
+      background: var(--surface, #1e202b);
+      border: 1px solid var(--border, #2e3140);
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 120ms ease;
+    }
+
+    .fe-file-search__input:focus {
+      border-color: var(--accent, #00f0ff);
+      box-shadow: 0 0 0 1px var(--accent, #00f0ff);
+    }
+
+    .fe-file-search__input::placeholder {
+      color: var(--text-muted, #64748b);
+    }
+
+    .fe-file-actions {
+      display: flex;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── File List (list view) ──────────────────────────────────────── */
+    .fe-file-list {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border, #2e3140) transparent;
+    }
+
+    .fe-file-list::-webkit-scrollbar {
+      width: 5px;
+    }
+    .fe-file-list::-webkit-scrollbar-thumb {
+      background: var(--border, #2e3140);
+      border-radius: 3px;
+    }
+
+    .fe-file-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 80ms ease;
+      user-select: none;
+    }
+
+    .fe-file-item:hover {
+      background: var(--surface, #1e202b);
+    }
+
+    .fe-file-item--selected {
+      background: var(--accent-muted, rgba(0, 240, 255, 0.12));
+    }
+
+    .fe-file-item--list {
+      border-bottom: 1px solid var(--border-subtle, #232635);
+    }
+
+    .fe-file-item__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: var(--text-muted, #64748b);
+    }
+
+    .fe-file-item__icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .fe-file-item__name {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-primary, #e2e8f0);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fe-file-item__meta {
+      font-size: 11px;
+      color: var(--text-muted, #64748b);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .fe-file-item__size {
+      width: 80px;
+      text-align: right;
+    }
+
+    .fe-file-item__date {
+      width: 80px;
+      text-align: right;
+    }
+
+    /* ── Grid View ──────────────────────────────────────────────────── */
+    .fe-file-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+      padding: 12px;
+      flex: 1;
+      overflow-y: auto;
+      align-content: start;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border, #2e3140) transparent;
+    }
+
+    .fe-file-grid::-webkit-scrollbar {
+      width: 5px;
+    }
+    .fe-file-grid::-webkit-scrollbar-thumb {
+      background: var(--border, #2e3140);
+      border-radius: 3px;
+    }
+
+    .fe-file-item--grid {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 12px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      gap: 6px;
+    }
+
+    .fe-file-item--grid:hover {
+      background: var(--surface, #1e202b);
+      border-color: var(--border, #2e3140);
+    }
+
+    .fe-file-item--grid.fe-file-item--selected {
+      background: var(--accent-muted, rgba(0, 240, 255, 0.12));
+      border-color: var(--accent, #00f0ff);
+    }
+
+    .fe-file-item__icon--grid {
+      width: 32px;
+      height: 32px;
+    }
+
+    .fe-file-item__icon--grid svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .fe-file-item__name--grid {
+      font-size: 11px;
+      line-height: 1.3;
+      max-height: 2.6em;
+      overflow: hidden;
+      word-break: break-all;
+    }
+
+    /* ── Empty State ────────────────────────────────────────────────── */
+    .fe-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-muted, #64748b);
+    }
+
+    .fe-empty__icon {
+      opacity: 0.4;
+      margin-bottom: 12px;
+    }
+
+    .fe-empty__text {
+      font-size: 13px;
+    }
+
+    /* ── Preview Panel ──────────────────────────────────────────────── */
+    .fe-preview {
+      border-top: 1px solid var(--border, #2e3140);
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-primary, #0f111a);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border, #2e3140) transparent;
+    }
+
+    .fe-preview::-webkit-scrollbar {
+      width: 5px;
+    }
+    .fe-preview::-webkit-scrollbar-thumb {
+      background: var(--border, #2e3140);
+      border-radius: 3px;
+    }
+
+    .fe-preview__empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 32px;
+      color: var(--text-muted, #64748b);
+      gap: 8px;
+    }
+
+    .fe-preview__empty-icon {
+      opacity: 0.3;
+    }
+
+    .fe-preview__empty-text {
+      font-size: 12px;
+    }
+
+    .fe-preview__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-subtle, #232635);
+      background: var(--surface, #1e202b);
+      flex-shrink: 0;
+    }
+
+    .fe-preview__filename {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary, #e2e8f0);
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    }
+
+    .fe-preview__filemeta {
+      font-size: 11px;
+      color: var(--text-muted, #64748b);
+    }
+
+    .fe-preview__code {
+      padding: 0;
+    }
+
+    .fe-preview__code pre {
+      margin: 0;
+      padding: 16px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      color: var(--text-primary, #e2e8f0);
+    }
+
+    .fe-preview__code code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* Syntax highlighting colors */
+    .hl-keyword  { color: #ff7b72; }
+    .hl-string   { color: #a5d6ff; }
+    .hl-number   { color: #79c0ff; }
+    .hl-comment  { color: #8b949e; font-style: italic; }
+    .hl-function { color: #d2a8ff; }
+
+    .fe-preview__image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-height: 200px;
+    }
+
+    .fe-preview__image img {
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .fe-preview__error {
+      color: var(--danger, #ef4444);
+      font-size: 13px;
+    }
+
+    .fe-preview__metadata {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fe-preview__meta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .fe-preview__meta-label {
+      color: var(--text-muted, #64748b);
+      width: 100px;
+      flex-shrink: 0;
+    }
+
+    .fe-preview__meta-value {
+      color: var(--text-secondary, #94a3b8);
+    }
+
+    .fe-preview__meta-value--path {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      word-break: break-all;
+    }
+
+    /* ── Drag Over State ────────────────────────────────────────────── */
+    .fe-file-container--drag-over {
+      background: var(--accent-muted, rgba(0, 240, 255, 0.06));
+      outline: 2px dashed var(--accent, #00f0ff);
+      outline-offset: -2px;
+    }
+
+    /* ── Loading / Error States ─────────────────────────────────────── */
+    .fe-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+    }
+
+    .fe-skeleton__toolbar {
+      display: flex;
+      gap: 8px;
+    }
+
+    .fe-skeleton__body {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 16px;
+    }
+
+    .fe-skeleton__tree {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .fe-skeleton__preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fe-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .fe-error__icon {
+      color: var(--danger, #ef4444);
+      opacity: 0.6;
+    }
+
+    .fe-error__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary, #e2e8f0);
+    }
+
+    .fe-error__desc {
+      font-size: 13px;
+      color: var(--text-secondary, #94a3b8);
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .fe-body {
+        grid-template-columns: 1fr;
+      }
+      .fe-tree-panel {
+        display: none;
+      }
+      .fe-file-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      }
+    }
+  </style>
+
+  <!-- Toolbar -->
+  <div class="fe-toolbar">
+    <div class="fe-toolbar__group">
+      <button class="c-btn c-btn--icon c-btn--sm" data-action="fe-new-file"
+              title="New File" aria-label="New File">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" width="14" height="14"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="12" x2="12" y2="18"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+      </button>
+      <button class="c-btn c-btn--icon c-btn--sm" data-action="fe-new-folder"
+              title="New Folder" aria-label="New Folder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" width="14" height="14"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          <line x1="12" y1="11" x2="12" y2="17"/>
+          <line x1="9" y1="14" x2="15" y2="14"/>
+        </svg>
+      </button>
+      <button class="c-btn c-btn--icon c-btn--sm" data-action="fe-refresh"
+              title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" width="14" height="14"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fe-toolbar__path" id="fe-current-path">{{rootPath}}</div>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="fe-breadcrumb" id="fe-breadcrumb">
+    <span class="fe-breadcrumb__item fe-breadcrumb__item--active"
+          data-breadcrumb-path="{{rootPath}}">
+      Project Root
+    </span>
+  </div>
+
+  <!-- Body -->
+  <div class="fe-body">
+    <!-- Tree Panel -->
+    <div class="fe-tree-panel">
+      <div class="fe-tree-header">
+        <span>Files</span>
+        <button class="c-btn c-btn--icon c-btn--sm" data-action="fe-refresh"
+                title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" width="12" height="12"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
+      <div class="fe-tree" id="fe-tree">
+        <div style="padding: 16px; color: var(--text-muted, #64748b); font-size: 12px; text-align: center;">
+          Loading file tree…
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Panel -->
+    <div class="fe-content-panel" id="fe-content-panel">
+      <!-- File list rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- Preview Panel -->
+  <div class="fe-preview" id="fe-preview">
+    <div class="fe-preview__empty">
+      <div class="fe-preview__empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.5" width="36" height="36"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <div class="fe-preview__empty-text">Select a file to preview</div>
+    </div>
+  </div>
+</div>

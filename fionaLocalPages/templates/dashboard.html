@@ -1,0 +1,150 @@
+<!-- dashboard.html — System Dashboard Page Template -->
+<div id="dash-content">
+  <style>
+    .dash-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
+    }
+    .dash-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-5);
+      margin-bottom: var(--space-5);
+    }
+    .dash-sysinfo-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+    }
+    .dash-quick-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-5);
+      flex-wrap: wrap;
+    }
+    .dash-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-1);
+    }
+    .dash-header-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+  </style>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: var(--space-6);">
+    <div class="dash-header-row">
+      <div>
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Dashboard
+        </h1>
+        <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+          System Overview
+        </p>
+      </div>
+      <div class="dash-header-right">
+        <div style="display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--text-muted);">
+          <span id="dash-status-indicator" style="display: flex; align-items: center; gap: 4px;">
+            <span id="dash-status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: {{connColor}};"></span>
+            <span id="dash-conn-label">{{connStatus}}</span>
+          </span>
+          <span>&middot;</span>
+          <span id="dash-timestamp">Updated {{timestamp}}</span>
+        </div>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="dash-refresh-btn" title="Refresh now">
+          <span class="c-btn__icon">{{{refreshIcon}}}</span>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Action Bar -->
+  <div class="dash-quick-actions">
+    <button class="c-btn c-btn--sm" data-action="quick-chat">
+      <span class="c-btn__icon">{{{messageIcon}}}</span>
+      New Chat
+    </button>
+    <button class="c-btn c-btn--sm" data-action="quick-macro">
+      <span class="c-btn__icon">{{{playIcon}}}</span>
+      Run Macro
+    </button>
+    <button class="c-btn c-btn--sm" data-action="quick-terminal">
+      <span class="c-btn__icon">{{{terminalIcon}}}</span>
+      Open Terminal
+    </button>
+    <button class="c-btn c-btn--sm" data-action="quick-screenshot">
+      <span class="c-btn__icon">{{{botIcon}}}</span>
+      Take Screenshot
+    </button>
+  </div>
+
+  <!-- Top Row: 4 Metric Cards -->
+  <div class="dash-metric-grid">
+    <div id="metric-cpu"></div>
+    <div id="metric-memory"></div>
+    <div id="metric-disk"></div>
+    <div id="metric-uptime"></div>
+  </div>
+
+  <!-- Middle Row: 2-Column -->
+  <div class="dash-two-col">
+    <!-- Active Agents -->
+    <div class="c-card">
+      <div class="c-card__header">
+        <span class="c-card__title">Active Agents</span>
+        <span class="c-badge c-badge--accent" id="agent-count-badge">0</span>
+      </div>
+      <div class="c-card__body" id="agents-list" style="padding: var(--space-2);">
+        <div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">
+          No agents connected.
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="c-card">
+      <div class="c-card__header">
+        <span class="c-card__title">Recent Activity</span>
+      </div>
+      <div class="c-card__body" id="activity-list" style="padding: var(--space-2); max-height: 320px; overflow-y: auto;">
+        <div style="text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: var(--font-size-sm);">
+          No recent activity.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row: System Info -->
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">System Information</span>
+    </div>
+    <div class="c-card__body" id="system-info-panel">
+      <div class="dash-sysinfo-grid">
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">OS</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-os">&mdash;</div>
+        </div>
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Hostname</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-hostname">&mdash;</div>
+        </div>
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Python</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-python">&mdash;</div>
+        </div>
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-1);">Fiona</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);" id="sys-fiona">v0.1.0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

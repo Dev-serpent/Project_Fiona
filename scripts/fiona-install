@@ -1,0 +1,284 @@
+#!/usr/bin/env bash
+# ============================================================================
+# fiona-install — Install Fiona and all its dependencies
+# ============================================================================
+# Usage:
+#   ./scripts/fiona-install              # Install everything
+#   ./scripts/fiona-install --minimal    # Core only, no optional deps
+#   ./scripts/fiona-install --venv       # Use venv instead of conda
+#   ./scripts/fiona-install --help       # Show usage
+# ============================================================================
+
+set -euo pipefail
+
+# ── Colors ─────────────────────────────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# ── Paths ───────────────────────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONDA_SH="$HOME/Applications/miniconda3/etc/profile.d/conda.sh"
+ENV_NAME="quiktieper"
+
+# ── Flags ───────────────────────────────────────────────────────────────────
+MINIMAL=false
+USE_VENV=false
+
+# ── Help ────────────────────────────────────────────────────────────────────
+usage() {
+    echo "Usage: $(basename "$0") [OPTIONS]"
+    echo ""
+    echo "Install Fiona and all its dependencies."
+    echo ""
+    echo "Options:"
+    echo "  --minimal    Core only — skip optional deps (browser, eyecontrol, web)"
+    echo "  --venv       Use Python venv instead of conda"
+    echo "  --help       Show this help message"
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --minimal) MINIMAL=true; shift ;;
+        --venv)    USE_VENV=true; shift ;;
+        --help|-h) usage ;;
+        *) echo "Unknown option: $1"; usage ;;
+    esac
+done
+
+# ── Banner ──────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║        Fiona — Installation Script          ║${NC}"
+echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${BLUE}Project root:${NC} $PROJECT_ROOT"
+echo -e "${BLUE}Mode:${NC}        $([ "$MINIMAL" = true ] && echo "minimal" || echo "full")"
+echo -e "${BLUE}Environment:${NC} $([ "$USE_VENV" = true ] && echo "venv" || echo "conda ($ENV_NAME)")"
+echo ""
+
+# ── Pre-checks ──────────────────────────────────────────────────────────────
+echo -e "${YELLOW}[1/7] Checking prerequisites...${NC}"
+
+# Python version
+PYTHON=$(command -v python3 || command -v python || echo "")
+if [ -z "$PYTHON" ]; then
+    echo -e "${RED}Error: Python not found. Install Python >= 3.11 first.${NC}"
+    exit 1
+fi
+
+PY_VER=$("$PYTHON" --version 2>&1 | grep -oP '\d+\.\d+' | head -1)
+PY_MAJOR=$(echo "$PY_VER" | cut -d. -f1)
+PY_MINOR=$(echo "$PY_VER" | cut -d. -f2)
+
+if [ "$PY_MAJOR" -lt 3 ] || { [ "$PY_MAJOR" -eq 3 ] && [ "$PY_MINOR" -lt 11 ]; }; then
+    echo -e "${RED}Error: Python >= 3.11 required (found $PY_VER).${NC}"
+    exit 1
+fi
+echo -e "  ${GREEN}✓${NC} Python $PY_VER"
+
+# pip
+if ! "$PYTHON" -m pip --version &>/dev/null; then
+    echo -e "${RED}Error: pip not found.${NC}"
+    exit 1
+fi
+echo -e "  ${GREEN}✓${NC} pip"
+
+# git
+if ! command -v git &>/dev/null; then
+    echo -e "${RED}Error: git not found.${NC}"
+    exit 1
+fi
+echo -e "  ${GREEN}✓${NC} git"
+
+# ── Environment Setup ──────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[2/7] Setting up Python environment...${NC}"
+
+if [ "$USE_VENV" = true ]; then
+    # ── venv ───────────────────────────────────────────────────────────────
+    VENV_DIR="$PROJECT_ROOT/.venv"
+    if [ ! -d "$VENV_DIR" ]; then
+        echo "  Creating venv at $VENV_DIR..."
+        "$PYTHON" -m venv "$VENV_DIR"
+    else
+        echo "  Using existing venv at $VENV_DIR..."
+    fi
+    source "$VENV_DIR/bin/activate"
+    PIP="$VENV_DIR/bin/pip"
+    PYTHON="$VENV_DIR/bin/python"
+else
+    # ── conda ──────────────────────────────────────────────────────────────
+    if [ ! -f "$CONDA_SH" ]; then
+        echo -e "  ${YELLOW}conda not found at $CONDA_SH${NC}"
+        echo "  Falling back to venv..."
+        VENV_DIR="$PROJECT_ROOT/.venv"
+        if [ ! -d "$VENV_DIR" ]; then
+            "$PYTHON" -m venv "$VENV_DIR"
+        fi
+        source "$VENV_DIR/bin/activate"
+        PIP="$VENV_DIR/bin/pip"
+        PYTHON="$VENV_DIR/bin/python"
+    else
+        source "$CONDA_SH"
+        if conda env list | grep -q "^$ENV_NAME "; then
+            echo "  Activating existing conda environment '$ENV_NAME'..."
+        else
+            echo "  Creating conda environment '$ENV_NAME'..."
+            conda create -y -n "$ENV_NAME" python="$PY_VER"
+        fi
+        conda activate "$ENV_NAME"
+        PIP="pip"
+    fi
+fi
+
+echo -e "  ${GREEN}✓${NC} Environment ready"
+echo -e "  Python: $("$PYTHON" --version)"
+echo -e "  pip:    $("$PIP" --version | cut -d' ' -f1-2)"
+
+# ── Install Core Package ───────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[3/7] Installing Fiona core package...${NC}"
+
+cd "$PROJECT_ROOT"
+"$PIP" install --upgrade pip setuptools wheel
+"$PIP" install -e .
+echo -e "  ${GREEN}✓${NC} Core package installed"
+
+# ── Install Optional Dependencies ──────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[4/7] Installing optional dependencies...${NC}"
+
+if [ "$MINIMAL" = false ]; then
+    # Browser automation
+    echo "  Installing browser automation (playwright)..."
+    "$PIP" install -e ".[browser]" 2>/dev/null || "$PIP" install playwright
+    echo -e "  ${GREEN}✓${NC} Browser automation"
+
+    # EyeControl
+    echo "  Installing EyeControl deps (opencv, mediapipe, pyautogui)..."
+    "$PIP" install -e ".[eyecontrol]" 2>/dev/null || true
+    echo -e "  ${GREEN}✓${NC} EyeControl (optional, may warn if deps unavailable)"
+
+    # Web frontend
+    echo "  Installing web frontend (aiohttp)..."
+    "$PIP" install aiohttp
+    echo -e "  ${GREEN}✓${NC} Web frontend"
+else
+    echo "  Skipping optional deps (--minimal mode)"
+fi
+
+# ── Install System Tools ───────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[5/7] Checking system tools...${NC}"
+
+TOOLS_MISSING=()
+for tool in ydotoold ydotoold kdotool xdotool xprop; do
+    if command -v "$tool" &>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} $tool"
+    else
+        TOOLS_MISSING+=("$tool")
+        echo -e "  ${YELLOW}○${NC} $tool (not found)"
+    fi
+done
+
+if [ ${#TOOLS_MISSING[@]} -gt 0 ]; then
+    echo ""
+    echo -e "  ${YELLOW}Some system tools are missing. Install them with:${NC}"
+    echo "    # Debian/Ubuntu:"
+    echo "    sudo apt install xdotool xprop"
+    echo ""
+    echo "    # For ydotool (Wayland automation):"
+    echo "    git clone https://github.com/ReimuNotMoe/ydotool.git"
+    echo "    cd ydotool && mkdir build && cd build"
+    echo "    cmake .. && make && sudo make install"
+    echo ""
+    echo "    # For kdotool (KDE window info):"
+    echo "    pip install kdotool"
+fi
+
+# ── Install Playwright Browsers ────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[6/7] Installing Playwright browsers...${NC}"
+
+if [ "$MINIMAL" = false ]; then
+    if "$PYTHON" -c "import playwright" 2>/dev/null; then
+        echo "  Installing Chromium browser for Playwright..."
+        "$PYTHON" -m playwright install chromium 2>/dev/null && \
+            echo -e "  ${GREEN}✓${NC} Playwright Chromium installed" || \
+            echo -e "  ${YELLOW}○${NC} Playwright browser install skipped (run 'playwright install' manually)"
+    else
+        echo -e "  ${YELLOW}○${NC} Playwright not installed, skipping browser download"
+    fi
+fi
+
+# ── Verify Installation ────────────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}[7/7] Verifying installation...${NC}"
+
+VERIFY_FAILED=false
+
+# Check fiona CLI
+if "$PYTHON" -c "from fiona.cli import main; print('CLI module OK')" 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} fiona CLI module"
+else
+    echo -e "  ${RED}✗${NC} fiona CLI module failed to import"
+    VERIFY_FAILED=true
+fi
+
+# Check core imports
+for mod in FionaCore CamComs Agent BrowserAutomation; do
+    if "$PYTHON" -c "import $mod" 2>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} $mod"
+    else
+        echo -e "  ${YELLOW}○${NC} $mod (not importable — may need deps)"
+    fi
+done
+
+# Check fiona --help
+if "$PYTHON" -m fiona.cli --help &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} fiona --help works"
+else
+    echo -e "  ${RED}✗${NC} fiona --help failed"
+    VERIFY_FAILED=true
+fi
+
+# ── Summary ─────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║          Installation Complete               ║${NC}"
+echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
+echo ""
+
+if [ "$VERIFY_FAILED" = true ]; then
+    echo -e "${YELLOW}Some verifications failed. Check the output above.${NC}"
+else
+    echo -e "${GREEN}All checks passed!${NC}"
+fi
+
+echo ""
+echo -e "Next steps:"
+echo -e "  ${BLUE}1. Activate the environment:${NC}"
+if [ "$USE_VENV" = true ]; then
+    echo "     source $PROJECT_ROOT/.venv/bin/activate"
+else
+    echo "     source $CONDA_SH && conda activate $ENV_NAME"
+fi
+echo ""
+echo -e "  ${BLUE}2. Try Fiona:${NC}"
+echo "     fiona --help"
+echo "     fiona action list"
+echo "     fiona browser status"
+echo ""
+echo -e "  ${BLUE}3. Start the web dashboard:${NC}"
+echo "     python3 fionaLocalPages/server/app.py --debug"
+echo "     # Open http://localhost:8765"
+echo ""
+echo -e "  ${BLUE}4. Run tests:${NC}"
+echo "     python3 -m pytest tests/ -v"
+echo ""

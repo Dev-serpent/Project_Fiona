@@ -11,6 +11,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 import {
   skeletonText,
   skeletonHeading,
@@ -972,9 +973,20 @@ export default function createPage(_routeInfo) {
     render() {
       return '<div id="config-root"></div>';
     },
-    mount(container) {
+    async mount(container) {
       const root = container.querySelector('#config-root') || container;
-      render(root);
+      try {
+        const templateHtml = await loadTemplate('config', {
+          loading: true,
+          fileSearch: '',
+        });
+        root.innerHTML = templateHtml;
+      } catch (err) {
+        console.error('[Config] Failed to load template:', err);
+      }
+      // Trigger data loading; renderPage() will replace the template content
+      _state.container = root;
+      loadConfigList();
     },
     destroy,
   };

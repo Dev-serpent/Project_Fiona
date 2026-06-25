@@ -11,6 +11,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 import {
   skeletonCard,
   skeletonText,
@@ -306,7 +307,7 @@ function statusColor(status) {
 
 /* ── Render ─────────────────────────────────────────────────────────────── */
 
-function renderPage(container) {
+async function renderPage(container) {
   if (_state.destroyed) return;
   _state.container = container;
 
@@ -326,86 +327,34 @@ function renderPage(container) {
   const warnCount = Object.values(_state.results).filter((r) => r.status === 'warning').length;
   const errCount = Object.values(_state.results).filter((r) => r.status === 'error').length;
 
-  container.innerHTML = html`
-    <!-- Page Header -->
-    <div style="margin-bottom: var(--space-5);">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
-        <div>
-          <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-            Diagnostics
-          </h1>
-          <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-            System health check and diagnostics dashboard
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
-          ${_state.lastRun ? html`
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted);" id="diag-last-run">
-              Last run: ${formatDate(_state.lastRun)}
-            </span>
-          ` : ''}
-          <button class="c-btn c-btn--primary c-btn--sm" id="diag-run-all"
-                  ?disabled="${_state.running}"
-                  style="${_state.running ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
-            <span class="c-btn__icon">
-              ${_state.running ? ICONS.refresh : ICONS.play}
-            </span>
-            ${_state.running ? 'Running…' : 'Run All Checks'}
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="diag-export"
-                  ?disabled="${doneCount === 0}"
-                  title="Export diagnostics report (JSON)">
-            <span class="c-btn__icon">${ICONS.download}</span>
-            Export
-          </button>
-          <button class="c-btn c-btn--sm c-btn--ghost" id="diag-logs-bundle"
-                  title="Download log bundle">
-            <span class="c-btn__icon">${ICONS.fileText}</span>
-            Log Bundle
-          </button>
-        </div>
-      </div>
-      <!-- Summary bar -->
-      ${doneCount > 0 ? html`
-        <div style="display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border-radius: var(--radius-md); font-size: var(--font-size-xs);">
-          <span>${doneCount}/${checkCount} checks completed</span>
-          <span style="display: flex; align-items: center; gap: 4px; color: var(--success);">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
-            ${okCount} passed
-          </span>
-          ${warnCount > 0 ? html`
-            <span style="display: flex; align-items: center; gap: 4px; color: var(--warning);">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning);"></span>
-              ${warnCount} warnings
-            </span>
-          ` : ''}
-          ${errCount > 0 ? html`
-            <span style="display: flex; align-items: center; gap: 4px; color: var(--danger);">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger);"></span>
-              ${errCount} failures
-            </span>
-          ` : ''}
-        </div>
-      ` : ''}
-      ${_state.running ? html`
-        <div style="margin-top: var(--space-3);">
-          <div class="c-progress" style="height: 4px;">
-            <div class="c-progress__bar" style="width: ${(doneCount / checkCount) * 100}%; background: var(--accent); transition: width 0.3s;"></div>
-          </div>
-          <span style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 4px; display: block;">
-            ${_state.currentCheckId
-              ? `Running: ${CHECKS.find(c => c.id === _state.currentCheckId)?.label || _state.currentCheckId}…`
-              : 'Starting…'}
-          </span>
-        </div>
-      ` : ''}
-    </div>
+  const checkCards = CHECKS.map((check) => renderCheckCard(check)).join('');
 
-    <!-- Check Cards Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-4);">
-      ${html.raw(CHECKS.map((check) => renderCheckCard(check)).join(''))}
-    </div>
-  `;
+  const data = {
+    showLastRun: !!_state.lastRun,
+    lastRunDate: _state.lastRun ? formatDate(_state.lastRun) : '',
+    runAllIcon: (_state.running ? ICONS.refresh : ICONS.play).html,
+    runAllText: _state.running ? 'Running\u2026' : 'Run All Checks',
+    isRunning: _state.running,
+    noResults: doneCount === 0,
+    exportIcon: ICONS.download.html,
+    logsIcon: ICONS.fileText.html,
+    showSummary: doneCount > 0,
+    doneCount,
+    checkCount,
+    okCount,
+    showWarnings: warnCount > 0,
+    warnCount,
+    showErrors: errCount > 0,
+    errCount,
+    showProgress: _state.running,
+    progressPercent: checkCount > 0 ? (doneCount / checkCount) * 100 : 0,
+    currentCheckLabel: _state.currentCheckId
+      ? 'Running: ' + (CHECKS.find(c => c.id === _state.currentCheckId)?.label || _state.currentCheckId) + '\u2026'
+      : 'Starting\u2026',
+    checkCards,
+  };
+
+  container.innerHTML = await loadTemplate('diagnostics', data);
 
   mountHandlers(container);
 }
@@ -494,7 +443,7 @@ ${esc(JSON.stringify(result.details, null, 2))}
         ` : ''}
       </div>
     </div>
-  `;
+  `.html;
 }
 
 function renderSkeletons(container) {
@@ -578,7 +527,7 @@ async function runSingleCheck(checkId) {
 
   _state.currentCheckId = checkId;
   _state.results[checkId] = { ...(_state.results[checkId] || {}), running: true };
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   try {
     const result = await check.run(api);
@@ -597,7 +546,7 @@ async function runSingleCheck(checkId) {
 
   _state.currentCheckId = null;
   if (!_state.destroyed && _state.container) {
-    renderPage(_state.container);
+    await renderPage(_state.container);
   }
 }
 
@@ -610,7 +559,7 @@ async function runAllChecks() {
   _state.results = {};
 
   // Render immediately to show progress
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   for (const check of CHECKS) {
     if (_state.destroyed) break;
@@ -624,7 +573,7 @@ async function runAllChecks() {
   persistLastRun();
 
   if (!_state.destroyed && _state.container) {
-    renderPage(_state.container);
+    await renderPage(_state.container);
   }
 }
 
@@ -771,7 +720,7 @@ async function loadData() {
   // Restore previous results from localStorage for a snappy initial view
   loadPersistedData();
 
-  if (_state.container) renderPage(_state.container);
+  if (_state.container) await renderPage(_state.container);
 
   // Auto-run checks that have never been run
   if (Object.keys(_state.results).length === 0) {
@@ -793,12 +742,12 @@ export function render(container) {
   loadData();
 }
 
-export function mount(container) {
+export async function mount(container) {
   if (container && !_state.container) {
     _state.container = container;
   }
   if (!_state.loading && _state.container) {
-    renderPage(_state.container);
+    await renderPage(_state.container);
   }
 }
 

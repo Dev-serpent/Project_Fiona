@@ -65,6 +65,12 @@ class SessionManager:
         # Start the browser
         self._call_async(self._manager.start)
 
+        # Create a default context so navigation/screenshot work immediately
+        try:
+            self._call_async(self._manager.create_context)
+        except Exception:
+            pass
+
     def stop(self) -> None:
         """Stop the session gracefully.
 

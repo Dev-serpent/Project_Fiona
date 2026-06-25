@@ -154,7 +154,7 @@ const routes = [
     path: '/agents/:id',
     name: 'agent-detail',
     component: () => import('../pages/agent-status.js'),
-    title: 'Agent',
+    title: 'Agent Detail',
     icon: 'bot',
   },
   {
@@ -283,7 +283,39 @@ const routes = [
     title: 'Workspace',
     icon: 'folder',
   },
+  {
+    path: '/camcoms',
+    name: 'camcoms',
+    component: () => import('../pages/camcoms.js'),
+    title: 'CamComs',
+    icon: 'wifi',
+  },
+  {
+    path: '/recall',
+    name: 'recall',
+    component: () => import('../pages/recall.js'),
+    title: 'RecallVault',
+    icon: 'search',
+  },
+  {
+    path: '/desktop',
+    name: 'desktop',
+    component: () => import('../pages/desktop.js'),
+    title: 'SeeOnDesk',
+    icon: 'maximize',
+  },
+  {
+    path: '/voice',
+    name: 'voice',
+    component: () => import('../pages/voice.js'),
+    title: 'Voice Commands',
+    icon: 'message',
+  },
 ];
+
+/* ── Sidebar Navigation Sections ──────────────────────────────────────────── */
+
+
 
 /* ── Global App Object ──────────────────────────────────────────────────── */
 
@@ -324,6 +356,10 @@ async function init() {
     // Persist UI state and settings to localStorage
     app.store.persist('app');
     app.store.persist('settings');
+
+    // Start with the sidebar expanded on every boot.
+    // This intentionally overrides any previous persisted collapse state.
+    app.store.set('app.sidebarCollapsed', false);
 
     // ── 2. Create API Client ──
     console.log('[fiona] Initializing API client');
@@ -492,49 +528,53 @@ function _isInInput(target) {
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 
 /**
- * Set up sidebar navigation and toggle behavior.
+ * Set up sidebar navigation, section collapse, collapse-state sync,
+ * and active-highlighting on route change.
  * @private
  */
 function _initSidebar() {
-  // Toggle sidebar via button
-  const toggleBtn = document.querySelector('[data-action="toggle-sidebar"]');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', _toggleSidebar);
+  const sidebarEl = document.getElementById('sidebar');
+  if (!sidebarEl) return;
+
+  // ── Logo click → Dashboard ──
+  const logo = sidebarEl.querySelector('.sidebar__logo');
+  if (logo) {
+    logo.style.cursor = 'pointer';
+    logo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (app.router) app.router.navigate('/');
+    });
   }
 
-  const collapseBtn = document.getElementById('sidebar-collapse-btn');
-  if (collapseBtn) {
-    collapseBtn.addEventListener('click', _toggleSidebar);
-  }
-
-  // Populate sidebar navigation from routes
-  _renderSidebarNav();
-
-  // Restore collapsed state from store hydration
-  const appState = app.store.get('app');
-  if (appState.sidebarCollapsed) {
-    document.getElementById('app-main')?.classList.add('app-main--sidebar-collapsed');
-  }
-
-  // Listen for sidebar collapse state changes
-  app.store.subscribe('app.sidebarCollapsed', (collapsed) => {
-    const main = document.getElementById('app-main');
-    if (main) {
-      main.classList.toggle('app-main--sidebar-collapsed', collapsed);
+  // ── Section collapse toggle only (nav <a> links work natively) ──
+  sidebarEl.addEventListener('click', (e) => {
+    const sectionTitle = e.target.closest('[data-action="toggle-section"]');
+    if (!sectionTitle) return;
+    e.preventDefault();
+    const section = sectionTitle.closest('.sidebar__nav-section');
+    if (!section) return;
+    const content = section.querySelector('.sidebar__nav-section-content');
+    const chevron = sectionTitle.querySelector('.chevron');
+    if (content) {
+      const isCollapsed = content.classList.toggle('sidebar__nav-section-content--collapsed');
+      if (chevron) chevron.classList.toggle('chevron--collapsed', isCollapsed);
+      sectionTitle.setAttribute('aria-expanded', !isCollapsed);
     }
-    try {
-      localStorage.setItem('fiona_sidebar_collapsed', String(collapsed));
-    } catch { /* ignore */ }
   });
-}
 
-/**
- * Toggle the sidebar collapsed state.
- * @private
- */
-function _toggleSidebar() {
-  const current = app.store.get('app.sidebarCollapsed');
-  app.store.set('app.sidebarCollapsed', !current);
+  // ── Route changes → update active nav highlight ─────────────────
+  if (app.router) {
+    app.router.onChange((route) => {
+      if (!route) return;
+      const path = route.path || '/';
+      document.querySelectorAll('#sidebar .nav-item').forEach((el) => {
+        const itemPath = el.getAttribute('data-nav-path');
+        if (!itemPath) return;
+        const isActive = path === itemPath || (itemPath !== '/' && path.startsWith(itemPath));
+        el.classList.toggle('nav-item--active', isActive);
+      });
+    });
+  }
 }
 
 /**
@@ -548,99 +588,6 @@ function _toggleRightPanel() {
   if (panel) {
     panel.classList.toggle('right-panel--hidden', current);
   }
-}
-
-/**
- * Render sidebar navigation items from route definitions.
- * @private
- */
-function _renderSidebarNav() {
-  const navContent = document.getElementById('sidebar-nav-content');
-  if (!navContent) return;
-
-  // Group routes into navigation sections
-  const navItems = routes
-    .filter((r) => r.path !== '/') // Exclude dashboard for sidebar (handled separately)
-    .map((r) => ({
-      path: r.path,
-      name: r.name,
-      title: r.title,
-      icon: r.icon,
-    }));
-
-  // Main sections
-  const primarySections = [
-    { label: 'Dashboard', path: '/', icon: 'dashboard', name: 'dashboard', title: 'Dashboard' },
-    ...navItems,
-  ];
-
-  const navHtml = primarySections
-    .map(
-      (item) => `
-    <a class="sidebar__nav-item${item.path === '/' ? ' sidebar__nav-item--active' : ''}"
-       href="#${item.path}"
-       data-nav-path="${item.path}"
-       title="${item.title}">
-      <span class="sidebar__nav-icon">${_getIconSvg(item.icon)}</span>
-      <span class="sidebar__nav-label">${item.title}</span>
-    </a>`
-    )
-    .join('');
-
-  navContent.innerHTML = navHtml;
-
-  // Set up click handlers for nav items
-  navContent.addEventListener('click', (e) => {
-    const navItem = e.target.closest('.sidebar__nav-item');
-    if (navItem) {
-      e.preventDefault();
-      const path = navItem.dataset.navPath;
-      if (path) {
-        app.router.navigate(path);
-      }
-    }
-  });
-
-  // Update active state on route change
-  app.router.onChange((route) => {
-    const items = navContent.querySelectorAll('.sidebar__nav-item');
-    items.forEach((item) => {
-      const itemPath = item.dataset.navPath;
-      const isActive = app.router.isActive(itemPath);
-      item.classList.toggle('sidebar__nav-item--active', isActive);
-    });
-  });
-}
-
-/**
- * Get a simple SVG icon string by name.
- * Returns a plain SVG string for direct use in string concatenation
- * or regular template literals (not html-tagged templates).
- * @param {string} iconName
- * @returns {string}
- * @private
- */
-function _getIconSvg(iconName) {
-  const icons = {
-    dashboard: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
-    message: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-    bot: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>',
-    bolt: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-    keyboard: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h8"/></svg>',
-    lock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-    play: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
-    terminal: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
-    eye: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
-    bell: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
-    gear: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    folder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
-    globe: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-    'check-circle': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-    puzzle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6"/><path d="M22 18h-6"/><path d="M22 6h-6"/><path d="M8 2v4"/><path d="M8 18v4"/><circle cx="8" cy="12" r="4"/></svg>',
-    activity: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-  };
-
-  return icons[iconName] || icons.dashboard;
 }
 
 /* ── Status Bar ─────────────────────────────────────────────────────────── */
@@ -1002,12 +949,6 @@ function _initHeaderActions() {
       case 'open-command-palette':
         _toggleCommandPalette();
         break;
-      case 'toggle-sidebar':
-        _toggleSidebar();
-        break;
-      case 'collapse-sidebar':
-        _toggleSidebar();
-        break;
       case 'close-panel':
         _toggleRightPanel();
         break;
@@ -1043,14 +984,6 @@ function _initResizeHandler() {
     resizeTimeout = setTimeout(() => {
       const width = window.innerWidth;
       const height = window.innerHeight;
-
-      // Auto-collapse sidebar on small screens (< 900px)
-      if (width < 900) {
-        const collapsed = app.store.get('app.sidebarCollapsed');
-        if (!collapsed) {
-          app.store.set('app.sidebarCollapsed', true);
-        }
-      }
 
       // Dispatch a custom event for components to listen to
       window.dispatchEvent(new CustomEvent('fiona:resize', {

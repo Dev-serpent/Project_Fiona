@@ -1,0 +1,84 @@
+<!-- diagnostics.html — System Health & Diagnostics Dashboard Template -->
+<div id="diag-content">
+  <style>
+    /* No page-specific styles needed — all use design-token inline styles */
+  </style>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: var(--space-5);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+      <div>
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Diagnostics
+        </h1>
+        <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+          System health check and diagnostics dashboard
+        </p>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+        {{#if showLastRun}}
+        <span style="font-size: var(--font-size-xs); color: var(--text-muted);" id="diag-last-run">
+          Last run: {{lastRunDate}}
+        </span>
+        {{/if}}
+        <button class="c-btn c-btn--primary c-btn--sm" id="diag-run-all"
+                {{#if isRunning}}disabled{{/if}}
+                style="{{#if isRunning}}opacity: 0.6; cursor: not-allowed;{{/if}}">
+          <span class="c-btn__icon">{{{runAllIcon}}}</span>
+          {{runAllText}}
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="diag-export"
+                {{#if noResults}}disabled{{/if}}
+                title="Export diagnostics report (JSON)">
+          <span class="c-btn__icon">{{{exportIcon}}}</span>
+          Export
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="diag-logs-bundle"
+                title="Download log bundle">
+          <span class="c-btn__icon">{{{logsIcon}}}</span>
+          Log Bundle
+        </button>
+      </div>
+    </div>
+
+    {{#if showSummary}}
+    <!-- Summary bar -->
+    <div style="display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border-radius: var(--radius-md); font-size: var(--font-size-xs);">
+      <span>{{doneCount}}/{{checkCount}} checks completed</span>
+      <span style="display: flex; align-items: center; gap: 4px; color: var(--success);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
+        {{okCount}} passed
+      </span>
+      {{#if showWarnings}}
+      <span style="display: flex; align-items: center; gap: 4px; color: var(--warning);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning);"></span>
+        {{warnCount}} warnings
+      </span>
+      {{/if}}
+      {{#if showErrors}}
+      <span style="display: flex; align-items: center; gap: 4px; color: var(--danger);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger);"></span>
+        {{errCount}} failures
+      </span>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    {{#if showProgress}}
+    <!-- Progress bar -->
+    <div style="margin-top: var(--space-3);">
+      <div class="c-progress" style="height: 4px;">
+        <div class="c-progress__bar" style="width: {{progressPercent}}%; background: var(--accent); transition: width 0.3s;"></div>
+      </div>
+      <span style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 4px; display: block;">
+        {{currentCheckLabel}}
+      </span>
+    </div>
+    {{/if}}
+  </div>
+
+  <!-- Check Cards Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: var(--space-4);">
+    {{{checkCards}}}
+  </div>
+</div>

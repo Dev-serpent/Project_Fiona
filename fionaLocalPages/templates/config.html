@@ -1,0 +1,109 @@
+<!-- Configuration Editor Page Template -->
+<!-- Static structure; dynamic content is rendered by JS on mount -->
+
+<!-- Loading skeleton state -->
+{{#if loading}}
+<div class="config-layout" style="height: 100%;">
+  <div style="width: 250px; border-right: 1px solid var(--border); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);">
+    <div class="c-skeleton c-skeleton--heading" style="width: 140px; height: 18px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 90%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 90%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 90%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 90%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 90%; height: 12px;"></div>
+  </div>
+  <div style="flex: 1; padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4);">
+    <div class="c-skeleton c-skeleton--heading" style="width: 200px; height: 18px;"></div>
+    <div class="c-skeleton c-skeleton--button" style="width: 80px; height: 28px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+    <div class="c-skeleton c-skeleton--text" style="width: 100%; height: 12px;"></div>
+  </div>
+</div>
+{{/if}}
+
+<!-- Error state -->
+{{#if error}}
+<div class="empty-state" style="margin-top: 10vh;">
+  <div class="empty-state__icon" style="color: var(--danger);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">Failed to Load Configuration</div>
+  <div class="empty-state__description">{{errorMessage}}</div>
+  <button class="c-btn c-btn--primary" id="config-retry-btn" style="margin-top: var(--space-4);">
+    <span class="c-btn__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </span>
+    Retry
+  </button>
+</div>
+{{/if}}
+
+<!-- Data state (static layout shell; dynamic content filled by JS) -->
+{{#unless loading}}
+{{#unless error}}
+<div class="config-layout">
+  <!-- Left Panel: File Tree -->
+  <div class="config-tree-panel">
+    <div class="config-tree-header">
+      <h3 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin: 0;">
+        Configuration Files
+      </h3>
+    </div>
+
+    <!-- File search -->
+    <div class="config-tree-search">
+      <span style="display: flex; align-items: center; color: var(--text-muted); position: absolute; left: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; width: 14px; height: 14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </span>
+      <input type="text" class="config-tree-search-input" id="config-file-search"
+             placeholder="Search files…" value="{{fileSearch}}"
+             style="padding-left: 28px; width: 100%;" />
+    </div>
+
+    <!-- File groups -->
+    <div class="config-tree-list" id="config-tree-list"></div>
+  </div>
+
+  <!-- Right Panel: Editor -->
+  <div class="config-editor-panel" id="config-editor-panel">
+    <div class="empty-state" style="margin-top: 15vh;">
+      <div class="empty-state__icon" style="color: var(--text-muted);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="36" height="36">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+      <div class="empty-state__title">Select a Configuration File</div>
+      <div class="empty-state__description">
+        Choose a file from the left panel to view and edit its contents.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div class="config-statusbar" id="config-statusbar"></div>
+{{/unless}}
+{{/unless}}

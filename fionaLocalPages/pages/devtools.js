@@ -11,6 +11,7 @@
 
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
+import { loadTemplate } from '../js/template-loader.js';
 import {
   skeletonCard,
   skeletonText,
@@ -945,8 +946,16 @@ export default function createPage(_routeInfo) {
     render() {
       return '<div id="devtools-root"></div>';
     },
-    mount(container) {
+    async mount(container) {
       const root = container.querySelector('#devtools-root') || container;
+      try {
+        const templateHtml = await loadTemplate('devtools', {
+          loading: true,
+        });
+        root.innerHTML = templateHtml;
+      } catch (err) {
+        console.error('[DevTools] Failed to load template:', err);
+      }
       render(root);
     },
     destroy,

@@ -36,7 +36,6 @@ const CSS = {
   header: 'sidebar__header',
   logo: 'sidebar__logo',
   logoIcon: 'sidebar__logo-icon',
-  collapseBtn: 'sidebar__collapse-btn',
   nav: 'sidebar__nav',
   navSection: 'sidebar__nav-section',
   sectionTitle: 'sidebar__nav-section-title',
@@ -77,6 +76,7 @@ const DEFAULT_SECTIONS = [
       { id: 'chat', label: 'AI Chat', icon: 'message', path: '/chat' },
       { id: 'agents', label: 'Agents', icon: 'bot', path: '/agents' },
       { id: 'actions', label: 'Actions', icon: 'bolt', path: '/actions' },
+      { id: 'recall', label: 'RecallVault', icon: 'search', path: '/recall' },
       { id: 'bindings', label: 'Key Bindings', icon: 'keyboard', path: '/bindings' },
       { id: 'terminal', label: 'Terminal', icon: 'terminal', path: '/terminal' },
       { id: 'files', label: 'Files', icon: 'folder', path: '/files' },
@@ -90,6 +90,9 @@ const DEFAULT_SECTIONS = [
     defaultCollapsed: true,
     items: [
       { id: 'macros', label: 'Macros', icon: 'play', path: '/macros' },
+      { id: 'camcoms', label: 'CamComs', icon: 'wifi', path: '/camcoms' },
+      { id: 'desktop', label: 'SeeOnDesk', icon: 'maximize', path: '/desktop' },
+      { id: 'voice', label: 'Voice', icon: 'message', path: '/voice' },
       { id: 'phiconnect', label: 'PhiConnect', icon: 'lock', path: '/phiconnect' },
       { id: 'vsee', label: 'Vsee', icon: 'eye', path: '/vsee' },
     ],
@@ -152,7 +155,6 @@ export class Sidebar extends BaseComponent {
     }
 
     this._state = {
-      collapsed: false,
       sections: sectionCollapse,
       activePath: this._router ? this._router.getCurrentRoute()?.path || '/' : '/',
     };
@@ -168,21 +170,6 @@ export class Sidebar extends BaseComponent {
    * Bind store subscription and keyboard shortcut on mount.
    */
   mount() {
-    // Subscribe to sidebar collapse state from store
-    if (this._store) {
-      this._unsubCollapse = this._store.subscribe('app.sidebarCollapsed', (collapsed) => {
-        this.setState({ collapsed: !!collapsed }, true);
-        this._updateCollapseClass(collapsed);
-      });
-
-      // Initial sync
-      const stored = this._store.get('app.sidebarCollapsed');
-      if (stored !== undefined) {
-        this.setState({ collapsed: !!stored }, true);
-        this._updateCollapseClass(!!stored);
-      }
-    }
-
     // Listen for route changes to update active state
     if (this._router) {
       this._unsubRoute = this._router.onChange((route) => {
@@ -190,22 +177,8 @@ export class Sidebar extends BaseComponent {
       });
     }
 
-    // Keyboard shortcut: Cmd+B / Ctrl+B
-    this._keyHandler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault();
-        this._toggleSidebar();
-      }
-    };
-    document.addEventListener('keydown', this._keyHandler);
-    this.addCleanup(() => {
-      document.removeEventListener('keydown', this._keyHandler);
-    });
-
-    // Delegated events
-    this.on('click', '[data-action="toggle-sidebar"]', () => {
-      this._toggleSidebar();
-    });
+    // Keyboard shortcut: Cmd+B / Ctrl+B is handled by app.js
+    // _initGlobalShortcuts() — we don't bind a second listener here.
 
     this.on('click', '[data-action="toggle-section"]', (e, el) => {
       const sectionId = el.dataset.sectionId;
@@ -239,20 +212,6 @@ export class Sidebar extends BaseComponent {
   }
 
   /**
-   * Toggle the entire sidebar collapsed state.
-   * @private
-   */
-  _toggleSidebar() {
-    const newState = !this._state.collapsed;
-    if (this._store) {
-      this._store.set('app.sidebarCollapsed', newState);
-    } else {
-      this.setState({ collapsed: newState });
-      this._updateCollapseClass(newState);
-    }
-  }
-
-  /**
    * Toggle a navigation section's collapsed state.
    * @param {string} sectionId
    * @private
@@ -264,24 +223,11 @@ export class Sidebar extends BaseComponent {
   }
 
   /**
-   * Update the CSS class on the sidebar container.
-   * @param {boolean} collapsed
-   * @private
-   */
-  _updateCollapseClass(collapsed) {
-    const main = document.getElementById('app-main');
-    if (main) {
-      main.classList.toggle('app-main--sidebar-collapsed', collapsed);
-    }
-  }
-
-  /**
    * Render the sidebar HTML.
    * @returns {string}
    */
   render() {
     const sections = this._props.navSections || DEFAULT_SECTIONS;
-    const collapsed = this._state.collapsed;
     const activePath = this._state.activePath;
 
     return html`
@@ -292,10 +238,6 @@ export class Sidebar extends BaseComponent {
             <span class="${CSS.logoIcon}">F</span>
             <span>${this._props.brandLabel || 'Fiona'}</span>
           </div>
-          <button class="${CSS.collapseBtn}" data-action="toggle-sidebar"
-                  title="Collapse sidebar (Cmd+B)" aria-label="Toggle sidebar">
-            ${ICONS.chevronLeft}
-          </button>
         </div>
 
         <!-- Navigation -->

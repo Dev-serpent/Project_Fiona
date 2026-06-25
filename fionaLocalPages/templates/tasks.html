@@ -1,0 +1,57 @@
+<!-- tasks.html — Task Queue / Kanban Page Template -->
+<style>
+  .task-column-body {
+    flex: 1;
+    padding: var(--space-2);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    min-height: 100px;
+  }
+  .task-card {
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: grab;
+    transition: all var(--transition-fast);
+  }
+  .task-card:active {
+    cursor: grabbing;
+  }
+</style>
+
+<!-- Page Header -->
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        Task Queue
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        {{taskCount}} total task{{taskPlural}}
+      </p>
+    </div>
+    <button class="c-btn c-btn--primary c-btn--sm" id="btn-new-task">
+      <span class="c-btn__icon">{{{plusIcon}}}</span>
+      New Task
+    </button>
+  </div>
+</div>
+
+<!-- Search Bar -->
+<div style="position: relative; margin-bottom: var(--space-4); max-width: 360px;">
+  <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
+    {{{searchIcon}}}
+  </span>
+  <input type="text" class="c-input" id="tasks-search-input"
+         placeholder="Search tasks…"
+         value="{{searchQuery}}"
+         style="padding-left: 32px; height: 34px;"
+         autocomplete="off" />
+</div>
+
+<!-- Kanban Columns -->
+<div id="tasks-kanban" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); min-height: 400px;">
+  {{{kanbanContent}}}
+</div>
