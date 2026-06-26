@@ -216,10 +216,6 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#fionalocalpages-web-dashboard" class="nav-link">fionaLocalPages (Web Dashboard)</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
             <li class="nav-item" data-bs-level="2"><a href="#vsee" class="nav-link">Vsee</a>
               <ul class="nav flex-column">
               </ul>
@@ -246,14 +242,6 @@
 </ul>
 <p>Status: Early prototype (v0.1.0). The geometry kernel and command system are functional; the frontend provides a basic 3D modeling UI. Not yet integrated with the main Fiona CLI or fionaLocalPages.</p>
 <p><strong>Tests</strong>: 98 Python server tests + 87 JavaScript frontend tests.</p>
-<h2 id="fionalocalpages-web-dashboard">fionaLocalPages (Web Dashboard)</h2>
-<p>The <code>fionaLocalPages/</code> web frontend is a modern single-page application (SPA) that serves as an operational dashboard for Fiona. It is a prototype for a browser-based control surface alongside the existing CLI and Tkinter GUI.</p>
-<ul>
-<li><strong>Backend</strong>: Python <code>aiohttp</code> HTTP server with REST API at <code>/api/v1/</code> (11 endpoint groups: system, agent, actions, voice, terminal, files, config, browser, desktop, recall, macros, camcoms), WebSocket at <code>/ws</code> for real-time push, and SSE at <code>/api/v1/stream</code>.</li>
-<li><strong>Frontend</strong>: Vanilla JavaScript SPA with hash-based routing (22 pages: dashboard, chat, agents, actions, bindings, phiconnect, macros, terminal, vsee, notifications, settings, performance, files, browser, tasks, plugins, logs, config, diagnostics, devtools, workspace), custom component system, and CSS theming.</li>
-<li><strong>Architecture</strong>: The Python server serves static SPA files and proxies API calls to Fiona subsystems. Communication is over REST + WebSocket for real-time updates.</li>
-</ul>
-<p>Status: Evolving prototype. Core pages (dashboard, chat, settings, terminal) are functional; some pages are stubs. Production concerns like authentication, theming, and full module coverage are still being addressed. Not the primary interface — the CLI and Tkinter GUI remain the main control surfaces.</p>
 <h2 id="vsee">Vsee</h2>
 <p>Vsee (<code>Vsee/</code>) is a 3D point and edge wireframe hologram viewer. It renders connected wireframe shapes from coordinate data. See the <a href="../modules/vsee/">Vsee module page</a> for details.</p>
 <p>Status: Basic wireframe viewer. True optical holography and richer primitives are future work.</p>

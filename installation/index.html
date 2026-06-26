@@ -212,12 +212,28 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#installation" class="nav-link">Installation</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#virtualenv" class="nav-link">Virtualenv</a>
+            <li class="nav-item" data-bs-level="2"><a href="#quick-install-script" class="nav-link">Quick Install Script</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#options" class="nav-link">Options</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#conda" class="nav-link">Conda</a>
+            <li class="nav-item" data-bs-level="3"><a href="#examples" class="nav-link">Examples</a>
               <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#manual-installation" class="nav-link">Manual Installation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#virtualenv" class="nav-link">Virtualenv</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#conda" class="nav-link">Conda</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#python-dependencies" class="nav-link">Python Dependencies</a>
@@ -249,21 +265,57 @@
 
 <h1 id="installation">Installation</h1>
 <p>Clone the repository, create or activate a Python environment, and install Fiona in editable mode.</p>
-<h2 id="virtualenv">Virtualenv</h2>
+<h2 id="quick-install-script">Quick Install Script</h2>
+<p>The fastest way to install Fiona and <strong>all</strong> dependencies (core + optional + system tools) is the install script:</p>
+<pre><code class="language-bash">git clone &lt;repo-url&gt; Fiona
+cd Fiona
+./scripts/fiona-install
+</code></pre>
+<p>The script handles everything — environment setup, pip install, optional extras (Playwright, aiohttp, EyeControl), system tool detection, and Playwright browser download.</p>
+<h3 id="options">Options</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--minimal</code></td>
+<td>Core only — skip browser, web dashboard, and EyeControl deps</td>
+</tr>
+<tr>
+<td><code>--venv</code></td>
+<td>Use Python venv instead of conda</td>
+</tr>
+<tr>
+<td><code>--help</code></td>
+<td>Show usage</td>
+</tr>
+</tbody>
+</table>
+<h3 id="examples">Examples</h3>
+<pre><code class="language-bash">./scripts/fiona-install                # Full install with conda
+./scripts/fiona-install --venv         # Full install with venv
+./scripts/fiona-install --minimal      # Core only
+</code></pre>
+<h2 id="manual-installation">Manual Installation</h2>
+<h3 id="virtualenv">Virtualenv</h3>
 <pre><code class="language-bash">git clone &lt;repo-url&gt; Fiona
 cd Fiona
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 </code></pre>
-<h2 id="conda">Conda</h2>
+<h3 id="conda">Conda</h3>
 <pre><code class="language-bash">conda create -n fiona python=3.13
 conda activate fiona
 git clone &lt;repo-url&gt; Fiona
 cd Fiona
 pip install -e .
 </code></pre>
-<p>The current development environment has used a Conda environment named <code>quiktieper</code>:</p>
+<p>The current development environment uses a conda environment named <code>quiktieper</code>:</p>
 <pre><code class="language-bash">source ~/Applications/miniconda3/etc/profile.d/conda.sh
 conda activate quiktieper
 cd /home/Dhruv/Documents/Projects/Fiona

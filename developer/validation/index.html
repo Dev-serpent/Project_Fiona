@@ -260,6 +260,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#latest-cli-command-surface-test-result" class="nav-link">Latest CLI Command Surface Test Result</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#latest-agent-chat-personality-test-result" class="nav-link">Latest Agent Chat &amp; Personality Test Result</a>
               <ul class="nav flex-column">
               </ul>
@@ -347,6 +351,11 @@ camcoms trust --list returned an empty sender list for a missing trusted directo
 <pre><code class="language-bash">python -m pytest tests/contracts/ -v
 </code></pre>
 <p>Result: 68 tests pass. Validates every ABC in <code>fiona/interfaces.py</code> — method signatures, parameter types, return values, error conditions, and data type invariants for IBrowserProvider, IBrowserContext, IAgentBackend, IEventBus, and all supporting types.</p>
+<h2 id="latest-cli-command-surface-test-result">Latest CLI Command Surface Test Result</h2>
+<p>Command:</p>
+<pre><code class="language-bash">python -m pytest tests/test_cli_command_surface.py -v
+</code></pre>
+<p>Result: 2 tests pass (54 subtests). Covers every CLI command node (<code>help</code> for all 26 commands: quiktieper, host, agent, dataclient, action, voice, macro, recall, fat, terminal-assist, cli, api, run-shell, seeondesk, vsee, ficad, browser, approval, phiconnect, camcoms) and 22 safe smoke commands that execute without tracebacks. Browser status output validated for <code>state</code>, <code>config</code>, <code>browser_type</code>, <code>headless</code>, <code>viewport_width</code>, <code>viewport_height</code>.</p>
 <h2 id="latest-agent-chat-personality-test-result">Latest Agent Chat &amp; Personality Test Result</h2>
 <p>Command:</p>
 <pre><code class="language-bash">python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py tests/test_agent_command_registry.py -v

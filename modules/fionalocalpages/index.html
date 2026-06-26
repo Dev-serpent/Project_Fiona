@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>fionaLocalPages — Web Dashboard - Fiona</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../../css/brands.min.css" rel="stylesheet">
+        <link href="../../css/solid.min.css" rel="stylesheet">
+        <link href="../../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../../stylesheets/fiona-docs.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Fiona</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../getting-started/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../installation/" class="dropdown-item">Installation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../architecture/" class="nav-link">Architecture</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Operations</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../operations/cli/" class="dropdown-item">CLI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../../operations/gui/" class="dropdown-item">GUI Mechanics</a>
+</li>
+                                    
+<li>
+    <a href="../../operations/workflows/" class="dropdown-item">System Workflows</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../quiktieper/" class="dropdown-item">QuikTieper</a>
+</li>
+                                    
+<li>
+    <a href="../camcoms/" class="dropdown-item">CamComs</a>
+</li>
+                                    
+<li>
+    <a href="../esp32payload/" class="dropdown-item">ESP32 Payload</a>
+</li>
+                                    
+<li>
+    <a href="../fionacore/" class="dropdown-item">FionaCore</a>
+</li>
+                                    
+<li>
+    <a href="../phiconnect/" class="dropdown-item">PhiConnect</a>
+</li>
+                                    
+<li>
+    <a href="../dataclient/" class="dropdown-item">DataClient</a>
+</li>
+                                    
+<li>
+    <a href="../vsee/" class="dropdown-item">Vsee</a>
+</li>
+                                    
+<li>
+    <a href="../seeondesk/" class="dropdown-item">SeeOnDesk</a>
+</li>
+                                    
+<li>
+    <a href="../voice/" class="dropdown-item">Voice</a>
+</li>
+                                    
+<li>
+    <a href="../eyecontrol/" class="dropdown-item">EyeControl</a>
+</li>
+                                    
+<li>
+    <a href="../terminalassist/" class="dropdown-item">TerminalAssist</a>
+</li>
+                                    
+<li>
+    <a href="../recallvault/" class="dropdown-item">RecallVault</a>
+</li>
+                                    
+<li>
+    <a href="../cmdtrace/" class="dropdown-item">CmdTrace</a>
+</li>
+                                    
+<li>
+    <a href="../agent/" class="dropdown-item">Agent</a>
+</li>
+                                    
+<li>
+    <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../current-state/" class="nav-link">Current State</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../prototypes/" class="nav-link">Prototypes</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
+</li>
+                                    
+<li>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#fionalocalpages-web-dashboard" class="nav-link">fionaLocalPages — Web Dashboard</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#architecture" class="nav-link">Architecture</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#backend-serverapppy" class="nav-link">Backend — server/app.py</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#frontend-pages-templates" class="nav-link">Frontend — Pages + Templates</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#core-js-infrastructure" class="nav-link">Core JS Infrastructure</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#css-design-system" class="nav-link">CSS Design System</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#running" class="nav-link">Running</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#status" class="nav-link">Status</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="fionalocalpages-web-dashboard">fionaLocalPages — Web Dashboard</h1>
+<p>fionaLocalPages (<code>fionaLocalPages/</code>) is a browser-based operational dashboard for Fiona. It serves as a modern SPA control surface alongside the existing CLI and Tkinter GUI.</p>
+<h2 id="architecture">Architecture</h2>
+<pre><code>Python backend (aiohttp) → HTML templates → JS modules (thin SPA layer)
+</code></pre>
+<h3 id="backend-serverapppy">Backend — <code>server/app.py</code></h3>
+<p>Python aiohttp HTTP server with 10+ handler modules and 40+ REST API endpoints at <code>/api/v1/</code>. Also serves WebSocket at <code>/ws</code> for real-time push and SSE at <code>/api/v1/stream</code>.</p>
+<p><strong>Handler modules:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Endpoints</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agents_crud.py</code></td>
+<td>7</td>
+<td>Agent CRUD (list, create, pause, resume, stop, restart) + Ollama model check</td>
+</tr>
+<tr>
+<td><code>browser.py</code></td>
+<td>7+</td>
+<td>Playwright browser automation (start, stop, status, navigate, click, type, screenshot)</td>
+</tr>
+<tr>
+<td><code>terminal.py</code></td>
+<td>4</td>
+<td>Terminal command execution + autocomplete (COMMAND_REFERENCE with 14 categories, 90+ commands)</td>
+</tr>
+<tr>
+<td><code>quiktieper.py</code></td>
+<td>8</td>
+<td>QuikTieper status, presets, desktop-app discovery, import-apps, assign-keys, launcher control</td>
+</tr>
+<tr>
+<td><code>settings_handler.py</code></td>
+<td>2</td>
+<td>Read/write <code>~/.config/fiona/settings.txt</code> (JSON)</td>
+</tr>
+<tr>
+<td><code>bindings.py</code></td>
+<td>3</td>
+<td>Key binding list, save, app discovery</td>
+</tr>
+<tr>
+<td><code>notifications_handler.py</code></td>
+<td>3</td>
+<td>Notification feed (list, create, dismiss)</td>
+</tr>
+<tr>
+<td><code>phiconnect.py</code></td>
+<td>5</td>
+<td>PhiConnect status, identity, messages, send, trust</td>
+</tr>
+<tr>
+<td><code>vsee.py</code></td>
+<td>3</td>
+<td>Vsee status, launch, model preview</td>
+</tr>
+<tr>
+<td>Plus: system, agent, actions, voice, files, config, desktop, recall, macros, camcoms</td>
+<td>—</td>
+<td>Routed directly in <code>app.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="frontend-pages-templates">Frontend — Pages + Templates</h3>
+<p>26 page modules, each following the <code>createPage(routeInfo) → { render, mount, destroy }</code> pattern:</p>
+<ul>
+<li><strong><code>render()</code></strong> returns a mount-point <code>&lt;div&gt;</code> only</li>
+<li><strong><code>mount()</code></strong> is async — calls <code>await loadTemplate('name', data)</code> to fetch and inject HTML from <code>templates/{name}.html</code>, then binds events</li>
+<li><strong><code>destroy()</code></strong> cleans up intervals, listeners, and subscriptions</li>
+</ul>
+<p><strong>Template system</strong> (<code>js/template-loader.js</code>):
+- <code>{{variable}}</code> — escaped text interpolation
+- <code>{{{rawHtml}}}</code> — raw HTML (used for SVG icons)
+- <code>{{#if}}</code> / <code>{{#each}}</code> — conditionals and loops</p>
+<p><strong>All 26 routes:</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Route</th>
+<th>Page</th>
+<th>Backend</th>
+<th>Features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>/</code></td>
+<td>dashboard.js</td>
+<td>system</td>
+<td>Live metrics, agent status, activity feed</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>/chat</code></td>
+<td>chat.js</td>
+<td>agent</td>
+<td>AI chat with streaming, model selection</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>/agents</code></td>
+<td>agents.js</td>
+<td>agents_crud</td>
+<td>Agent list + qwen3:8b indicator</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>/agents/:id</code></td>
+<td>agent-status.js</td>
+<td>agent</td>
+<td>Tabbed agent detail</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>/actions</code></td>
+<td>actions.js</td>
+<td>actions</td>
+<td>Action list + history, search, dry-run</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>/bindings</code></td>
+<td>bindings.js</td>
+<td>bindings</td>
+<td>Two-panel key binding editor</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>/phiconnect</code></td>
+<td>phiconnect.js</td>
+<td>phiconnect</td>
+<td>Secure messaging status + send</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>/macros</code></td>
+<td>macros.js</td>
+<td>macros</td>
+<td>Macro cards with step preview, run/dry-run</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>/terminal</code></td>
+<td>terminal.js</td>
+<td>terminal</td>
+<td>Interactive terminal emulator (backend-driven)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>/vsee</code></td>
+<td>vsee.js</td>
+<td>vsee</td>
+<td>3D model viewer status + launch</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>/notifications</code></td>
+<td>notifications.js</td>
+<td>notifications</td>
+<td>Urgency-coded list with dismiss</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>/settings</code></td>
+<td>settings.js</td>
+<td>config</td>
+<td>Multi-tab settings panels</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>/performance</code></td>
+<td>performance.js</td>
+<td>system</td>
+<td>Real-time CPU/memory Canvas 2D charts</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>/files</code></td>
+<td>file-explorer.js</td>
+<td>files</td>
+<td>File tree browser</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>/browser</code></td>
+<td>browser.js</td>
+<td>browser</td>
+<td>Playwright automation controls</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>/tasks</code></td>
+<td>tasks.js</td>
+<td>—</td>
+<td>Kanban task board</td>
+</tr>
+<tr>
+<td>17</td>
+<td><code>/plugins</code></td>
+<td>plugins.js</td>
+<td>—</td>
+<td>Plugin manager</td>
+</tr>
+<tr>
+<td>18</td>
+<td><code>/logs</code></td>
+<td>logs.js</td>
+<td>—</td>
+<td>Log viewer</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>/config</code></td>
+<td>config.js</td>
+<td>config</td>
+<td>Config file editor</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>/diagnostics</code></td>
+<td>diagnostics.js</td>
+<td>—</td>
+<td>Health check grid</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>/devtools</code></td>
+<td>devtools.js</td>
+<td>—</td>
+<td>Developer tools panel</td>
+</tr>
+<tr>
+<td>22</td>
+<td><code>/workspace</code></td>
+<td>workspace.js</td>
+<td>—</td>
+<td>Project workspace overview</td>
+</tr>
+<tr>
+<td>23</td>
+<td><code>/camcoms</code></td>
+<td>camcoms.js</td>
+<td>camcoms</td>
+<td>Service status + fingerprint</td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>/recall</code></td>
+<td>recall.js</td>
+<td>recall</td>
+<td>Key-value memory search</td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>/desktop</code></td>
+<td>desktop.js</td>
+<td>desktop</td>
+<td>Active window + snapshot</td>
+</tr>
+<tr>
+<td>26</td>
+<td><code>/voice</code></td>
+<td>voice.js</td>
+<td>voice</td>
+<td>Command parse + audio transcription</td>
+</tr>
+</tbody>
+</table>
+<p>All pages handle <strong>loading</strong> (skeleton), <strong>error</strong> (retry button), <strong>empty</strong> (icon + message), and <strong>data</strong> (full UI) states. All pages clean up on destroy.</p>
+<h3 id="core-js-infrastructure">Core JS Infrastructure</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>js/app.js</code></td>
+<td>App initialization, 26 route registrations, sidebar/shortcut inits, store wiring</td>
+</tr>
+<tr>
+<td><code>js/router.js</code></td>
+<td>Hash-based SPA router with lifecycle hooks, lazy page loading, active nav tracking</td>
+</tr>
+<tr>
+<td><code>js/api.js</code></td>
+<td>REST client + WebSocket manager with auto-reconnection</td>
+</tr>
+<tr>
+<td><code>js/state.js</code></td>
+<td>Observable store with localStorage persistence (subscribe, set, get)</td>
+</tr>
+<tr>
+<td><code>js/template-loader.js</code></td>
+<td>HTML template fetcher with <code>{{variable}}</code>, <code>{{{raw}}}</code>, <code>{{#if}}</code>, <code>{{#each}}</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="css-design-system">CSS Design System</h3>
+<p>5 CSS files, dark-first glassmorphism theme:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>css/globals.css</code></td>
+<td>Design tokens (colors, spacing, z-index, shadows), CSS reset, glass utilities</td>
+</tr>
+<tr>
+<td><code>css/layout.css</code></td>
+<td>Grid layout, sidebar, header, page-content areas</td>
+</tr>
+<tr>
+<td><code>css/components.css</code></td>
+<td>~20 reusable component styles (tables, modals, toasts, forms, cards, tabs, etc.)</td>
+</tr>
+<tr>
+<td><code>css/themes.css</code></td>
+<td>Dark theme variables, theme utility classes</td>
+</tr>
+<tr>
+<td><code>css/animations.css</code></td>
+<td>Transitions, skeleton loading, slide-in/out, fade</td>
+</tr>
+</tbody>
+</table>
+<h2 id="running">Running</h2>
+<pre><code class="language-bash">./scripts/fiona-pages-start              # default port 8765
+./scripts/fiona-pages-start --port 8080  # custom port
+./scripts/fiona-pages-start --debug      # verbose logging
+</code></pre>
+<p>Open <code>http://fiona.agent:8765</code> in a browser.</p>
+<h2 id="status">Status</h2>
+<p>All 26 pages fully implemented. Production concerns (authentication, HTTPS) still being addressed. This is a supplementary control surface — the CLI and Tkinter GUI remain the primary Fiona interfaces.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

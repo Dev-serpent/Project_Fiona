@@ -271,8 +271,8 @@
 <li>system tray icon with state indicators and <code>--tray-only</code> mode</li>
 <li>voice wake-word detection, push-to-talk, and feedback engine</li>
 <li>BrowserAutomation module with Playwright lifecycle manager (start, stop, navigate, click, type, screenshot)</li>
-<li>fionaLocalPages SPA web frontend with REST API + WebSocket + SSE real-time updates</li>
-<li>Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, system tray, and browser automation paths</li>
+<li>fionaLocalPages SPA web dashboard with aiohttp REST API (10+ handler modules, 40+ endpoints), WebSocket, SSE, 26 HTML/JS pages, terminal emulator, settings persistence, and QuikTieper API</li>
+<li>Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, system tray, browser automation, and CLI command surface</li>
 </ul>
 <h2 id="still-incomplete">Still Incomplete</h2>
 <ul>
@@ -281,19 +281,20 @@
 <li>no Fiona training/fine-tuning pipeline yet</li>
 <li>ESP32 firmware crypto adapter is still a template, not hardware-verified</li>
 <li>Vsee is currently a wireframe coordinate viewer, not true optical holography</li>
-<li>Web UI still evolving — some pages and workflows are partial</li>
 <li>BrowserAutomation has basic lifecycle but no advanced interaction patterns (forms, frames, wait strategies)</li>
 <li>Agent orchestration maturity — multi-agent coordination, tool-use reliability, and error recovery still being hardened</li>
 </ul>
 <h2 id="latest-known-validation">Latest Known Validation</h2>
 <p>The latest recorded project validation is:</p>
-<pre><code class="language-text">1598 tests across Python and JavaScript:
-  Python:   1413 passed (pytest)
+<pre><code class="language-text">Tests:
+  Python:   1413+ passed (pytest) + 54 CLI surface subtests
   CAD JS:    87 passed (vitest)
   CAD Srv:   98 passed (pytest)
+  Browser:   52 passed (pytest)
   compileall OK
+  CLI surface: 2 tests, 54 subtests all pass
 
-14 pre-existing environment failures unrelated to roadmap
+~14 pre-existing environment failures unrelated to roadmap
 </code></pre>
 <p>Use the Validation page for the exact commands.</p></div>
             </div>
