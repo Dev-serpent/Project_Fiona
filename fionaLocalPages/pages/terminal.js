@@ -20,7 +20,7 @@ function getApi() {
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
 const PROMPT_BASE = 'user@fiona';
-const INITIAL_DIR = '~';
+let INITIAL_DIR = '~';
 const MAX_OUTPUT_HEIGHT = 10000; // max lines in output buffer
 
 
@@ -194,16 +194,12 @@ class TerminalSession {
   }
 
   /**
-   * Try to extract the working directory from command output.
+   * Update cwd from a backend response that includes "cwd".
+   * @param {string} newCwd - The current working directory from the server
    */
-  updateDirFromOutput(stdout, stderr) {
-    // If command was 'pwd', the stdout contains the directory
-    // If command had 'cd', we track it
-    const combined = stdout + stderr;
-    // Simple heuristic: look for path patterns in output
-    const pathMatch = combined.match(/^(\/[^\s]+)$/m);
-    if (pathMatch) {
-      this.cwd = pathMatch[1];
+  updateCwd(newCwd) {
+    if (newCwd) {
+      this.cwd = newCwd;
     }
   }
 }
@@ -230,7 +226,7 @@ function createSession() {
   const id = ++_sessionCounter;
   const session = new TerminalSession(id);
   session.addOutput(`Fiona Terminal v0.2.0 — Shell commands on the Fiona host`, 'system');
-  session.addOutput(`Type 'help' or press ? for command reference. Press ↑/↓ for history, Tab for autocomplete.\n`, 'system');
+  session.addOutput(`Type 'help' or press ? for command reference. Use 'science <cmd>' for scientific retrieval. Press ↑/↓ for history, Tab for autocomplete.\n`, 'system');
   session.addPrompt(session.cwd);
   _sessions.push(session);
   if (_sessions.length === 1) {
@@ -333,6 +329,148 @@ function updateInputPrompt() {
   }
 }
 
+/* ── Science Command Handler ───────────────────────────────────────────── */
+
+/**
+ * Handle a "science <subcommand>" terminal command via the SciRetrieval API.
+ * Manages its own loading state and output rendering.
+ */
+async function handleScienceCommand(fullCommand, session, api) {
+  const parts = fullCommand.split(/\s+/);
+  const subcommand = parts[1];
+
+  try {
+    switch (subcommand) {
+      case 'search': {
+        const query = parts.slice(2).join(' ');
+        if (!query) {
+          session.addOutput('Usage: science search <query>', 'stderr');
+          session.addOutput('Example: science search "What is the molecular weight of Aspirin?"', 'system');
+          return;
+        }
+        const result = await api.post('/api/v1/sciretrieval/search', { query });
+        const data = result.data || result;
+        session.addOutput(data.summary || 'No results.', 'stdout');
+        return;
+      }
+
+      case 'classify': {
+        const query = parts.slice(2).join(' ');
+        if (!query) {
+          session.addOutput('Usage: science classify <query>', 'stderr');
+          return;
+        }
+        const result = await api.post('/api/v1/sciretrieval/classify', { query });
+        const data = result.data || result;
+        session.addOutput(`Domain: ${data.primary_domain || 'Unknown'}`, 'stdout');
+        if (data.secondary_domain) {
+          session.addOutput(`Secondary: ${data.secondary_domain}`, 'stdout');
+        }
+        session.addOutput(`Intent: ${data.intent}`, 'stdout');
+        session.addOutput(`Confidence: ${(data.confidence * 100).toFixed(0)}%`, 'stdout');
+        if (data.matched_keywords?.length) {
+          session.addOutput(`Keywords: ${data.matched_keywords.join(', ')}`, 'stdout');
+        }
+        return;
+      }
+
+      case 'providers': {
+        const result = await api.get('/api/v1/sciretrieval/providers');
+        const data = result.data || result;
+        const providers = data.providers || {};
+        const lines = Object.entries(providers).map(([name, domains]) =>
+          `  ${name}: ${domains.join(', ')}`
+        );
+        session.addOutput('Registered Providers:', 'stdout');
+        lines.forEach(l => session.addOutput(l, 'stdout'));
+        return;
+      }
+
+      case 'getdata': {
+        const provider = parts[2];
+        const entity = parts.slice(3).join(' ');
+        if (!provider || !entity) {
+          session.addOutput('Usage: science getdata <provider> <entity>', 'stderr');
+          session.addOutput('Example: science getdata pubchem aspirin', 'system');
+          return;
+        }
+        const result = await api.post('/api/v1/sciretrieval/getdata', { provider, entity });
+        const data = result.data || result;
+        session.addOutput(data.result || 'No data returned.', 'stdout');
+        return;
+      }
+
+      case 'cache':
+      case 'clear-cache': {
+        const result = await api.post('/api/v1/sciretrieval/cache/clear');
+        const data = result.data || result;
+        session.addOutput(data.message || 'Cache operation completed.', 'stdout');
+        return;
+      }
+
+      default:
+        session.addOutput(`Unknown science command: ${subcommand}`, 'stderr');
+        session.addOutput('', 'system');
+        session.addOutput('Available commands:', 'system');
+        session.addOutput('  science search <query>     - Search scientific databases', 'system');
+        session.addOutput('  science classify <query>   - Classify a scientific query', 'system');
+        session.addOutput('  science providers          - List registered providers', 'system');
+        session.addOutput('  science getdata <p> <e>    - Direct provider lookup', 'system');
+        session.addOutput('  science cache              - Clear retrieval caches', 'system');
+    }
+  } catch (err) {
+    const msg = err.message || 'Unknown error';
+    session.addOutput(`Science Error: ${msg}`, 'stderr');
+    console.error('[Terminal] Science command failed:', err);
+  } finally {
+    session.isLoading = false;
+    renderTabs();
+    renderOutput();
+    updateInputPrompt();
+  }
+}
+
+/* ── Help Command ────────────────────────────────────────────────────────── */
+
+/**
+ * Display the custom help reference that includes SciRetrieval commands.
+ */
+function showHelp(session) {
+  const help = [
+    '',
+    '╔══════════════════════════════════════════════════════════╗',
+    '║               Fiona Terminal Help Reference              ║',
+    '╚══════════════════════════════════════════════════════════╝',
+    '',
+    '── Shell Commands ──────────────────────────────────────────',
+    '  <command>                  Execute any shell command',
+    '  cd <dir>                   Change directory',
+    '  pwd                        Print working directory',
+    '  clear                      Clear terminal output',
+    '',
+    '── Scientific Retrieval (SciRetrieval) ──────────────────────',
+    '  science search <query>     Search scientific databases',
+    '  science classify <query>   Classify a scientific query',
+    '  science providers          List registered data providers',
+    '  science getdata <p> <e>    Direct provider lookup',
+    '  science cache              Clear retrieval caches',
+    '',
+    '── Terminal Controls ────────────────────────────────────────',
+    '  ↑/↓                        Navigate command history',
+    '  Tab                        Autocomplete',
+    '  ? or help                  Show this reference',
+    '',
+    '  Note: All science commands are processed locally and do not',
+    '  require a shell backend. Provider lookups (search, getdata)',
+    '  require active database connectivity.',
+    '',
+  ];
+  help.forEach(line => session.addOutput(line, 'system'));
+  session.isLoading = false;
+  renderTabs();
+  renderOutput();
+}
+
 /* ── Execute Command ────────────────────────────────────────────────────── */
 
 async function executeCommand(command) {
@@ -359,6 +497,19 @@ async function executeCommand(command) {
   renderTabs();
 
   try {
+    // ── Intercept science commands ────────────────────────────────────
+    if (trimmed.startsWith('science ')) {
+      await handleScienceCommand(trimmed, session, api);
+      return;
+    }
+
+    // ── Intercept help ────────────────────────────────────────────────
+    if (trimmed === 'help' || trimmed === '?' || trimmed === '--help') {
+      showHelp(session);
+      return;
+    }
+
+    // ── Original shell execution ──────────────────────────────────────
     const result = await api.post('/api/v1/terminal/exec', {
       command: trimmed,
     });
@@ -391,37 +542,9 @@ async function executeCommand(command) {
       session.addOutput(`[Completed in ${formatDuration(data.duration_ms)}]`, 'system');
     }
 
-    // Track cwd changes
-    if (trimmed.startsWith('cd ')) {
-      const dirArg = trimmed.slice(3).trim();
-      if (dirArg.startsWith('/')) {
-        session.cwd = dirArg;
-      } else if (dirArg === '..') {
-        const parts = session.cwd.split('/').filter(Boolean);
-        parts.pop();
-        session.cwd = parts.length > 0 ? '/' + parts.join('/') : '/';
-      } else if (dirArg === '~' || dirArg === '') {
-        session.cwd = INITIAL_DIR;
-      } else {
-        const base = session.cwd === INITIAL_DIR ? '/home' : session.cwd;
-        session.cwd = base.replace(/\/$/, '') + '/' + dirArg;
-      }
-      // Verify with pwd
-      try {
-        const pwdResult = await api.post('/api/v1/terminal/exec', { command: 'pwd' });
-        const pwdData = pwdResult.data || pwdResult;
-        if (pwdData.stdout) {
-          const actualDir = pwdData.stdout.trim();
-          if (actualDir) session.cwd = actualDir;
-        }
-      } catch { /* silent */ }
-    }
-
-    if (trimmed === 'pwd') {
-      const pwdData = data.stdout?.trim();
-      if (pwdData && pwdData.startsWith('/')) {
-        session.cwd = pwdData;
-      }
+    // Update cwd from backend response (handles cd, pwd, and all commands)
+    if (data.cwd) {
+      session.updateCwd(data.cwd);
     }
 
   } catch (err) {
@@ -740,6 +863,24 @@ async function mount(container) {
 
   // Create initial session
   createSession();
+
+  // Fetch the real cwd from the backend so the prompt is accurate
+  const api = getApi();
+  if (api) {
+    try {
+      const cwdResult = await api.get('/api/v1/terminal/cwd');
+      const cwdData = cwdResult.data || cwdResult;
+      if (cwdData.cwd) {
+        INITIAL_DIR = cwdData.cwd;
+        const session = getActiveSession();
+        if (session) {
+          session.cwd = INITIAL_DIR;
+        }
+      }
+    } catch {
+      // Fall back to '~' display if backend is unreachable
+    }
+  }
 
   // Render initial state
   renderTabs();

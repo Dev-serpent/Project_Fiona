@@ -985,3 +985,389 @@ pkexec ydotoold
 sudo -n ydotoold
 ydotoold
 ```
+
+---
+
+## SciPhi — Scientific Operating System
+
+*This section is the authoritative reference for all SciPhi development. Update it when architecture decisions change.*
+
+### Philosophy
+
+SciPhi is not a simulation library. It is a **scientific operating system** whose central component is the **Opsim Kernel** — a reasoning engine that plans, constructs, executes, validates, and explains scientific investigations. It behaves like a lead scientist coordinating a research team, not like a function that computes equations.
+
+### Final Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    User / Agent Request                  │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Opsim Kernel (opsim.py)                │
+│                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │  Simulation   │  │  Scientific  │  │  Hypothesis   │  │
+│  │   Advisor     │  │   Planner    │  │   Engine      │  │
+│  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘  │
+│         │                 │                   │          │
+│  ┌──────┴───────┐  ┌──────┴───────┐  ┌───────┴───────┐  │
+│  │   Problem    │  │   Model      │  │  Uncertainty  │  │
+│  │   Compiler   │  │   Selector   │  │   Analyzer    │  │
+│  └──────┬───────┘  └──────┬───────┘  └───────────────┘  │
+│         │                 │                              │
+│  ┌──────┴─────────────────┴──────┐                      │
+│  │      Solver Selection Engine   │                      │
+│  └──────┬────────────────────────┘                      │
+└─────────┼────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────┐     ┌─────────────────────────────┐
+│  Models (models/)    │     │  Solvers (solvers/)         │
+│                     │     │                             │
+│  ┌─────────────────┐│     │  ┌─────────────────────────┐│
+│  │ physics/        ││     │  │ deterministic/          ││
+│  │ chemistry/      ││     │  │ stochastic/             ││
+│  │ biology/        ││     │  │ symbolic/               ││
+│  │ earth/          ││     │  │ optimization/           ││
+│  │ engineering/    ││     │  │ hybrid/                 ││
+│  │ math/           ││     │  └─────────────────────────┘│
+│  └─────────────────┘│     │  Declare capabilities,      │
+│  Declare equations, │     │  never know the science      │
+│  never know the     │     └─────────────────────────────┘
+│  computation        │
+└─────────────────────┘
+          │                         │
+          └─────────┬───────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────┐
+│           Validation & Evaluation            │
+│  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
+│  │ Physical  │  │ Unit     │  │ Stability │  │
+│  │ Sanity    │  │ Analysis │  │ Analysis  │  │
+│  └──────────┘  └──────────┘  └───────────┘  │
+│  ┌──────────┐  ┌────────────────────────┐   │
+│  │ Evidence │  │   Provenance Tracker   │   │
+│  │ Check    │  │   (every decision)     │   │
+│  └──────────┘  └────────────────────────┘   │
+└──────────────────────┬──────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────┐
+│           Report Generation                  │
+│  Findings, uncertainty, limitations,         │
+│  assumptions, traceability chain             │
+└─────────────────────────────────────────────┘
+```
+
+### Design Principles
+
+| Principle | Meaning |
+|-----------|---------|
+| **Models describe the science, not the computation** | Equations, variables, assumptions, constraints. No solver logic. |
+| **Solvers describe the computation, not the science** | Numerical methods, convergence criteria. No domain knowledge. |
+| **Opsim bridges both** | Classifies, plans, compiles, selects, executes, validates. |
+| **Simulation-first, but analytical when possible** | Simulation Advisor avoids unnecessary computation. |
+| **Provenance by construction** | Every decision tracked as structured data, not afterthought logging. |
+| **Domain-agnostic kernel** | Core kernel never imports physics, chemistry, etc. New domains are plugins. |
+
+### Data Flow
+
+```
+User Input
+    │
+    ▼
+OpsimKernel.investigate(query: str) → InvestigationReport
+    │
+    ├── Advisor.should_simulate(plan) → bool
+    ├── Planner.create_plan(query) → InvestigationPlan
+    ├── Compiler.compile(model, plan) → ComputationalProblem
+    ├── SolverSelector.select(problem) → Solver
+    ├── Solver.solve(problem) → SimulationResult
+    ├── Evaluator.validate(result, plan) → ValidationReport
+    ├── Uncertainty.analyze(result, plan) → UncertaintyEstimate
+    ├── Provenance.record(plan, solver, result, validation, uncertainty) → ProvenanceRecord
+    └── Report.compile(plan, result, validation, uncertainty, provenance) → InvestigationReport
+```
+
+### Component Specifications
+
+#### Opsim Kernel (`kernel/opsim.py`)
+
+The central orchestrator. Owns the full lifecycle:
+
+1. Receive query → hand to Simulation Advisor
+2. If simulation needed → hand to Scientific Planner
+3. Planner selects model → Problem Compiler translates to computational form
+4. Solver Selection Engine matches form to solver capabilities
+5. Execute solver → results back through Validation → Uncertainty → Evaluation
+6. Provenance tracker records every decision
+7. Report generator compiles final output
+
+```python
+class OpsimKernel:
+    async def investigate(self, query: str) -> InvestigationReport: ...
+    async def simulate(self, model_id: str, params: dict) -> SimulationResult: ...
+    async def validate(self, result: SimulationResult) -> ValidationReport: ...
+    def list_models(self, domain: str = None) -> list[ModelInfo]: ...
+    def list_solvers(self) -> list[SolverInfo]: ...
+```
+
+#### Simulation Advisor (`kernel/advisor.py`)
+
+Before any computation: checks for analytical/closed-form solutions, dimensional analysis sufficiency, conservation law shortcuts, known results. If yes → short-circuit. If no → dispatch to Planner.
+
+#### Scientific Planner (`kernel/planner.py`)
+
+Produces a structured `InvestigationPlan`:
+
+```python
+@dataclass
+class InvestigationPlan:
+    domain: ScientificDomain
+    governing_equations: list[Equation]
+    variables: list[Variable]
+    parameters: list[Parameter]
+    assumptions: list[Assumption]
+    constraints: list[Constraint]
+    boundary_conditions: list[BoundaryCondition]
+    required_accuracy: AccuracyLevel
+    mathematical_form: MathematicalForm  # ODE, PDE, algebraic, stochastic, ...
+```
+
+#### Hypothesis Engine (`kernel/hypothesis.py`)
+
+Generates testable hypotheses for each investigation, each independently evaluated after simulation:
+
+```python
+@dataclass
+class Hypothesis:
+    statement: str
+    null_hypothesis: str
+    variables: list[str]
+    expected_outcome: str
+    test_method: str
+```
+
+#### Problem Compiler (`kernel/compiler.py`)
+
+The critical translation layer. Takes a `ScientificModel` and produces a `ComputationalProblem`. Introduces no science — purely translates. Discretization strategies are chosen based on the model's declared form and required accuracy.
+
+```python
+@dataclass
+class ComputationalProblem:
+    mathematical_form: MathematicalForm
+    discretization: Discretization | None
+    equations: list[ComputableEquation]
+    initial_conditions: dict
+    boundary_conditions: dict
+    parameter_ranges: dict
+    tolerance: float
+    constraints: list[Constraint]
+```
+
+#### Solver Selection Engine (`kernel/solver_selector.py`)
+
+Treats solver selection as constraint satisfaction — matches `ComputationalProblem` against solver capability declarations:
+
+```python
+@dataclass
+class SolverCapabilities:
+    name: str
+    forms: list[MathematicalForm]
+    methods: list[str]
+    order: list[int]
+    supports_parallel: bool
+    handles_stiff: bool | None
+    error_estimation: bool
+```
+
+#### Scientific Model (`models/`)
+
+Self-contained module per domain. Declares equations, variables, parameters, constants, assumptions, constraints, and classifies its own mathematical form. Never references solvers.
+
+```python
+class ScientificModel(ABC):
+    @property
+    @abstractmethod
+    def domain(self) -> ScientificDomain: ...
+    @property
+    @abstractmethod
+    def equations(self) -> list[Equation]: ...
+    @property
+    @abstractmethod
+    def variables(self) -> list[Variable]: ...
+    @property
+    @abstractmethod
+    def parameters(self) -> list[Parameter]: ...
+    @property
+    @abstractmethod
+    def mathematical_form(self) -> MathematicalForm: ...
+    @property
+    def assumptions(self) -> list[Assumption]: ...
+    @property
+    def constraints(self) -> list[Constraint]: ...
+    @property
+    def constants(self) -> list[PhysicalConstant]: ...
+```
+
+#### Solver (`solvers/`)
+
+Pure computational engine. Never references domain knowledge.
+
+```python
+class Solver(ABC):
+    @property
+    @abstractmethod
+    def capabilities(self) -> SolverCapabilities: ...
+    @abstractmethod
+    async def solve(self, problem: ComputationalProblem) -> SimulationResult: ...
+```
+
+#### Validation & Evaluation (`kernel/evaluator.py`, `kernel/uncertainty.py`)
+
+- Physical sanity: energy conservation, bounds checking, limit behavior
+- Unit consistency: dimensional analysis
+- Numerical stability: convergence, mesh sensitivity
+- Evidence comparison: against known experimental/literature values
+- Uncertainty propagation: Monte Carlo or analytic error propagation
+
+#### Provenance Tracker (`kernel/provenance.py`)
+
+Structured record of every scientific decision:
+
+```python
+@dataclass
+class ProvenanceRecord:
+    query: str
+    model_id: str
+    model_version: str
+    equations_used: list[str]
+    constants_used: list[dict]
+    data_sources: list[str]
+    solver_id: str
+    solver_config: dict
+    assumptions: list[str]
+    approximations: list[str]
+    validation_results: list[ValidationCheck]
+    uncertainty: UncertaintyEstimate
+    timestamp: datetime
+```
+
+#### Report Generator (`kernel/report.py`)
+
+Compiles all phases into a structured scientific report with: executive summary, methodology (model, solver, assumptions), results (tables, figures, key numbers), validation summary, uncertainty and limitations, traceability chain, hypothesis evaluation results.
+
+### Module Structure
+
+```
+SciPhi/
+├── __init__.py                  # Public API, version
+├── kernel/
+│   ├── __init__.py
+│   ├── opsim.py                 # Core orchestrator
+│   ├── advisor.py               # Simulation Advisor
+│   ├── planner.py               # Scientific Planner
+│   ├── hypothesis.py            # Hypothesis Engine
+│   ├── compiler.py              # Problem Compiler
+│   ├── solver_selector.py       # Solver Selection Engine
+│   ├── evaluator.py             # Scientific evaluation & validation
+│   ├── uncertainty.py           # Error propagation & confidence
+│   ├── provenance.py            # Provenance tracking
+│   └── report.py                # Report generation
+├── models/
+│   ├── __init__.py              # Model registry
+│   ├── physics/
+│   │   ├── __init__.py
+│   │   ├── kinematics.py
+│   │   ├── dynamics.py
+│   │   ├── thermodynamics.py
+│   │   ├── electromagnetism.py
+│   │   └── quantum.py
+│   ├── chemistry/
+│   ├── biology/
+│   ├── earth/
+│   ├── engineering/
+│   └── math/
+├── solvers/
+│   ├── __init__.py              # Solver registry
+│   ├── deterministic/
+│   │   ├── ode_solver.py
+│   │   ├── pde_solver.py
+│   │   └── algebraic_solver.py
+│   ├── stochastic/
+│   │   └── monte_carlo.py
+│   ├── symbolic/
+│   │   └── symbolic_solver.py
+│   └── optimization/
+│       └── optimizer.py
+├── data/
+│   ├── __init__.py
+│   ├── constants.py             # CODATA physical constants
+│   └── units.py                 # Unit system with conversions
+├── interfaces/
+│   ├── __init__.py
+│   ├── model.py                 # ScientificModel ABC
+│   └── solver.py                # Solver ABC
+├── visualization/
+│   └── __init__.py
+├── reports/
+│   └── __init__.py
+├── cli.py                       # SciPhi CLI (registered in fiona/cli.py)
+└── tests/
+    ├── test_kernel.py
+    ├── test_compiler.py
+    ├── test_solver_selector.py
+    └── test_domains/
+```
+
+### Implementation Status (2026-06-26)
+
+| Phase | Focus | Status | Deliverables |
+|-------|-------|--------|-------------|
+| **1** | Kernel Core | ✅ Complete | ABCs, Opsim orchestrator, Advisor, Planner, Compiler, Solver Selector. Hypothesis engine. Unit tests. |
+| **2** | Infrastructure | ✅ Complete | CODATA constants (17), unit converter (21 units), Provenance, Report, Evaluator, Uncertainty. Tests. |
+| **3** | Physics Models | ✅ Complete | 5 models: kinematics, dynamics, thermodynamics, electromagnetism, quantum. 80 tests. |
+| **4** | Reference Solvers | ✅ Complete | 5 solvers: ODE (RK4/Euler/DOPRI5), algebraic (Newton/bisection/fixed-point), Monte Carlo, symbolic (SymPy), optimizer (gradient/Nelder-Mead/BFGS). 61 tests. |
+| **5** | Integration & CLI | ✅ Complete | `fiona sciphi research/simulate/validate/list-models/list-solvers`. 3 ActionSpec entries. |
+| **6** | More Domains | ✅ Complete | Chemistry (3 models), Biology (2 models), Earth (1 model), Engineering (2 models). 164 tests. |
+| **7** | Visualization | ✅ Complete | `plot_result()`, `plot_report()`, `plot_comparison()`. Dark theme. 17 tests. |
+| **8** | Hypothesis Expansion | 🔲 Pending | More sophisticated multi-hypothesis testing, Bayesian comparison |
+| **9** | Documentation | 🔲 Pending | fionaDocsPage module page for SciPhi |
+
+**Test suite**: 322 passed, 6 skipped (sympy not installed).
+
+### Integration With Fiona
+
+| Point | Mechanism | Status |
+|-------|-----------|--------|
+| CLI | `fiona sciphi <subcommand>` via `fiona/cli.py` | ✅ Done |
+| Agent | `ActionSpec` in `FionaCore/actions.py` | ✅ Done |
+| pyproject.toml | `SciPhi` and subpackages in `[tool.setuptools] packages` | ✅ Done |
+| fionaLocalPages | `/sciphi` route in aiohttp server (future) | 🔲 Planned |
+| EventBus | Simulation lifecycle events | 🔲 Planned |
+
+### Current CLI Usage
+
+```bash
+# Full scientific investigation (Opsim pipeline)
+fiona sciphi research "What is the trajectory of a projectile launched at 45 degrees?"
+
+# Run a specific model directly
+fiona sciphi simulate KinematicsModel --params '{"initial_angle": 45, "initial_velocity": 10}'
+
+# Validate an existing result
+fiona sciphi validate result.json
+
+# List available models
+fiona sciphi list-models
+fiona sciphi list-models --domain physics
+fiona sciphi list-models --domain chemistry
+
+# List available solvers
+fiona sciphi list-solvers
+```
+
+— SciPhi section end —

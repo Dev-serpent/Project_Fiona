@@ -19,10 +19,20 @@ eyecontrol = [
   "pyautogui>=0.9.54",
 ]
 browser = [
-  "playwright>=1.45.0",
+  "selenium>=4.20.0",
+  "webdriver-manager>=4.0.0",
+]
+sciphi = [
+  "sympy>=1.12",
+  "scipy>=1.11.0",
+]
+sciretrieval = [
+  "aiohttp>=3.9.0",
 ]
 test = [
   "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "aioresponses>=0.7.6",
 ]
 
 [project.scripts]
@@ -32,10 +42,19 @@ fiona = "fiona.cli:main"
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.setuptools]
 packages = ["fiona", "BrowserAutomation", "QuikTieper", "CamComs", "Vsee", "Agent", "PhiConnect", "SeeOnDesk", "DataClient", "EyeControl", "TerminalAssist", "FionaCore", "CmdTrace", "RecallVault", "Voice", "cad",
             "cad.core", "cad.geometry", "cad.constraints", "cad.sketch", "cad.part", "cad.assembly",
-            "cad.commands", "cad.scripting", "cad.io", "cad.plugins", "cad.rendering", "cad.gui", "cad.cli", "cad.tests"]
+            "cad.commands", "cad.scripting", "cad.io", "cad.plugins", "cad.rendering", "cad.gui", "cad.cli", "cad.tests",
+            "SciPhi", "SciPhi.kernel", "SciPhi.interfaces", "SciPhi.data", "SciPhi.models", "SciPhi.solvers",
+            "SciPhi.models.physics", "SciPhi.models.chemistry", "SciPhi.models.biology", "SciPhi.models.earth", "SciPhi.models.engineering", "SciPhi.models.math",
+            "SciPhi.solvers.deterministic", "SciPhi.solvers.stochastic", "SciPhi.solvers.symbolic", "SciPhi.solvers.optimization",
+            "SciPhi.visualization", "SciPhi.reports", "SciPhi.tests",
+            "SciRetrieval", "SciRetrieval.providers", "SciRetrieval.scilab",
+            "SciRetrieval.cache", "SciRetrieval.data"]
 
 [tool.setuptools.package-data]
 CamComs = ["esp32payload/*"]

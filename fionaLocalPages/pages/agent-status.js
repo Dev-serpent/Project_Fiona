@@ -242,7 +242,13 @@ function renderConversation() {
     <div class="c-card">
       <div class="c-card__header">
         <span class="c-card__title">Conversation</span>
-        <span class="c-badge c-badge--accent">${messages.length} messages</span>
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <span class="c-badge c-badge--info" style="font-size: 9px;"
+                title="Scientific context enrichment is available — pass enrich_science=true to /api/v1/agent/ask">
+            Science
+          </span>
+          <span class="c-badge c-badge--accent">${messages.length} messages</span>
+        </div>
       </div>
       <div class="c-card__body" style="padding: 0;">
         ${messages.length === 0 ? html`

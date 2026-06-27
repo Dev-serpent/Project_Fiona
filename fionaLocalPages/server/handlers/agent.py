@@ -38,7 +38,12 @@ def _get_client() -> OllamaClient:
 async def agent_ask(request: Request) -> Response:
     """POST /api/v1/agent/ask
 
-    Body: { prompt, model?, system?, temperature?, max_tokens? }
+    Body: { prompt, model?, system?, temperature?, max_tokens?, enrich_science? }
+
+    When ``enrich_science`` is *True*, the prompt is preprocessed through
+    the SciRetrieval pipeline.  If a scientific domain is detected, the
+    retrieved context is injected before the LLM call.  Enrichment
+    failures are non-blocking.
     """
     try:
         body = await request.json()
@@ -49,16 +54,42 @@ async def agent_ask(request: Request) -> Response:
     if not prompt:
         raise ApiError(400, "Missing required field: prompt")
 
+    # ── Optional: enrich with scientific context ──────────────────────────
+    enrich = body.get("enrich_science", False)
+    scientific_context: str | None = None
+
+    if enrich:
+        try:
+            from fiona.di import get_sci_retrieval_bridge
+
+            bridge = get_sci_retrieval_bridge()
+            scientific_context = await bridge.on_scientific_query(prompt)
+        except Exception as e:
+            logger.warning("SciRetrieval enrichment failed (non-blocking): %s", e)
+
+    # Build the final prompt with optional scientific context
+    final_prompt = prompt
+    if scientific_context:
+        final_prompt = (
+            f"[Scientific Context]\n{scientific_context}\n\n"
+            f"[User Query]\n{prompt}\n\n"
+            f"Answer the user's query using the scientific context above."
+        )
+
+    # ── LLM call ──────────────────────────────────────────────────────────
     try:
         client = _get_client()
         response_text = client.ask(
-            prompt=prompt,
+            prompt=final_prompt,
             temperature=body.get("temperature", 0.3),
             max_tokens=body.get("max_tokens", 2048),
         )
         return json_response({
             "ok": True,
-            "data": {"response": response_text},
+            "data": {
+                "response": response_text,
+                "enriched": scientific_context is not None,
+            },
         })
     except Exception as exc:
         logger.exception("Agent ask failed")

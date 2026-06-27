@@ -1012,6 +1012,198 @@ class EventBus:
 
 
 # ---------------------------------------------------------------------------
+#  Scientific Knowledge Retrieval Interfaces
+# ---------------------------------------------------------------------------
+
+
+class IIntentDomainClassifier(abc.ABC):
+    """Classifies a user query into a scientific domain and intent."""
+
+    @abc.abstractmethod
+    async def classify(self, query: str) -> "IntentDomainResult":
+        """Classify *query* into a domain + intent.
+
+        Args:
+            query: Free-text user query.
+
+        Returns:
+            An :class:`IntentDomainResult` with the best-guess domain
+            and intent, or ``unknown`` if nothing matched.
+        """
+        ...
+
+
+class IProvider(abc.ABC):
+    """Abstract interface for a scientific data provider."""
+
+    @property
+    @abc.abstractmethod
+    def provider_name(self) -> str:
+        """Short, stable provider identifier (e.g. ``'pubchem'``)."""
+
+    @property
+    @abc.abstractmethod
+    def supported_domains(self) -> frozenset["ScientificDomain"]:
+        """Set of domains this provider can handle."""
+
+    @abc.abstractmethod
+    async def fetch(self, context: "RetrievalContext") -> "RawProviderResult":
+        """Fetch raw data for the given retrieval context.
+
+        Args:
+            context: Fully resolved context with domains and query.
+
+        Returns:
+            Raw provider data wrapped in a :class:`RawProviderResult`.
+
+        Raises:
+            ProviderConnectionError: Network / connectivity failure.
+            ProviderTimeoutError: Request exceeded the timeout.
+            ProviderRateLimitedError: API rate limit was hit.
+        """
+        ...
+
+
+class INormalizer(abc.ABC):
+    """Converts raw provider responses into :class:`ScientificEntity` lists."""
+
+    @abc.abstractmethod
+    async def normalize(self, raw: "RawProviderResult") -> list["ScientificEntity"]:
+        """Normalise a single raw provider result.
+
+        Args:
+            raw: Raw data from a provider.
+
+        Returns:
+            A list of normalised entities (may be empty).
+
+        Raises:
+            NormalizationError: The raw data could not be parsed.
+        """
+        ...
+
+
+class IEntityResolver(abc.ABC):
+    """Resolves entity aliases, assigns canonical IDs, and merges
+    cross-provider duplicates."""
+
+    @abc.abstractmethod
+    async def resolve(
+        self, entities: list["ScientificEntity"]
+    ) -> list["ScientificEntity"]:
+        """Resolve a list of entities to their canonical forms.
+
+        1. Checks each entity name / alias against a synonym registry.
+        2. Groups entities by canonical ID.
+        3. Merges properties, aliases, relationships, and provenance.
+
+        Args:
+            entities: Entities from one or more providers (post-normalisation).
+
+        Returns:
+            Deduplicated list of resolved, merged entities.
+        """
+        ...
+
+
+class ISciLabProcessor(abc.ABC):
+    """Processes normalised entities through the SciLab pipeline
+    (parse → rank → deduplicate → summarise → context)."""
+
+    @abc.abstractmethod
+    async def process(
+        self, entities: list["ScientificEntity"], context: "RetrievalContext"
+    ) -> "SciLabResult":
+        """Run the full SciLab processing pipeline.
+
+        Args:
+            entities: Normalised (and optionally resolved) entities.
+            context: The original retrieval context.
+
+        Returns:
+            A :class:`SciLabResult` with summary, ranked entities, and context.
+        """
+        ...
+
+
+class ICacheBackend(abc.ABC):
+    """Abstract interface for a cache storage backend."""
+
+    @abc.abstractmethod
+    async def get(self, key: str) -> "CacheEntry | None":
+        """Retrieve a cache entry by key.
+
+        Returns:
+            The :class:`CacheEntry` if found and not expired, else *None*.
+        """
+        ...
+
+    @abc.abstractmethod
+    async def set(self, key: str, value: Any, policy: "CachePolicy") -> None:
+        """Store a value under *key* with the given *policy*."""
+        ...
+
+    @abc.abstractmethod
+    async def delete(self, key: str) -> bool:
+        """Remove the entry for *key*.
+
+        Returns:
+            True if an entry was removed.
+        """
+        ...
+
+    @abc.abstractmethod
+    async def clear(self) -> None:
+        """Remove all entries from this backend."""
+        ...
+
+    @abc.abstractmethod
+    async def evict_expired(self) -> int:
+        """Remove all expired entries.
+
+        Returns:
+            The number of entries evicted.
+        """
+        ...
+
+
+class IRetrievalManager(abc.ABC):
+    """Top-level orchestrator for the scientific knowledge retrieval pipeline."""
+
+    @abc.abstractmethod
+    async def retrieve(
+        self,
+        query: str,
+        *,
+        conversation_id: str | None = None,
+        options: dict | None = None,
+    ) -> "SciLabResult":
+        """Execute a full retrieval pipeline for *query*.
+
+        Args:
+            query: Free-text user query.
+            conversation_id: Optional conversation ID for caching.
+            options: Free-form options dict.
+
+        Returns:
+            A :class:`SciLabResult` with the processed results.
+        """
+        ...
+
+    @abc.abstractmethod
+    async def get_data(self, request: "GetDataRequest") -> "GetDataResponse":
+        """Fetch data for a specific entity from a specific provider.
+
+        Args:
+            request: A :class:`GetDataRequest` specifying provider, entity, etc.
+
+        Returns:
+            A :class:`GetDataResponse` with the result.
+        """
+        ...
+
+
+# ---------------------------------------------------------------------------
 #  Public API
 # ---------------------------------------------------------------------------
 
@@ -1069,4 +1261,12 @@ __all__ = [
     # Event bus
     "Subscription",
     "EventBus",
+    # SciRetrieval interfaces
+    "IIntentDomainClassifier",
+    "IProvider",
+    "INormalizer",
+    "IEntityResolver",
+    "ISciLabProcessor",
+    "ICacheBackend",
+    "IRetrievalManager",
 ]

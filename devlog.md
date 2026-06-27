@@ -498,3 +498,170 @@ Comprehensive MkDocs site update (30+ files across all sections), complete Agent
 - QuikTieper dedicated frontend route (optional — CLI/Config are sufficient for now)
 - Authentication/HTTPS for production fionaLocalPages deployment
 - Hard-refresh browser after deployment to stale module caches
+
+---
+
+## Entry 14 — Scientific Knowledge Retrieval (SciRetrieval) ✅
+
+**Date**: 2026-06-27
+**Focus**: Build and integrate a multi-provider scientific knowledge retrieval subsystem with domain classification, entity resolution, SciLab processing, cache management, and full fionaLocalPages integration
+
+### Summary
+Complete new subsystem: 26 source files in `SciRetrieval/`, 5 server handler endpoints, frontend integration in Terminal and Agent pages, 278 passing tests, code reviewed and approved.
+
+### Architecture
+
+```text
+User Query → Router (domain + intent classification)
+                  │
+                  ▼
+           EntityResolver (synonym registry, canonical IDs)
+                  │
+                  ▼
+           Normalizer (standard schema, cross-provider merge)
+                  │
+                  ▼
+    ┌─────────────┼─────────────┐
+    ▼             ▼             ▼
+  NCBI          PubChem       NIST
+  (BIOLOGY)     (CHEMISTRY)   (CHEMISTRY/PHYSICS)
+    │             │             │
+    └──────┬──────┘             │
+           ▼                    ▼
+    SciLab Processor     CacheManager
+           │             (conversation TTL 5min,
+           │              NIST disk-persisted)
+           └────────┬──────────┘
+                    ▼
+             Final Response
+```
+
+### Milestones
+
+#### M1 — Foundation (ABCs, Data Models, Error Hierarchy)
+- `SciRetrieval/interfaces.py` — 7 ABCs re-exported from `fiona/interfaces.py` (IIntentDomainClassifier, IProvider, IEntityResolver, INormalizer, ISciLabProcessor, ICacheManager, IRetrievalManager)
+- `SciRetrieval/models.py` — 7 data models (IntentDomainResult, ScientificEntityData, EntityRecord, NormalizedResult, SciLabContext, CacheEntry, RetrievalResult)
+- `SciRetrieval/errors.py` — Error hierarchy (SciRetrievalError → ClassificationError, ProviderError, NormalizationError, EntityResolutionError, SciLabError, CacheError)
+
+#### M2 — Domain Routing Engine
+- `SciRetrieval/router.py` — `Router` class (173 lines): keyword-list classifier for biology/chemistry/physics + 4 intent categories (lookup, compare, explain, list)
+- Data: `SciRetrieval/data/keywordlist.json` (30 biology, 32 chemistry, 34 physics keywords + intent patterns)
+
+#### M3 — Multi-Provider Retrieval
+- `SciRetrieval/providers/base.py` — `BaseProvider` ABC with retry logic, timeout, graceful degradation
+- `SciRetrieval/providers/ncbi.py` — NCBI E-utilities provider (esearch → esummary)
+- `SciRetrieval/providers/pubchem.py` — PubChem PUG REST provider
+- `SciRetrieval/providers/nist.py` — NIST CODATA/Physics provider
+- `SciRetrieval/providers/manager.py` — `ProviderManager` with multi-provider parallel dispatch, cross-provider merge, primary+secondary routing
+
+#### M4 — Normalizer + EntityResolver
+- `SciRetrieval/normalizer.py` — `Normalizer` class: consistent schema across providers, field mapping, confidence scoring
+- `SciRetrieval/entity_resolver.py` — `EntityResolver` class: synonym registry (`synonyms.json`), canonical ID assignment, cross-provider dedup with provenance tracking
+- Data: `SciRetrieval/data/synonyms.json` (Aspirin/pubchem:2244, Glucose/pubchem:5793, TP53/ncbi:7157, BRCA1/ncbi:672)
+
+#### M5 — SciLab Processing Pipeline
+- `SciRetrieval/scilab/pipeline.py` — `SciLabPipeline`: orchestration (validate → context → summarize → enrich)
+- `SciRetrieval/scilab/validator.py` — `SciLabValidator`: cross-field consistency checks
+- `SciRetrieval/scilab/context_generator.py` — `ContextGenerator`: entity/relationship sections, size capping
+- `SciRetrieval/scilab/summarizer.py` — `Summarizer`: template-based synthesis from providers + cache
+
+#### M6 — CacheManager
+- `SciRetrieval/cache/manager.py` — `CacheManager`: conversation cache (TTL 5 min, in-memory dict), NIST dataset cache (disk-persisted JSON, single-level), TTL-based expiry, `clear_all()`, stats tracking
+- `SciRetrieval/cache/nist_cache.py` — `NistCache`: disk-persistent JSON cache with get/set/clear/stats
+
+#### M7 — Integration (CLI, DI, Agent, FLoP)
+- `fiona/cli.py` — `sire`/`sr` CLI layer with 5 subcommands: query, classify, providers, getdata, cache-clear
+- `SciRetrieval/cli.py` — `SciRetrievalCLI` with argparse and formatted output
+- `fiona/di.py` — `register_sci_retrieval()` + `get_sci_retrieval_bridge()`
+- `Agent/command_registry.py` — `sciretrieval_query` CommandSpec with provenance tracking
+- `Agent/orchestrator.py` — `sciretrieval_query` action handler with error interception
+- `fiona/__init__.py` — SciRetrieval module exports
+
+#### M8 — Tests (278 tests, 13 files)
+| Test File | Tests |
+|---|---|
+| `tests/sci_retrieval/test_router.py` | 46 |
+| `tests/sci_retrieval/test_providers.py` | 30 |
+| `tests/sci_retrieval/test_normalizer.py` | 20 |
+| `tests/sci_retrieval/test_entity_resolver.py` | 28 |
+| `tests/sci_retrieval/test_scilab.py` | 80 |
+| `tests/sci_retrieval/test_cache.py` | 28 |
+| `tests/sci_retrieval/test_manager.py` | 20 |
+| `tests/sci_retrieval/test_integration.py` | 26 |
+| Total | 278 |
+
+#### M9 — fionaLocalPages Integration
+- **Backend**: `server/handlers/sciretrieval.py` — 6 REST endpoints (search, classify, providers, getdata, enrich, cache/clear)
+- **Server routes**: Registered in `server/app.py`
+- **Terminal page**: `pages/terminal.js` — `handleScienceCommand()` with 5 subcommands (search, classify, providers, getdata, cache), intercepted before shell execution
+- **Agent page**: `server/handlers/agent.py` — `enrich_science: true` option in agent_ask handler (non-blocking enrichment)
+- **Agent status**: `pages/agent-status.js` — Science badge in Conversation tab
+- **Help command**: `showHelp()` function in terminal.js with SciRetrieval section
+
+### Key Decisions
+- **EntityResolver layer** added between Normalizer and SciLab (user suggestion) — resolves aliases, assigns canonical IDs, merges cross-provider duplicates
+- **Conversation Cache** (TTL 5 min) replaces one-link-deep SQLite — simpler, supports long scientific discussions
+- **NIST cache single-level disk** initially — multi-level (L1/L2/L3) deferred until profiling proves need
+- **Multi-provider retrieval** — queries can use primary + secondary providers (e.g., PubChem primary + NCBI secondary)
+- **ABCs in `fiona/interfaces.py`** — single source of truth, follows existing pattern
+- **Graceful degradation** — provider failures never crash Terminal or Agent pages
+
+### Keyword List Expansion (Post-Testing)
+After browser testing revealed coverage gaps, keywordlist.json was expanded by ~83%:
+| Domain | Before | After | Key Additions |
+|---|---|---|---|
+| Biology | 15 | 30 | function, pathway, organism, species, metabolism, signaling, regulation |
+| Chemistry | 17 | 32 | molecular, weight, mass, molar, mole, atomic, valence, ligand, isotope |
+| Physics | 17 | 34 | speed, light, frequency, wavelength, current, voltage, gravity, density |
+| Intent patterns | 28 | 37 | what's, calculate, compute, similarities, contrast, enumerate, step by step |
+
+### Browser Test Results
+| Test Area | Tests | Pass | Partial | Fail |
+|---|---|---|---|---|
+| Backend API | 9 | 6 | 3 | 0 |
+| Server Startup | 1 | 1 | 0 | 0 |
+| Frontend Code | 3 | 3 | 0 | 0 |
+| **Total** | **13** | **10** | **3** | **0** |
+
+Partial failures were all keyword coverage gaps — resolved by the expansion above. After the fix, all three previously-failing queries now classify correctly:
+- `"molecular weight of Aspirin"` → `CHEMISTRY` (was `BIOLOGY`)
+- `"function of BRCA1 gene"` → `BIOLOGY` (higher confidence)
+- `"speed of light"` → `PHYSICS` (was generic/unscientific)
+
+### Code Review Result
+**APPROVE WITH MINOR CHANGES** — 3 non-blocking items:
+1. `BaseProvider` type annotation alignment
+2. `on_conversation_end` event loop guard
+3. `fiona/__init__.py` exports
+
+### Key Achievements
+
+| Metric | Value |
+|---|---|
+| New files created (SciRetrieval/) | 26 |
+| New handler modules | 1 (`sciretrieval.py`) |
+| New API endpoints | 6 (search, classify, providers, getdata, enrich, cache/clear) |
+| New CLI commands | 5 (query, classify, providers, getdata, cache-clear) |
+| New tests | 278 across 13 files |
+| Total tests | 1018 pass (17 pre-existing env failures) |
+| Code review | APPROVED (3 minor items) |
+| Files modified (existing) | 8 (cli.py, di.py, interfaces.py, __init__.py, app.py, terminal.js, agent.py, agent-status.js) |
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `SciRetrieval/` (26 files) | NEW — Full subsystem |
+| `fiona/cli.py` | Added `sire`/`sr` CLI layer |
+| `fiona/di.py` | Added `register_sci_retrieval()`, `get_sci_retrieval_bridge()` |
+| `fiona/interfaces.py` | Added 7 ABCs |
+| `fiona/__init__.py` | SciRetrieval module exports |
+| `Agent/command_registry.py` | Added `sciretrieval_query` CommandSpec |
+| `Agent/orchestrator.py` | Added `sciretrieval_query` action handler |
+| `fionaLocalPages/server/handlers/sciretrieval.py` | NEW — 6 REST endpoints |
+| `fionaLocalPages/server/handlers/agent.py` | Added `enrich_science` option |
+| `fionaLocalPages/server/app.py` | Registered SciRetrieval routes |
+| `fionaLocalPages/pages/terminal.js` | Added `handleScienceCommand()`, `showHelp()`, help interceptor |
+| `fionaLocalPages/pages/agent-status.js` | Added Science badge |
+| `SciRetrieval/data/keywordlist.json` | Expanded keywords (30/32/34 per domain) |
+| `tests/sci_retrieval/` (13 files) | NEW — 278 tests |

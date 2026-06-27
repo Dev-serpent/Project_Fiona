@@ -108,10 +108,11 @@ class TestStateTransitions:
         await manager.stop()
         assert manager.state == BrowserManagerState.STOPPED
 
-    async def test_double_start_raises(self, manager: BrowserManager) -> None:
+    async def test_double_start_is_safe(self, manager: BrowserManager) -> None:
         await manager.start()
-        with pytest.raises(RuntimeError, match="start"):
-            await manager.start()
+        # Second start is a no-op when already running
+        await manager.start()
+        assert manager.state == BrowserManagerState.RUNNING
 
     async def test_double_stop_is_safe(self, manager: BrowserManager) -> None:
         await manager.start()
@@ -278,4 +279,33 @@ class TestConcurrency:
         for t in threads:
             t.join()
 
+        assert manager.state == BrowserManagerState.RUNNING
+
+
+# ---------------------------------------------------------------------------
+# Error recovery (start from ERROR, start when already running)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestGracefulStart:
+    async def test_start_from_error(self, mock_provider: _MockBrowserProvider) -> None:
+        """Starting from ERROR state should restart the browser."""
+        # First, force a failure to get into ERROR state
+        mock_provider._launch_fail = True
+        mgr = BrowserManager(provider=mock_provider)  # type: ignore[arg-type]
+        with pytest.raises(BrowserLaunchError):
+            await mgr.start()
+        assert mgr.state == BrowserManagerState.ERROR
+
+        # Now fix the provider and start again from ERROR
+        mock_provider._launch_fail = False
+        await mgr.start()
+        assert mgr.state == BrowserManagerState.RUNNING
+
+    async def test_double_start_is_noop(self, manager: BrowserManager) -> None:
+        """Starting when already RUNNING is a safe no-op."""
+        await manager.start()
+        assert manager.state == BrowserManagerState.RUNNING
+        await manager.start()  # should not raise
         assert manager.state == BrowserManagerState.RUNNING

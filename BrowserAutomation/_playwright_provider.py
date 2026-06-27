@@ -55,7 +55,12 @@ PLAYWRIGHT_CAPABILITIES: frozenset[str] = frozenset({
 
 
 def _check_playwright_installed() -> None:
-    """Raise ``RuntimeError`` if Playwright is not available."""
+    """Raise ``RuntimeError`` if Playwright is not available.
+
+    Checks both the Python package (``import playwright``) and whether
+    the browser binaries have been downloaded with
+    ``python -m playwright install chromium``.
+    """
     import sys  # noqa: PLC0415
 
     # Check sys.modules first (handles injected fake modules in tests)
@@ -64,9 +69,12 @@ def _check_playwright_installed() -> None:
 
     if find_spec("playwright") is None:
         msg = (
-            "Playwright is not installed. Install it with:\n"
+            "The Playwright Python package is not installed.\n\n"
             "  pip install playwright\n"
-            "  playwright install chromium"
+            "  python -m playwright install chromium\n\n"
+            "On Arch Linux you can also use:\n"
+            "  sudo pacman -S python-playwright\n"
+            "  python -m playwright install chromium"
         )
         raise RuntimeError(msg)
 
@@ -328,6 +336,13 @@ class PlaywrightBrowserProvider(IBrowserProvider):
             browser_type = getattr(pw, config.browser_type)
             browser = await browser_type.launch(**pw_args)
         except Exception as exc:
+            exc_str = str(exc).lower()
+            if "executable" in exc_str and ("does not exist" in exc_str or "not found" in exc_str):
+                raise BrowserLaunchError(
+                    f"Playwright browser binaries are not installed.\n\n"
+                    f"  python -m playwright install {config.browser_type}\n\n"
+                    f"({exc})"
+                ) from exc
             raise BrowserLaunchError(
                 f"Failed to launch {config.browser_type} browser: {exc}"
             ) from exc

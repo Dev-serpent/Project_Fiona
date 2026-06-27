@@ -10,7 +10,7 @@ from fiona.interfaces import BrowserConfig
 # ---------------------------------------------------------------------------
 
 DEFAULT_BROWSER_TYPE = "chromium"
-DEFAULT_HEADLESS = False
+DEFAULT_HEADLESS = True
 DEFAULT_VIEWPORT_WIDTH = 1280
 DEFAULT_VIEWPORT_HEIGHT = 720
 

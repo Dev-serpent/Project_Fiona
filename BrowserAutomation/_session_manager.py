@@ -163,10 +163,10 @@ class SessionManager:
         """Create the manager in the event-loop thread, defaults used."""
         from ._config import default_config  # noqa: PLC0415
 
-        from ._playwright_provider import PlaywrightBrowserProvider  # noqa: PLC0415
+        from ._selenium_provider import SeleniumBrowserProvider  # noqa: PLC0415
 
         config = self._config if self._config is not None else default_config()
-        provider = PlaywrightBrowserProvider()
+        provider = SeleniumBrowserProvider()
         return BrowserManager(config=config, provider=provider)
 
     def _call_async(self, coro_factory: Any, *args: Any, **kwargs: Any) -> Any:

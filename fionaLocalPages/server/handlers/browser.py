@@ -91,8 +91,13 @@ async def browser_status_handler(_request: Request) -> Response:
         page_title = ""
         try:
             ctx = manager._require_default_context()
-            page_url = ctx.page.url if hasattr(ctx, "page") else ""
-            page_title = await ctx.page.title() if hasattr(ctx, "page") else ""
+            if hasattr(ctx, "_driver"):
+                page_url = ctx._driver.current_url  # type: ignore[union-attr]
+                page_title = ctx._driver.title  # type: ignore[union-attr]
+            else:
+                # Fallback via JS evaluation for providers that don't expose _driver
+                page_url = str(await ctx.evaluate("window.location.href") or "")
+                page_title = str(await ctx.evaluate("document.title") or "")
         except Exception:
             pass
 

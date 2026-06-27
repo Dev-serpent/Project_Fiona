@@ -321,6 +321,17 @@ If the goal is achieved, set "action" to null.
                 os.unlink(tmp.name)
                 return f"Screenshot captured ({size} bytes)"
 
+            # 7. Scientific Retrieval Tools
+            if name == "sciretrieval_query":
+                query = params.get("query", "")
+                if not query:
+                    return "Error: 'query' is required."
+                from fiona.di import get_sci_retrieval_bridge
+                import asyncio
+                bridge = get_sci_retrieval_bridge()
+                result = asyncio.run(bridge.on_scientific_query(query))
+                return result
+
             return f"Error: Unknown action '{name}'"
 
         except Exception as e:

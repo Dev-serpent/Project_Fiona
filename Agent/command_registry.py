@@ -14,6 +14,7 @@ DEFAULT_ALLOWED_ACTIONS = frozenset({
     "fiona_status",
     "browser_status", "browser_navigate", "browser_click",
     "browser_type", "browser_screenshot",
+    "sciretrieval_query",
 })
 
 
@@ -148,6 +149,15 @@ DEFAULT_COMMANDS = (
         category="browser",
         description="Capture a screenshot of the current browser page.",
         input_schema={},
+    ),
+    # Scientific retrieval
+    CommandSpec(
+        name="sciretrieval_query",
+        category="research",
+        description="Query scientific databases (NCBI, PubChem, NIST) for chemical, biological, or physical data.",
+        input_schema={
+            "query": "The scientific question to research (e.g., 'What is the molecular weight of Aspirin?')"
+        },
     ),
 )
 

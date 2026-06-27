@@ -4,13 +4,15 @@ All terminal logic lives server-side.  The frontend is a thin client that
 sends user input to ``POST /api/v1/terminal/exec`` and displays whatever
 ``stdout`` / ``stderr`` the backend returns.
 
-Built-in commands (``help``, ``clear``) are handled entirely in Python
-so the frontend never needs to know about them.
+The backend tracks the current working directory (``_cwd``) across
+commands so that ``cd`` works correctly — each subprocess runs in the
+tracked directory.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import shlex
 from typing import Any
 
@@ -21,7 +23,13 @@ from TerminalAssist import terminal_assist_status
 
 from fionaLocalPages.server.middleware import ApiError
 
+
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Persistent session state (single-user; all tabs share the same cwd)
+# ---------------------------------------------------------------------------
+_cwd: str = os.path.expanduser("~")
 
 # ---------------------------------------------------------------------------
 # Categorized command reference (server-side)
@@ -190,6 +198,36 @@ def _find_autocomplete_matches(partial: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+async def terminal_cwd(_request: Request) -> Response:
+    """GET /api/v1/terminal/cwd — return the current working directory."""
+    return json_response({
+        "ok": True,
+        "data": {"cwd": _cwd},
+    })
+
+
+def _resolve_cd(dest: str) -> str | None:
+    """Resolve a ``cd`` destination relative to ``_cwd``.
+
+    Returns the resolved absolute path, or ``None`` if the path does not
+    exist or is not a directory.
+    """
+    global _cwd
+    dest = dest.strip()
+    if not dest or dest == "~":
+        resolved = os.path.expanduser("~")
+    elif dest.startswith("~"):
+        resolved = os.path.expanduser(dest)
+    elif dest.startswith("/"):
+        resolved = dest
+    else:
+        resolved = os.path.normpath(os.path.join(_cwd, dest))
+    if os.path.isdir(resolved):
+        _cwd = resolved
+        return _cwd
+    return None
+
+
 async def terminal_exec(request: Request) -> Response:
     """POST /api/v1/terminal/exec
 
@@ -205,8 +243,13 @@ async def terminal_exec(request: Request) -> Response:
         Returns the full categorized command reference as ``stdout``.
     ``clear``
         Clears the terminal (returns ``"action": "clear"``).
+    ``cd <path>``
+        Changes the server-side current working directory (``_cwd``).
+        Returns the new ``cwd`` in the response so the frontend can
+        update its prompt.
 
-    Everything else is forwarded to :func:`safe_subprocess_run`.
+    Everything else is forwarded to :func:`safe_subprocess_run` with
+    ``cwd=_cwd`` so that the working directory persists across commands.
     """
     try:
         body: dict[str, Any] = await request.json()
@@ -230,6 +273,7 @@ async def terminal_exec(request: Request) -> Response:
                 "stdout": _build_help_text(),
                 "stderr": "",
                 "command": raw,
+                "cwd": _cwd,
             },
         })
 
@@ -243,6 +287,84 @@ async def terminal_exec(request: Request) -> Response:
                 "stdout": "",
                 "stderr": "",
                 "command": raw,
+                "cwd": _cwd,
+            },
+        })
+
+    # ── Built-in: cd (server-side directory tracking) ─────────────────
+    if raw_lower.startswith("cd "):
+        dest = raw[3:].strip()
+        if not dest or dest == "~":
+            _resolve_cd("~")
+            return json_response({
+                "ok": True,
+                "data": {
+                    "returncode": 0,
+                    "stdout": "",
+                    "stderr": "",
+                    "command": raw,
+                    "cwd": _cwd,
+                },
+            })
+        elif dest == "-":
+            # cd - is not tracked; just no-op
+            return json_response({
+                "ok": True,
+                "data": {
+                    "returncode": 0,
+                    "stdout": _cwd,
+                    "stderr": "",
+                    "command": raw,
+                    "cwd": _cwd,
+                },
+            })
+        else:
+            resolved = _resolve_cd(dest)
+            if resolved is None:
+                # Directory does not exist — let the shell try so the
+                # user gets the proper error message.
+                try:
+                    args = shlex.split(raw)
+                except ValueError:
+                    args = raw.split()
+                completed = safe_subprocess_run(
+                    args,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=_cwd,
+                )
+                return json_response({
+                    "ok": True,
+                    "data": {
+                        "returncode": completed.returncode,
+                        "stdout": completed.stdout or "",
+                        "stderr": completed.stderr or "",
+                        "command": raw,
+                        "cwd": _cwd,
+                    },
+                })
+            return json_response({
+                "ok": True,
+                "data": {
+                    "returncode": 0,
+                    "stdout": "",
+                    "stderr": "",
+                    "command": raw,
+                    "cwd": _cwd,
+                },
+            })
+
+    # ── Built-in: pwd (return tracked directory) ──────────────────────
+    if raw_lower == "pwd":
+        return json_response({
+            "ok": True,
+            "data": {
+                "returncode": 0,
+                "stdout": _cwd + "\n",
+                "stderr": "",
+                "command": raw,
+                "cwd": _cwd,
             },
         })
 
@@ -261,6 +383,7 @@ async def terminal_exec(request: Request) -> Response:
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=_cwd,
         )
         return json_response({
             "ok": True,
@@ -269,6 +392,7 @@ async def terminal_exec(request: Request) -> Response:
                 "stdout": completed.stdout or "",
                 "stderr": completed.stderr or "",
                 "command": raw,
+                "cwd": _cwd,
             },
         })
     except ShellCommandError as exc:

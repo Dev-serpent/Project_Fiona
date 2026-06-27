@@ -1,7 +1,7 @@
 /* ==========================================================================
    browser.js — Browser Automation Page
    ==========================================================================
-   Control panel for Fiona's Playwright-based browser automation.
+   Control panel for Fiona's Selenium-based browser automation.
    Features browser lifecycle management, URL navigation, element
    interaction, console log capture, screenshot gallery, and multi-
    session (tab) management.

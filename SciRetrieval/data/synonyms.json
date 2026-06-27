@@ -1,0 +1,26 @@
+{
+  "aspirin": {
+    "canonical_id": "pubchem:2244",
+    "canonical_name": "Aspirin",
+    "aliases": ["acetylsalicylic acid", "ASA", "2-acetoxybenzoic acid"],
+    "entity_type": "chemical_compound"
+  },
+  "glucose": {
+    "canonical_id": "pubchem:5793",
+    "canonical_name": "Glucose",
+    "aliases": ["dextrose", "D-glucose", "blood sugar"],
+    "entity_type": "chemical_compound"
+  },
+  "tp53": {
+    "canonical_id": "ncbi:7157",
+    "canonical_name": "TP53",
+    "aliases": ["p53", "tumor protein p53", "cellular tumor antigen p53"],
+    "entity_type": "protein"
+  },
+  "brca1": {
+    "canonical_id": "ncbi:672",
+    "canonical_name": "BRCA1",
+    "aliases": ["breast cancer type 1 susceptibility protein", "RNF53"],
+    "entity_type": "protein"
+  }
+}

@@ -167,6 +167,16 @@ def default_action_specs() -> tuple[ActionSpec, ...]:
         ActionSpec("approval.deny", ("approval", "deny"),
                    "Deny a pending plan.",
                    risk="medium", permission="control", sender_scope="local"),
+        # SciPhi — scientific investigation
+        ActionSpec("sciphi.research", ("sciphi", "research"),
+                   "Conduct a full scientific investigation.",
+                   risk="low", permission="read", sender_scope="local"),
+        ActionSpec("sciphi.list_models", ("sciphi", "list-models"),
+                   "List available scientific models.",
+                   risk="low", permission="read", sender_scope="local"),
+        ActionSpec("sciphi.list_solvers", ("sciphi", "list-solvers"),
+                   "List available solvers.",
+                   risk="low", permission="read", sender_scope="local"),
     )
 
 

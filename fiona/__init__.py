@@ -14,6 +14,7 @@ Fiona is split into sibling subsystems:
 - RecallVault: structured remembrance storage
 - FionaCore: shared action router, permissions, notifications, voice, and macros
 - BrowserAutomation: web browser automation via Playwright
+- SciRetrieval: scientific knowledge retrieval from NCBI, PubChem, NIST
 """
 
 from __future__ import annotations

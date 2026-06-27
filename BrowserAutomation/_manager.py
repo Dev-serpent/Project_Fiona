@@ -26,7 +26,7 @@ from ._errors import (
     BrowserNotRunning,
     BrowserShutdownError,
 )
-from ._playwright_provider import PlaywrightBrowserProvider
+from ._selenium_provider import SeleniumBrowserProvider
 
 
 class BrowserManagerState(Enum):
@@ -66,18 +66,18 @@ class BrowserManager:
     Args:
         config: Browser configuration.  If omitted, defaults are used.
         provider: Browser provider.  If omitted, a new
-            :class:`PlaywrightBrowserProvider` is created.
+            :class:`SeleniumBrowserProvider` is created.
         event_bus: Optional event bus for publishing lifecycle events.
     """
 
     def __init__(
         self,
         config: BrowserConfig | None = None,
-        provider: PlaywrightBrowserProvider | None = None,
+        provider: SeleniumBrowserProvider | None = None,
         event_bus: EventBus | None = None,
     ) -> None:
         self._config = config or default_config()
-        self._provider = provider or PlaywrightBrowserProvider()
+        self._provider = provider or SeleniumBrowserProvider()
         self._event_bus = event_bus
 
         self._lock = threading.Lock()
@@ -115,17 +115,26 @@ class BrowserManager:
     async def start(self) -> None:
         """Start the browser.
 
-        Transitions: ``STOPPED → STARTING → RUNNING``
+        Transitions: ``{STOPPED, ERROR} → STARTING → RUNNING``
+
+        If the browser is already running this is a no-op (returns
+        immediately).
 
         Raises:
             BrowserLaunchError: If the browser cannot be launched.
-            RuntimeError: If called from an invalid state
-                (e.g. already running or starting).
+            RuntimeError: If called from STARTING (a concurrent start
+                is already in progress).
         """
         with self._lock:
-            self._assert_state("start", BrowserManagerState.STOPPED)
+            # Already running — no-op
+            if self._state == BrowserManagerState.RUNNING:
+                return
+            self._assert_state("start", BrowserManagerState.STOPPED, BrowserManagerState.ERROR)
             self._state = BrowserManagerState.STARTING
             self._crash_count = 0
+            # Clear stale contexts from a previous error state
+            self._contexts.clear()
+            self._instance = None
 
         try:
             instance = await self._provider.launch(self._config)

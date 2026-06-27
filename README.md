@@ -30,7 +30,7 @@ If `fiona` prints `command not found`, the package has not been installed into t
 
 ## Current Architecture
 
-Fiona is the umbrella package. It exposes thirteen sibling subsystems:
+Fiona is the umbrella package. It exposes fourteen sibling subsystems:
 
 - `QuikTieper`: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.
 - `CamComs`: communication layer for encoded/encrypted messages, currently focused on ESP32 sender to Fiona host receiver, with pairing, key rotation, and trust expiry.
@@ -45,6 +45,7 @@ Fiona is the umbrella package. It exposes thirteen sibling subsystems:
 - `TerminalAssist`: Fiona Terminal Assistance (`fAT`) btop-style terminal dashboard and Zellij workspace helper.
 - `RecallVault`: small persistent remembrance store for key-value snippets and categories.
 - `CmdTrace`: high-performance JSONL-based observability log for all routed actions.
+- `SciRetrieval`: scientific knowledge retrieval subsystem — domain-aware query routing to NCBI/PubChem/NIST with normalization, entity resolution, SciLab processing, and cache-managed memory.
 
 Project layout:
 
@@ -63,9 +64,10 @@ DataClient/            research/data collection app
 EyeControl/            optional eye-controlled mouse tracker integration
 TerminalAssist/        Fiona Terminal Assistance and Zellij layout generation
 RecallVault/           persistent remembrance storage
+SciRetrieval/          scientific knowledge retrieval subsystem
 CmdTrace/              action trace logging
 scripts/               local launch wrappers
-tests/                 Python tests (740+)
+tests/                 Python tests (1018+)
 DEVELOPERNOTE.md       detailed project notes and latest verification log
 pyproject.toml         package metadata and Python dependencies
 ```
@@ -903,6 +905,106 @@ Preview a table from the terminal:
 python3 -m fiona.cli dataclient view ./research.csv --limit 5
 ```
 
+## SciRetrieval — Scientific Knowledge Retrieval
+
+SciRetrieval is a multi-provider scientific knowledge retrieval subsystem. Given a free-text query, it:
+
+1. **Classifies** the query into a scientific domain (biology, chemistry, physics) and intent (lookup, compare, explain, list).
+2. **Routes** to the best-fit provider (NCBI, PubChem, NIST) based on domain.
+3. **Retrieves** data with graceful degradation (provider failures never crash the pipeline).
+4. **Normalizes** results into a standard schema.
+5. **Resolves entities** via a synonym registry (`synonyms.json`) with canonical ID assignment.
+6. **Processes** through the SciLab pipeline for structured summarization.
+7. **Caches** conversation results (TTL 5 min) and NIST datasets (disk-persisted).
+
+Architecture:
+
+```text
+User Query → Router → EntityResolver → Normalizer → Providers (NCBI/PubChem/NIST)
+                                                        │
+                                                        ▼
+                                                  SciLab Processor
+                                                        │
+                                                        ▼
+                                              CacheManager → Response
+```
+
+### CLI
+
+```bash
+# Route through the full pipeline
+fiona sire query "What is the molecular weight of Aspirin?"
+fiona sr  query "How does p53 regulate apoptosis?"
+
+# Classify a query without retrieving
+fiona sire classify "What is the speed of light?"
+
+# List registered providers
+fiona sire providers
+
+# Direct provider lookup
+fiona sire getdata pubchem aspirin
+```
+
+### Agent Integration
+
+The Agent chat system auto-detects scientific queries and optionally enriches prompts with scientific context:
+
+```bash
+# Agent ask with scientific enrichment
+python3 -m fiona.cli agent ask --model qwen3:8b --enrich-science "What is the function of BRCA1?"
+
+# Web API (fionaLocalPages)
+curl -X POST http://localhost:8765/api/v1/agent/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "What is the speed of light?", "enrich_science": true}'
+```
+
+### Terminal Integration (fionaLocalPages)
+
+In the web terminal page:
+
+```text
+science search <query>     Search scientific databases
+science classify <query>   Classify a scientific query
+science providers          List registered data providers
+science getdata <p> <e>    Direct provider lookup
+science cache              Clear retrieval caches
+```
+
+### REST API
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/sciretrieval/search` | POST | Full pipeline search |
+| `/api/v1/sciretrieval/classify` | POST | Classify query domain |
+| `/api/v1/sciretrieval/providers` | GET | List registered providers |
+| `/api/v1/sciretrieval/getdata` | POST | Direct provider lookup |
+| `/api/v1/sciretrieval/enrich` | POST | Detect if message is scientific |
+| `/api/v1/sciretrieval/cache/clear` | POST | Clear all caches |
+
+### Dependencies
+
+SciRetrieval has optional dependencies for HTTP-based providers:
+
+```bash
+pip install -e ".[sciretrieval]"    # Installs aiohttp for NCBI/PubChem/NIST
+```
+
+Without `aiohttp`, the providers degrade gracefully and return informative error messages.
+
+### Data Files
+
+- `SciRetrieval/data/keywordlist.json` — Domain classification keywords (30 biology, 32 chemistry, 34 physics) + intent patterns
+- `SciRetrieval/data/synonyms.json` — Entity synonym registry with canonical IDs (Aspirin, Glucose, TP53, BRCA1)
+
+### Tests
+
+```bash
+python3 -m pytest tests/sci_retrieval/ -v
+# 278 tests across 13 files
+```
+
 ## Agent And Ollama
 
 Agent is the bridge toward the future AI agent. It talks to Ollama as a local inference server, using Ollama's OpenAI-compatible API.
@@ -994,6 +1096,11 @@ Working today:
 - Vsee point/edge hologram viewer
 - project-restricted GUI debug editor
 - curated app command presets through `normalize-app-cmds`
+- Scientific knowledge retrieval with domain classification, multi-provider routing (NCBI/PubChem/NIST), normalization, entity resolution, SciLab processing, and cache-managed memory
+- Web terminal integration with `science` commands (search, classify, providers, getdata, cache)
+- Agent chat enrichment with auto-detection of scientific queries
+- REST API for all retrieval operations (6 endpoints)
+- Python tests for SciRetrieval subsystem (278 tests, 13 files)
 - Python tests for core model, crypto, transport, service, ACL, shell safety, macro engine, pairing, voice, and system tray paths (740+ tests)
 
 Still incomplete:
@@ -1024,13 +1131,13 @@ python -m pytest tests/ -v
 Compile the main packages:
 
 ```bash
-python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
+python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SciRetrieval SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
 
 Current latest known result:
 
 ```text
-740 tests in 26.48s
+1018 tests in 33.03s
 OK (17 pre-existing environment failures unrelated to roadmap)
 compileall OK
 ```

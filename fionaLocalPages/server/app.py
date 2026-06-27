@@ -48,7 +48,7 @@ from fionaLocalPages.server.middleware import (
     logging_middleware,
 )
 
-from fionaLocalPages.server.websocket import WebSocketManager
+from fionaLocalPages.server.ws_server import WebSocketManager
 
 from fionaLocalPages.server.handlers import (
     actions,
@@ -65,6 +65,7 @@ from fionaLocalPages.server.handlers import (
     phiconnect,
     quiktieper,
     recall,
+    sciretrieval,  # ADD
     settings_handler as settings,
     system,
     terminal,
@@ -220,6 +221,7 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_post("/api/v1/voice/transcribe", voice.voice_transcribe)
 
     # ── Terminal ───────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/terminal/cwd", terminal.terminal_cwd)
     app.router.add_post("/api/v1/terminal/exec", terminal.terminal_exec)
     app.router.add_post("/api/v1/terminal/autocomplete", terminal.terminal_autocomplete)
     app.router.add_get("/api/v1/terminal/status", terminal.terminal_status)
@@ -297,6 +299,14 @@ def _setup_api_routes(app: web.Application) -> None:
     # ── Settings ───────────────────────────────────────────────────────
     app.router.add_get("/api/v1/settings", settings.get_settings)
     app.router.add_put("/api/v1/settings", settings.put_settings)
+
+    # ── SciRetrieval ───────────────────────────────────────────────────
+    app.router.add_post("/api/v1/sciretrieval/search", sciretrieval.sciretrieval_search)
+    app.router.add_post("/api/v1/sciretrieval/classify", sciretrieval.sciretrieval_classify)
+    app.router.add_get("/api/v1/sciretrieval/providers", sciretrieval.sciretrieval_providers)
+    app.router.add_post("/api/v1/sciretrieval/getdata", sciretrieval.sciretrieval_getdata)
+    app.router.add_post("/api/v1/sciretrieval/cache/clear", sciretrieval.sciretrieval_cache_clear)
+    app.router.add_post("/api/v1/sciretrieval/enrich", sciretrieval.sciretrieval_enrich)
 
 
 def _setup_websocket(app: web.Application) -> None:

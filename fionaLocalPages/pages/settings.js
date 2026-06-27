@@ -107,7 +107,7 @@ const DEFAULT_SETTINGS = {
   integrations: {
     ollamaUrl: 'http://localhost:11434',
     browserType: 'chromium',
-    browserHeadless: false,
+    browserHeadless: true,
     gitEnabled: true,
     dockerEnabled: false,
   },

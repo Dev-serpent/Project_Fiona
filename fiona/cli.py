@@ -193,6 +193,15 @@ def main() -> None:
         _run_approval(args)
         return
 
+    if args.layer == "sciphi":
+        _run_sciphi(args)
+        return
+
+    if args.layer in {"sire", "sr"}:
+        from SciRetrieval.cli import run as sire_main
+        sire_main(args.sire_args)
+        return
+
     parser.print_help()
 
 
@@ -482,6 +491,18 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     deny_p = approval_sub.add_parser("deny", help="Deny a pending plan.")
     deny_p.add_argument("plan_id", help="Plan ID to deny.")
     deny_p.add_argument("--reason", default="", help="Reason for denial.")
+
+    sciphi_parser = subparsers.add_parser(
+        "sciphi", help="SciPhi — scientific investigation and simulation engine."
+    )
+    sciphi_parser.add_argument("sciphi_args", nargs=argparse.REMAINDER)
+
+    sire_parser = subparsers.add_parser(
+        "sire",
+        aliases=["sr"],
+        help="SciRetrieval — scientific knowledge retrieval from NCBI, PubChem, NIST.",
+    )
+    sire_parser.add_argument("sire_args", nargs=argparse.REMAINDER)
 
     subparsers.add_parser("phiconnect", help="Open the standalone PhiConnect encrypted chat window.")
 
@@ -1403,6 +1424,12 @@ def _run_approval(args: argparse.Namespace) -> None:
     elif args.approval_command == "deny":
         success = manager.deny_plan(args.plan_id, args.reason)
         print(f"Plan {args.plan_id}: {'denied' if success else 'not found or not pending'}")
+
+
+def _run_sciphi(args: argparse.Namespace) -> None:
+    """Dispatch SciPhi CLI commands."""
+    from SciPhi.cli import main as sciphi_main
+    sciphi_main(args.sciphi_args)
 
 
 def _run_seeondesk(args: argparse.Namespace) -> None:

@@ -1,0 +1,20 @@
+{
+  "biology": {
+    "keywords": ["gene", "dna", "rna", "protein", "disease", "cell", "taxonomy", "genome", "chromosome", "mutation", "enzyme", "receptor", "kinase", "transcription", "expression", "function", "pathway", "organism", "species", "metabolism", "oncogene", "tumor", "nucleotide", "amino", "lipid", "carbohydrate", "mitochondria", "ribosome", "signaling", "regulation"],
+    "weight": 1.0
+  },
+  "chemistry": {
+    "keywords": ["compound", "molecule", "molecular", "weight", "mass", "molar", "mole", "atomic", "reaction", "element", "formula", "structure", "bond", "acid", "base", "salt", "solution", "concentration", "pH", "oxidation", "catalyst", "polymer", "isomer", "chemical", "synthesis", "valence", "electron", "proton", "neutron", "isotope", "orbital", "ligand"],
+    "weight": 1.0
+  },
+  "physics": {
+    "keywords": ["speed", "light", "frequency", "wavelength", "current", "voltage", "resistance", "constant", "unit", "spectroscopy", "material", "dataset", "mechanics", "optics", "thermodynamics", "quantum", "electromagnetic", "wave", "force", "energy", "velocity", "acceleration", "field", "particle", "gravity", "momentum", "inertia", "density", "pressure", "temperature", "conductivity", "refraction", "diffraction", "polarization"],
+    "weight": 1.0
+  },
+  "intent": {
+    "lookup": ["what is", "what's", "what are", "find", "search", "look up", "get", "show me", "tell me about", "define", "calculate", "compute", "determine"],
+    "compare": ["compare", "versus", "vs", "difference between", "vs.", "similarities", "contrast", "differentiate"],
+    "explain": ["explain", "how does", "why does", "describe", "mechanism", "how do", "worked out", "step by step", "solved"],
+    "list": ["list", "all", "types of", "kinds of", "examples of", "enumerate", "catalog"]
+  }
+}

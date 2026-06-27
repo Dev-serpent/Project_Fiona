@@ -3,6 +3,11 @@
 These tests **never** import Playwright at module level — all mocking
 happens via monkey-patching ``find_spec`` and ``async_playwright``
 at runtime.
+
+.. deprecated::
+   The Playwright provider has been replaced by
+   :class:`BrowserAutomation._selenium_provider.SeleniumBrowserProvider`.
+   These tests are preserved for reference only and are all skipped.
 """
 
 from __future__ import annotations
@@ -23,6 +28,8 @@ from BrowserAutomation._errors import (
     SelectorTimeout,
 )
 from fiona.interfaces import BrowserConfig, NavigationEvent
+
+pytestmark = pytest.mark.skip(reason="Playwright provider is deprecated; replaced by SeleniumBrowserProvider")
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +101,7 @@ class TestLaunchLifecycle:
         assert instance.is_closed is False
         assert instance.pid is not None
 
+    @pytest.mark.skip(reason="PlaywrightProvider is deprecated; replaced by SeleniumBrowserProvider")
     async def test_launch_browser_launch_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_mocks(monkeypatch, launch_should_fail=True)
         provider = PlaywrightBrowserProvider()
