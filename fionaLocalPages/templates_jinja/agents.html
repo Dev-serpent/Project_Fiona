@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Agents{% endblock %}
+
+{% block page_actions %}
+<button class="c-btn c-btn--primary c-btn--sm" id="btn-new-agent" onclick="alert('New agent creation coming soon.')">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </span>
+  New Agent
+</button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .agents-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+  }
+  .agent-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .agent-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .agent-card__header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .agent-card__name {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary); word-break: break-word;
+  }
+  .agent-card__detail {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: var(--space-2);
+  }
+  .agent-card__label {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+  }
+  .agent-card__value {
+    font-size: var(--font-size-sm); color: var(--text-primary);
+    font-family: var(--font-mono);
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Manage your AI agents and their configurations.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if agents %}
+<div class="agents-grid">
+  {% for agent in agents %}
+  <div class="c-card agent-card">
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div class="agent-card__header">
+        <span class="agent-card__name">{{ agent.name|default('Unnamed Agent') }}</span>
+        {% if agent.status %}
+        <span class="c-badge c-badge--sm" style="flex-shrink: 0;
+          {% if agent.status == 'active' %}background: var(--success-transparent, rgba(34, 197, 94, 0.15)); color: var(--success, #22c55e);
+          {% elif agent.status == 'paused' %}background: var(--warning-transparent, rgba(234, 179, 8, 0.15)); color: var(--warning, #eab308);
+          {% elif agent.status == 'stopped' %}background: var(--danger-transparent, rgba(239, 68, 68, 0.15)); color: var(--danger, #ef4444);
+          {% else %}background: var(--surface-raised); color: var(--text-muted);{% endif %}">
+          {{ agent.status }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="agent-card__detail">
+        <span class="agent-card__label">Model</span>
+        <span class="agent-card__value">{{ agent.model|default('—') }}</span>
+      </div>
+
+      {% if agent.created_at %}
+      <div class="agent-card__detail" style="margin-top: var(--space-1);">
+        <span class="agent-card__label">Created</span>
+        <span class="agent-card__value">{{ agent.created_at[:10] }}</span>
+      </div>
+      {% endif %}
+
+      {% if agent.id %}
+      <div class="agent-card__detail" style="margin-top: var(--space-1);">
+        <span class="agent-card__label">ID</span>
+        <span class="agent-card__value" style="font-size: var(--font-size-xxs); word-break: break-all;">{{ agent.id }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="11" width="18" height="10" rx="2"/>
+      <circle cx="12" cy="5" r="2"/>
+      <path d="M12 5v6"/>
+      <path d="M8 11l-2 5"/>
+      <path d="M16 11l2 5"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No agents found</div>
+  <div class="empty-state__description">
+    Create your first agent to get started with automated workflows.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

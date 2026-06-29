@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Macros{% endblock %}
+
+{% block page_actions %}
+<button class="c-btn c-btn--primary c-btn--sm" id="btn-new-macro" onclick="alert('New macro creation coming soon.')">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </span>
+  New Macro
+</button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .macros-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+  }
+  .macro-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .macro-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .macro-card__header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .macro-card__name {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary); word-break: break-word;
+  }
+  .macro-card__meta {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    margin-top: var(--space-2);
+  }
+  .macro-card__steps {
+    margin-top: var(--space-3);
+  }
+  .macro-card__step {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-1) 0;
+    font-size: var(--font-size-xs); color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+  .macro-card__step-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--surface-raised); color: var(--text-muted);
+    font-size: 10px; font-weight: var(--font-weight-medium); flex-shrink: 0;
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Automate repetitive tasks with reusable macros.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if macros %}
+<div class="macros-grid">
+  {% for macro in macros %}
+  <div class="c-card macro-card">
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <div class="macro-card__header">
+        <span class="macro-card__name">{{ macro.name|default('Unnamed Macro') }}</span>
+      </div>
+      {% if macro.description %}
+      <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: var(--space-2) 0 0 0; word-break: break-word;">
+        {{ macro.description }}
+      </p>
+      {% endif %}
+      {% if macro.created_at %}
+      <div class="macro-card__meta">
+        Created {{ macro.created_at[:10] }}
+      </div>
+      {% endif %}
+      {% if macro.steps %}
+      <div class="macro-card__steps">
+        {% for step in macro.steps %}
+        <div class="macro-card__step">
+          <span class="macro-card__step-number">{{ loop.index }}</span>
+          <span>{{ step }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No macros saved</div>
+  <div class="empty-state__description">
+    Create your first macro to automate repetitive tasks.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

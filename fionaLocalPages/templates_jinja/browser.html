@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Browser{% endblock %}
+
+{% block content %}
+<style>
+  .browser-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: calc(100vh - 260px); min-height: 350px;
+    text-align: center; gap: var(--space-4);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  .browser-placeholder__icon { color: var(--text-muted); opacity: 0.3; }
+  .browser-placeholder__title {
+    font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  .browser-placeholder__desc {
+    font-size: var(--font-size-sm); color: var(--text-muted);
+    max-width: 420px; line-height: 1.6;
+  }
+  .browser-fake-ui {
+    margin-top: var(--space-4); width: 100%; max-width: 500px;
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    overflow: hidden; opacity: 0.6;
+  }
+  .browser-fake-ui__bar {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised); border-bottom: 1px solid var(--border-subtle);
+  }
+  .browser-fake-ui__dots {
+    display: flex; gap: 4px;
+  }
+  .browser-fake-ui__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .browser-fake-ui__dot:nth-child(1) { background: #ef4444; }
+  .browser-fake-ui__dot:nth-child(2) { background: #eab308; }
+  .browser-fake-ui__dot:nth-child(3) { background: #22c55e; }
+  .browser-fake-ui__url {
+    flex: 1; padding: 4px 8px; font-size: var(--font-size-xs);
+    background: var(--surface); border-radius: var(--radius-sm);
+    color: var(--text-muted); font-family: var(--font-mono);
+    text-align: center;
+  }
+  .browser-fake-ui__body {
+    padding: var(--space-8) var(--space-4);
+    text-align: center; color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+</style>
+
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Browser automation — control web browsers programmatically through Fiona.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="browser-placeholder">
+  <div class="browser-placeholder__icon">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+  </div>
+  <div class="browser-placeholder__title">Browser control interface coming soon</div>
+  <div class="browser-placeholder__desc">
+    The browser automation interface will allow you to control web browsers remotely, navigate pages, extract data, and automate web workflows — all from within Fiona.
+  </div>
+
+  <div class="browser-fake-ui">
+    <div class="browser-fake-ui__bar">
+      <div class="browser-fake-ui__dots">
+        <span class="browser-fake-ui__dot"></span>
+        <span class="browser-fake-ui__dot"></span>
+        <span class="browser-fake-ui__dot"></span>
+      </div>
+      <span class="browser-fake-ui__url">https://fiona.local</span>
+    </div>
+    <div class="browser-fake-ui__body">
+      Browser viewport will render here
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Browser</strong> — This page provides a placeholder for browser automation. Full functionality will be available once the backend browser control service (e.g., Playwright or Puppeteer) is connected.
+</p>
+{% endblock %}

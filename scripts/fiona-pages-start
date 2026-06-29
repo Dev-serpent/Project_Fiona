@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # ============================================================================
-# fiona-pages-start — Launch the Fiona Local Pages API Server
+# fiona-pages-start — Launch the Fiona API Server + Pages Server
 # ============================================================================
-# Starts the aiohttp backend that serves the static frontend and REST API.
-# Makes the server accessible at  http://fiona.agent:8765  on the local
-# machine, and at  http://<lan-ip>:8765  from other devices on the network.
+# Starts:
+#   1. aiohttp backend (API + static files) on port 8765
+#   2. Flask/Jinja2 pages server on port 5000
 #
 # Usage:
-#   ./scripts/fiona-pages-start                 # default port 8765
-#   ./scripts/fiona-pages-start --port 8080     # custom port
-#   ./scripts/fiona-pages-start --debug         # verbose logging
+#   ./scripts/fiona-pages-start                         # default ports
+#   ./scripts/fiona-pages-start --api-port 8080          # custom API port
+#   ./scripts/fiona-pages-start --pages-port 3000        # custom Pages port
+#   ./scripts/fiona-pages-start --debug                  # verbose logging
 # ============================================================================
 
 set -euo pipefail
@@ -19,24 +20,36 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PIDFILE="/tmp/fiona-pages.pid"
 HOSTS_SENTINEL="/tmp/fiona-pages.hosts-added"
 
-# ── Resolve port from args ────────────────────────────────────────────────
-PORT="8765"
+# ── Default ports ───────────────────────────────────────────────────────────
+API_PORT="8765"
+PAGES_PORT="5000"
 DEBUG=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --port) PORT="$2"; shift 2 ;;
-    --debug) DEBUG="--debug"; shift ;;
+    --api-port)  API_PORT="$2";   shift 2 ;;
+    --pages-port) PAGES_PORT="$2"; shift 2 ;;
+    --port)      API_PORT="$2";   PAGES_PORT="$((API_PORT - 3765))"; shift 2 ;;
+    --debug)     DEBUG="--debug"; shift ;;
     *) shift ;;
   esac
 done
 
 # ── Check if already running ──────────────────────────────────────────────
 if [ -f "$PIDFILE" ]; then
-  OLD_PID=$(cat "$PIDFILE")
-  if kill -0 "$OLD_PID" 2>/dev/null; then
-    echo "[fiona-pages] Server already running (PID $OLD_PID) on port $PORT"
-    echo "[fiona-pages]   →  http://fiona.agent:$PORT"
-    echo "[fiona-pages] Use 'fiona-pages-stop' to stop it"
+  API_PID=$(head -1 "$PIDFILE" 2>/dev/null || echo "")
+  PAGES_PID=$(tail -1 "$PIDFILE" 2>/dev/null || echo "")
+  RUNNING=false
+  if [ -n "$API_PID" ] && kill -0 "$API_PID" 2>/dev/null; then
+    RUNNING=true
+  fi
+  if [ -n "$PAGES_PID" ] && kill -0 "$PAGES_PID" 2>/dev/null; then
+    RUNNING=true
+  fi
+  if [ "$RUNNING" = true ]; then
+    echo "[fiona-pages] Servers already running"
+    echo "[fiona-pages]   API:  http://fiona.agent:$API_PORT"
+    echo "[fiona-pages]   Pages: http://fiona.agent:$PAGES_PORT"
+    echo "[fiona-pages] Use 'fiona-pages-stop' to stop them"
     exit 0
   else
     rm -f "$PIDFILE"
@@ -44,7 +57,6 @@ if [ -f "$PIDFILE" ]; then
 fi
 
 # ── Register fiona.agent in /etc/hosts ────────────────────────────────────
-# This lets the local machine resolve http://fiona.agent → 127.0.0.1.
 HOSTS_ENTRY="127.0.0.1 fiona.agent"
 if ! grep -qsi 'fiona\.agent' /etc/hosts 2>/dev/null; then
   echo "[fiona-pages] Adding '$HOSTS_ENTRY' to /etc/hosts (sudo required)…"
@@ -59,34 +71,67 @@ else
   echo "[fiona-pages] fiona.agent already in /etc/hosts"
 fi
 
-# ── Launch server in background ───────────────────────────────────────────
-# Bind to 0.0.0.0 so the server is reachable from other devices on the LAN.
+# ── Launch API server (aiohttp) ──────────────────────────────────────────
 cd "$PROJECT_ROOT"
-/usr/bin/python3 fionaLocalPages/server/app.py --host 0.0.0.0 --port "$PORT" $DEBUG &
-SERVER_PID=$!
-echo "$SERVER_PID" > "$PIDFILE"
+API_LOG="$PROJECT_ROOT/logs/api-server.log"
+mkdir -p "$(dirname "$API_LOG")"
+echo "[fiona-pages] Starting API server on port $API_PORT …"
+nohup /usr/bin/python3 fionaLocalPages/server/app.py --host 0.0.0.0 --port "$API_PORT" $DEBUG \
+  > "$API_LOG" 2>&1 &
+API_PID=$!
+disown
 
-# ── Wait for server to be ready (up to 10 seconds) ────────────────────────
-echo -n "[fiona-pages] Starting server on http://fiona.agent:$PORT …"
-for i in $(seq 1 20); do
-  if curl -sf "http://127.0.0.1:$PORT/api/v1/health" >/dev/null 2>&1; then
-    LAN_IP=$(ip -4 route get 1 2>/dev/null | grep -oP 'src \K[\d.]+' || echo "<lan-ip>")
-    echo " ready (PID $SERVER_PID)"
-    echo ""
-    echo "  ┌─────────────────────────────────────────────────────┐"
-    echo "  │  Fiona Local Pages                                 │"
-    echo "  │                                                     │"
-    echo "  │  Local:    http://fiona.agent:$PORT                  │"
-    echo "  │  Network:  http://$LAN_IP:$PORT                      │"
-    echo "  │                                                     │"
-    echo "  │  Stop:     ./scripts/fiona-pages-stop               │"
-    echo "  └─────────────────────────────────────────────────────┘"
-    exit 0
+# ── Launch Pages server (Flask) ──────────────────────────────────────────
+PAGES_LOG="$PROJECT_ROOT/logs/pages-server.log"
+echo "[fiona-pages] Starting Pages server on port $PAGES_PORT …"
+nohup /usr/bin/python3 fionaLocalPages/server/flask_app.py --port "$PAGES_PORT" --host 0.0.0.0 \
+  > "$PAGES_LOG" 2>&1 &
+PAGES_PID=$!
+disown
+
+# ── Write both PIDs to PID file ─────────────────────────────────────────
+echo "$API_PID"  > "$PIDFILE"
+echo "$PAGES_PID" >> "$PIDFILE"
+
+# ── Wait for both servers to be ready (up to 20 seconds) ────────────────
+echo -n "[fiona-pages] Waiting for servers to start …"
+
+API_READY=false
+PAGES_READY=false
+for i in $(seq 1 40); do
+  if [ "$API_READY" = false ] && curl -sf "http://127.0.0.1:$API_PORT/api/v1/health" >/dev/null 2>&1; then
+    API_READY=true
+  fi
+  if [ "$PAGES_READY" = false ] && curl -sf "http://127.0.0.1:$PAGES_PORT/" >/dev/null 2>&1; then
+    PAGES_READY=true
+  fi
+  if [ "$API_READY" = true ] && [ "$PAGES_READY" = true ]; then
+    break
   fi
   sleep 0.5
   echo -n "."
 done
 
-echo
-echo "[fiona-pages] WARNING: Server started (PID $SERVER_PID) but health check did not respond."
-echo "                     Check logs with:  ./scripts/fiona-pages-start --debug"
+LAN_IP=$(ip -4 route get 1 2>/dev/null | grep -oP 'src \K[\d.]+' || echo "<lan-ip>")
+
+echo " ready"
+echo ""
+echo "  ┌───────────────────────────────────────────────────────────────────┐"
+echo "  │  Fiona Servers                                                   │"
+echo "  │                                                                   │"
+echo "  │  API  Server:  http://fiona.agent:$API_PORT  (aiohttp, REST API)  │"
+echo "  │  Pages Server: http://fiona.agent:$PAGES_PORT (Flask, Jinja2 UI)  │"
+echo "  │                                                                   │"
+echo "  │  Network:                                                         │"
+echo "  │    API:   http://$LAN_IP:$API_PORT                                  │"
+echo "  │    Pages: http://$LAN_IP:$PAGES_PORT                                │"
+echo "  │                                                                   │"
+echo "  │  Stop:    ./scripts/fiona-pages-stop                              │"
+echo "  └───────────────────────────────────────────────────────────────────┘"
+
+if [ "$API_READY" = false ]; then
+  echo "[fiona-pages] WARNING: API server (PID $API_PID) health check did not respond."
+fi
+if [ "$PAGES_READY" = false ]; then
+  echo "[fiona-pages] WARNING: Pages server (PID $PAGES_PID) did not respond."
+fi

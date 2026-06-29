@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Plugins{% endblock %}
+
+{% block page_actions %}
+<button class="c-btn c-btn--primary c-btn--sm" id="btn-install-plugin" onclick="alert('Plugin installation coming soon.')">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </span>
+  Install Plugin
+</button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .plugins-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .plugins-table {
+    width: 100%; border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+  .plugins-table th {
+    text-align: left; padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    color: var(--text-secondary); font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-xs); text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .plugins-table td {
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+  .plugins-table tr:last-child td { border-bottom: none; }
+  .plugins-table tr:hover td { background: var(--surface-raised); }
+  .plugins-table__name {
+    font-weight: var(--font-weight-medium); white-space: nowrap;
+  }
+  .plugins-table__desc {
+    color: var(--text-secondary); max-width: 300px;
+  }
+  .plugins-table__version {
+    font-family: var(--font-mono); font-size: var(--font-size-xs);
+    color: var(--text-muted); white-space: nowrap;
+  }
+  .plugins-table__author {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+  }
+  .plugins-table__status {
+    white-space: nowrap;
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Extend Fiona with plugins — manage installation, enablement, and configuration.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if plugins %}
+<div class="plugins-table-wrapper">
+  <table class="plugins-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Version</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Author</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for plugin in plugins %}
+      <tr>
+        <td class="plugins-table__name">{{ plugin.name|default('—') }}</td>
+        <td class="plugins-table__version">{{ plugin.version|default('—') }}</td>
+        <td class="plugins-table__desc">{{ plugin.description|default('—') }}</td>
+        <td class="plugins-table__status">
+          {% if plugin.enabled is defined %}
+          <span class="c-badge c-badge--sm" style="
+            {% if plugin.enabled %}background: var(--success-transparent, rgba(34, 197, 94, 0.15)); color: var(--success, #22c55e);
+            {% else %}background: var(--surface-raised); color: var(--text-muted);{% endif %}">
+            {{ 'Enabled' if plugin.enabled else 'Disabled' }}
+          </span>
+          {% else %}
+          <span style="color: var(--text-muted);">—</span>
+          {% endif %}
+        </td>
+        <td class="plugins-table__author">{{ plugin.author|default('—') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+      <line x1="6" y1="6" x2="6.01" y2="6"/>
+      <line x1="6" y1="18" x2="6.01" y2="18"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No plugins installed</div>
+  <div class="empty-state__description">
+    Install plugins to extend Fiona's functionality. Plugins will appear here once installed.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

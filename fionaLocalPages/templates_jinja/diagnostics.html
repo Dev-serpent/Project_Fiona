@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Diagnostics{% endblock %}
+
+{% block content %}
+<style>
+  .diag-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4); margin-bottom: var(--space-5);
+  }
+  .diag-section { margin-bottom: var(--space-5); }
+  .diag-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-sm);
+  }
+  .diag-row:last-child { border-bottom: none; }
+  .diag-row__label { color: var(--text-muted); }
+  .diag-row__value {
+    color: var(--text-primary); font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono); font-size: var(--font-size-xs);
+  }
+  .diag-row__value--ok { color: var(--success, #22c55e); }
+  .diag-row__value--warn { color: var(--warning, #eab308); }
+  .diag-row__value--err { color: var(--danger, #ef4444); }
+  .diag-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: var(--space-8) var(--space-4);
+    text-align: center; gap: var(--space-3);
+  }
+  .diag-placeholder__icon { color: var(--text-muted); opacity: 0.3; }
+  .diag-placeholder__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+  }
+  .diag-placeholder__desc {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    max-width: 360px; line-height: 1.6;
+  }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        System diagnostics and health checks — monitor the state of Fiona services.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- System Overview -->
+<div class="diag-grid">
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">System</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+      <div class="diag-row">
+        <span class="diag-row__label">Status</span>
+        <span class="diag-row__value diag-row__value--ok">Operational</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">Uptime</span>
+        <span class="diag-row__value">—</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">Version</span>
+        <span class="diag-row__value">0.2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Backend</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+      <div class="diag-row">
+        <span class="diag-row__label">Connection</span>
+        <span class="diag-row__value diag-row__value--warn">Pending</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">Latency</span>
+        <span class="diag-row__value">—</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">Last Check</span>
+        <span class="diag-row__value">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Services</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+      <div class="diag-row">
+        <span class="diag-row__label">WebSocket</span>
+        <span class="diag-row__value diag-row__value--warn">Disconnected</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">Voice</span>
+        <span class="diag-row__value diag-row__value--warn">Standby</span>
+      </div>
+      <div class="diag-row">
+        <span class="diag-row__label">CamComs</span>
+        <span class="diag-row__value diag-row__value--warn">Standby</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Health Checks -->
+<div class="c-card diag-section">
+  <div class="c-card__header">
+    <span class="c-card__title">Health Checks</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-8) var(--space-4);">
+    <div class="diag-placeholder">
+      <div class="diag-placeholder__icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="diag-placeholder__title">Health checks placeholder</div>
+      <div class="diag-placeholder__desc">
+        Comprehensive health checks will be displayed here once the backend diagnostics service is connected. This will include memory usage, CPU load, disk space, and service status.
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Diagnostics</strong> — This page provides a placeholder for system diagnostics and health checks. Full functionality will be available once the backend diagnostics service is connected.
+</p>
+{% endblock %}

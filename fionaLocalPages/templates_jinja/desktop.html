@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — SeeOnDesk{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
+    <div>
+      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+        SeeOnDesk
+      </h1>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        Desktop awareness — active window, processes, and system resources
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Stats -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Active Window</span>
+    </div>
+    <div class="c-card__body">
+      {% if active_data and active_data.get('ok') and active_data.get('data') %}
+        {% set win = active_data['data'] %}
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); font-size: var(--font-size-sm);">
+          <div style="color: var(--text-muted);">Title</div>
+          <div style="color: var(--text-primary); font-weight: var(--font-weight-medium); word-break: break-word;">
+            {{ win.get('title', '—') }}
+          </div>
+          <div style="color: var(--text-muted);">Application</div>
+          <div style="color: var(--text-primary);">
+            {{ win.get('app_name', '—') }}
+          </div>
+          <div style="color: var(--text-muted);">Window ID</div>
+          <div style="color: var(--text-primary); font-family: var(--font-mono); font-size: var(--font-size-xs); word-break: break-all;">
+            {{ win.get('window_id', '—') }}
+          </div>
+          {% if win.get('backend') %}
+          <div style="color: var(--text-muted);">Backend</div>
+          <div style="color: var(--text-primary); font-family: var(--font-mono); font-size: var(--font-size-xs);">
+            {{ win['backend'] }}
+          </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div style="color: var(--text-muted); font-style: italic; font-size: var(--font-size-sm);">
+          Unable to fetch active window information.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Note for developers -->
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-4); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>SeeOnDesk</strong> — This page shows a server-rendered view of desktop awareness data.
+  More features (processes, applications, workspace management, polling) will be added in subsequent updates.
+</p>
+{% endblock %}

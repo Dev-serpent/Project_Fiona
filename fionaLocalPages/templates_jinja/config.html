@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Configuration{% endblock %}
+
+{% block content %}
+<style>
+  .config-section { margin-bottom: var(--space-5); }
+  .config-section:last-child { margin-bottom: 0; }
+  .config-field {
+    display: grid; grid-template-columns: 220px 1fr;
+    gap: var(--space-3); padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+  }
+  .config-field:last-child { border-bottom: none; }
+  .config-field__key {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary); font-family: var(--font-mono);
+    word-break: break-all;
+  }
+  .config-field__value {
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+    font-family: var(--font-mono); word-break: break-all;
+  }
+  .config-field__value--null {
+    color: var(--text-muted); font-style: italic;
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Application configuration — system and user-defined settings.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if configs %}
+<div class="c-card config-section">
+  <div class="c-card__header">
+    <span class="c-card__title">Configuration</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+    {% if configs is mapping %}
+      {% for key, value in configs.items() %}
+      <div class="config-field">
+        <div class="config-field__key">{{ key }}</div>
+        <div class="config-field__value{% if value is none %} config-field__value--null{% endif %}">
+          {% if value is none %}
+            null
+          {% elif value is boolean %}
+            {{ value|lower }}
+          {% elif value is mapping or value is sequence and value is not string %}
+            {{ value|tojson }}
+          {% else %}
+            {{ value }}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% elif configs is sequence %}
+      {% for entry in configs %}
+        {% if entry is mapping %}
+          {% for key, value in entry.items() %}
+          <div class="config-field">
+            <div class="config-field__key">{{ key }}</div>
+            <div class="config-field__value{% if value is none %} config-field__value--null{% endif %}">
+              {% if value is none %}
+                null
+              {% elif value is boolean %}
+                {{ value|lower }}
+              {% elif value is mapping or value is sequence and value is not string %}
+                {{ value|tojson }}
+              {% else %}
+                {{ value }}
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No configuration available</div>
+  <div class="empty-state__description">
+    Configuration data will appear here once the backend provides it.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Voice Commands{% endblock %}
+
+{% block content %}
+<style>
+  .voice-status {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-4); margin-bottom: var(--space-5);
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .voice-status__indicator {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--text-muted); flex-shrink: 0;
+    position: relative;
+  }
+  .voice-status__indicator--active {
+    background: var(--success, #22c55e);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  }
+  .voice-status__indicator--inactive {
+    background: var(--text-muted);
+  }
+  .voice-status__label {
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+  }
+  .voice-status__status {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+  .voice-info-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4); margin-bottom: var(--space-5);
+  }
+  .voice-command-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .voice-command-item:last-child { border-bottom: none; }
+  .voice-command-item__phrase {
+    font-size: var(--font-size-sm); color: var(--text-primary);
+    font-family: var(--font-mono); font-weight: var(--font-weight-medium);
+  }
+  .voice-command-item__action {
+    font-size: var(--font-size-xs); color: var(--text-secondary);
+  }
+  .voice-howto {
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    overflow: hidden; margin-bottom: var(--space-5);
+  }
+  .voice-howto__header {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .voice-howto__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  .voice-howto__body {
+    padding: var(--space-4);
+  }
+  .voice-howto__step {
+    display: flex; gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .voice-howto__step:last-child { margin-bottom: 0; }
+  .voice-howto__step-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: var(--text-on-accent);
+    font-size: var(--font-size-xs); font-weight: var(--font-weight-bold);
+    flex-shrink: 0;
+  }
+  .voice-howto__step-text {
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+    line-height: 1.6;
+  }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Control Fiona with your voice — activate commands hands-free.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Status Indicator -->
+<div class="voice-status">
+  <div class="voice-status__indicator voice-status__indicator--inactive" id="voice-indicator"></div>
+  <div>
+    <div class="voice-status__label">Voice Service</div>
+    <div class="voice-status__status" id="voice-status-text">Not connected</div>
+  </div>
+</div>
+
+<!-- Info Cards -->
+<div class="voice-info-grid">
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Voice Commands</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"open chat"</span>
+        <span class="voice-command-item__action">Opens AI Chat</span>
+      </div>
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"open terminal"</span>
+        <span class="voice-command-item__action">Opens Terminal</span>
+      </div>
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"show dashboard"</span>
+        <span class="voice-command-item__action">Returns to Dashboard</span>
+      </div>
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"run macro [name]"</span>
+        <span class="voice-command-item__action">Runs a saved macro</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Requirements</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-4);">
+      <ul style="margin: 0; padding-left: var(--space-4); font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">
+        <li>Microphone access enabled in your browser</li>
+        <li>Speech recognition API support (Chrome, Edge, Safari)</li>
+        <li>Backend voice processing service running</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- How to Use -->
+<div class="voice-howto">
+  <div class="voice-howto__header">
+    <span class="voice-howto__title">How to Use Voice Commands</span>
+  </div>
+  <div class="voice-howto__body">
+    <div class="voice-howto__step">
+      <span class="voice-howto__step-number">1</span>
+      <span class="voice-howto__step-text">
+        <strong>Enable the microphone</strong> — Grant microphone permission when prompted by your browser.
+      </span>
+    </div>
+    <div class="voice-howto__step">
+      <span class="voice-howto__step-number">2</span>
+      <span class="voice-howto__step-text">
+        <strong>Activate voice mode</strong> — Click the microphone icon in the status bar or press your configured push-to-talk key.
+      </span>
+    </div>
+    <div class="voice-howto__step">
+      <span class="voice-howto__step-number">3</span>
+      <span class="voice-howto__step-text">
+        <strong>Speak a command</strong> — Say one of the available voice commands clearly. Fiona will process and execute the action.
+      </span>
+    </div>
+    <div class="voice-howto__step">
+      <span class="voice-howto__step-number">4</span>
+      <span class="voice-howto__step-text">
+        <strong>Watch the feedback</strong> — The status indicator will show listening state. A confirmation will appear when a command is recognized.
+      </span>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Voice Commands</strong> — This page provides a reference for available voice commands.
+  Full voice interaction requires the backend speech recognition service to be running and connected.
+</p>
+{% endblock %}

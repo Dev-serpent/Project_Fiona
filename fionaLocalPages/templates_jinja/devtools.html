@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Developer Tools{% endblock %}
+
+{% block content %}
+<style>
+  .devtools-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4); margin-bottom: var(--space-5);
+  }
+  .devtools-card {
+    text-align: center; padding: var(--space-5);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .devtools-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .devtools-card__icon {
+    width: 40px; height: 40px; margin: 0 auto var(--space-3);
+    color: var(--accent);
+  }
+  .devtools-card__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary); margin-bottom: var(--space-1);
+  }
+  .devtools-card__desc {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .devtools-card__status {
+    display: inline-block; margin-top: var(--space-3);
+    font-size: var(--font-size-xs);
+  }
+  .devtools-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: var(--space-8) var(--space-4);
+    text-align: center; gap: var(--space-3);
+  }
+  .devtools-placeholder__icon { color: var(--text-muted); opacity: 0.3; }
+  .devtools-placeholder__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+  }
+  .devtools-placeholder__desc {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    max-width: 400px; line-height: 1.6;
+  }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Developer tools — inspect, debug, and extend Fiona.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="devtools-grid">
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="16 18 22 12 16 6"/>
+        <polyline points="8 6 2 12 8 18"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">API Inspector</div>
+    <div class="devtools-card__desc">Inspect and test API requests and responses in real time.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">Log Viewer</div>
+    <div class="devtools-card__desc">Browse and filter system logs with search and severity levels.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">State Explorer</div>
+    <div class="devtools-card__desc">Explore the internal state of Fiona's services and modules.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">Command Reference</div>
+    <div class="devtools-card__desc">Browse available commands, actions, and their signatures.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">Test Runner</div>
+    <div class="devtools-card__desc">Run and monitor integration tests from the dashboard.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+
+  <div class="c-card devtools-card">
+    <div class="devtools-card__icon">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9h4"/>
+      </svg>
+    </div>
+    <div class="devtools-card__title">Documentation</div>
+    <div class="devtools-card__desc">Browse developer guides, API docs, and contribution notes.</div>
+    <span class="devtools-card__status c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted);">Soon</span>
+  </div>
+</div>
+
+<div class="c-card">
+  <div class="c-card__header">
+    <span class="c-card__title">Available Tools</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-8) var(--space-4);">
+    <div class="devtools-placeholder">
+      <div class="devtools-placeholder__icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="16 18 22 12 16 6"/>
+          <polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </div>
+      <div class="devtools-placeholder__title">Developer tools placeholder</div>
+      <div class="devtools-placeholder__desc">
+        Developer tools are under active development. Each tool will provide deep insights into Fiona's operation, enabling debugging, inspection, and extension of the system. Check back as new tools are added.
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-4); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Developer Tools</strong> — This page provides a placeholder for developer tooling. Tools will be activated as backend services become available.
+</p>
+{% endblock %}

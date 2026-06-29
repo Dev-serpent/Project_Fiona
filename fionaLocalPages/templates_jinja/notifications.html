@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Notifications{% endblock %}
+
+{% block page_actions %}
+<button class="c-btn c-btn--ghost c-btn--sm" id="btn-clear-all">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </svg>
+  </span>
+  Clear All
+</button>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <div style="display: flex; align-items: center; gap: var(--space-2);">
+        <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
+          Notifications
+        </h1>
+        {% if notifications and notifications.get('unread', 0) > 0 %}
+        <span class="c-badge c-badge--danger" style="font-size: 11px;">
+          {{ notifications['unread'] }}
+        </span>
+        {% endif %}
+      </div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
+        System event center
+      </p>
+    </div>
+  </div>
+</div>
+
+{% set items = notifications.get('items', []) if notifications else [] %}
+
+{% if items %}
+  <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+    {% for notif in items %}
+    <div class="c-card" data-notif-id="{{ notif.get('id', '') }}" style="{% if not notif.get('read', True) %}border-left: 3px solid var(--accent);{% endif %}">
+      <div class="c-card__body" style="padding: var(--space-3);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2);">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">
+                {{ notif.get('title', 'Untitled') }}
+              </span>
+              {% if notif.get('urgency') %}
+              <span class="c-badge c-badge--sm" style="
+                {% if notif['urgency'] == 'critical' %}background: var(--danger-transparent); color: var(--danger);
+                {% elif notif['urgency'] == 'low' %}background: var(--surface-raised); color: var(--text-muted);
+                {% else %}background: var(--accent-transparent); color: var(--accent);{% endif %}">
+                {{ notif['urgency'] }}
+              </span>
+              {% endif %}
+            </div>
+            {% if notif.get('body') %}
+            <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: var(--space-1) 0 0 0;">
+              {{ notif['body'] }}
+            </p>
+            {% endif %}
+          </div>
+          <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;">
+            {% if notif.get('created_at') %}
+            <span style="font-size: var(--font-size-xxs); color: var(--text-muted); white-space: nowrap;">
+              {{ notif['created_at'][:10] }}
+            </span>
+            {% endif %}
+            <button class="notif-dismiss-btn" title="Dismiss" style="
+              background: none;
+              border: none;
+              color: var(--text-muted);
+              cursor: pointer;
+              padding: 2px 6px;
+              font-size: 16px;
+              line-height: 1;
+              border-radius: var(--radius-sm);
+              transition: color 0.15s, background 0.15s;
+            " onmouseover="this.style.color='var(--text-primary)';this.style.background='var(--surface-raised)'" onmouseout="this.style.color='var(--text-muted)';this.style.background='none'">&times;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state" style="text-align: center; padding: 10vh var(--space-4);">
+    <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </div>
+    <div class="empty-state__title">No notifications</div>
+    <div class="empty-state__description">
+      You're all caught up.
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── Toast helper ──────────────────────────────────────────── */
+  function showToast(message, isError) {
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    var bg = isError
+      ? 'var(--danger, #ef4444)'
+      : 'var(--accent, #6366f1)';
+    toast.style.cssText =
+      'background:' + bg + ';' +
+      'color:#fff;' +
+      'padding:8px 16px;' +
+      'border-radius:6px;' +
+      'margin-bottom:6px;' +
+      'font-size:13px;' +
+      'line-height:1.5;' +
+      'animation:fadeIn 0.2s ease;' +
+      'max-width:420px;' +
+      'word-break:break-word;' +
+      'white-space:pre-wrap;' +
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    toast.textContent = typeof message === 'string'
+      ? message
+      : JSON.stringify(message, null, 2);
+    container.appendChild(toast);
+    setTimeout(function () {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, 5000);
+  }
+
+  /* ── Clear All ─────────────────────────────────────────────── */
+  var clearBtn = document.getElementById('btn-clear-all');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      clearBtn.disabled = true;
+      clearBtn.textContent = 'Clearing…';
+
+      fetch('/notifications/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (json && json.ok) {
+          window.location.reload();
+        } else {
+          showToast(json.error || 'Failed to clear notifications', true);
+          clearBtn.disabled = false;
+          clearBtn.innerHTML = '<span class="c-btn__icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span> Clear All';
+        }
+      })
+      .catch(function (err) {
+        showToast('Network error: ' + err.message, true);
+        clearBtn.disabled = false;
+        clearBtn.innerHTML = '<span class="c-btn__icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span> Clear All';
+      });
+    });
+  }
+
+  /* ── Dismiss individual notification ───────────────────────── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.notif-dismiss-btn');
+    if (!btn) return;
+
+    var card = btn.closest('.c-card');
+    if (!card) return;
+
+    var notifId = card.getAttribute('data-notif-id');
+    if (!notifId) return;
+
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    fetch('/notifications/dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notifId })
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (json) {
+      if (json && json.ok) {
+        card.parentNode.removeChild(card);
+      } else {
+        showToast(json.error || 'Failed to dismiss notification', true);
+        btn.disabled = false;
+        btn.innerHTML = '&times;';
+      }
+    })
+    .catch(function (err) {
+      showToast('Network error: ' + err.message, true);
+      btn.disabled = false;
+      btn.innerHTML = '&times;';
+    });
+  });
+
+})();
+</script>
+{% endblock %}

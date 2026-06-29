@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Terminal{% endblock %}
+
+{% block content %}
+<style>
+  .terminal-wrapper {
+    height: calc(100vh - 260px); min-height: 350px;
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    overflow: hidden; position: relative;
+  }
+  #terminal-container {
+    width: 100%; height: 100%;
+    background: #0c0d14;
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 1.5;
+    padding: var(--space-4);
+    box-sizing: border-box;
+    overflow-y: auto;
+    color: #c0caf5;
+    position: relative;
+  }
+  .terminal-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%;
+    text-align: center; gap: var(--space-3);
+    color: var(--text-muted);
+  }
+  .terminal-placeholder__icon {
+    opacity: 0.3;
+  }
+  .terminal-placeholder__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+  }
+  .terminal-placeholder__note {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    max-width: 360px; line-height: 1.6;
+  }
+  .terminal-prompt {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-top: var(--space-4); font-size: var(--font-size-sm);
+    opacity: 0.5;
+  }
+  .terminal-prompt__dollar { color: var(--accent); }
+  .terminal-prompt__cursor {
+    display: inline-block; width: 8px; height: 16px;
+    background: var(--accent); animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+</style>
+
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Interactive terminal emulator — requires JavaScript for full functionality.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="terminal-wrapper">
+  <div id="terminal-container">
+    <div class="terminal-placeholder">
+      <div class="terminal-placeholder__icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5"/>
+          <line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+      </div>
+      <div class="terminal-placeholder__title">Terminal</div>
+      <div class="terminal-placeholder__note">
+        The terminal requires <strong>xterm.js</strong> and a backend WebSocket connection to become fully interactive.
+        This placeholder will be replaced once the JavaScript enhancement is loaded.
+      </div>
+      <div class="terminal-prompt">
+        <span class="terminal-prompt__dollar">$</span>
+        <span>_</span>
+        <span class="terminal-prompt__cursor"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Terminal</strong> — This page provides a container for xterm.js. To activate:
+  load the xterm library, attach a WebSocket to the backend PTY endpoint, and call
+  <code style="font-family: var(--font-mono); background: var(--surface-raised); padding: 1px 4px; border-radius: var(--radius-sm);">new Terminal().open(document.getElementById('terminal-container'))</code>.
+</p>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Welcome to Fiona — your desktop automation hub.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4);">
+  <!-- Quick Actions -->
+  <a href="/chat" class="c-card" style="text-decoration: none; cursor: pointer; transition: transform var(--transition-fast);">
+    <div class="c-card__body" style="text-align: center; padding: var(--space-5);">
+      <div style="width: 40px; height: 40px; margin: 0 auto var(--space-3); color: var(--accent);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">AI Chat</div>
+      <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-1);">Talk to your AI assistant</div>
+    </div>
+  </a>
+
+  <a href="/desktop" class="c-card" style="text-decoration: none; cursor: pointer; transition: transform var(--transition-fast);">
+    <div class="c-card__body" style="text-align: center; padding: var(--space-5);">
+      <div style="width: 40px; height: 40px; margin: 0 auto var(--space-3); color: var(--accent);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">SeeOnDesk</div>
+      <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-1);">Desktop awareness</div>
+    </div>
+  </a>
+
+  <a href="/tasks" class="c-card" style="text-decoration: none; cursor: pointer; transition: transform var(--transition-fast);">
+    <div class="c-card__body" style="text-align: center; padding: var(--space-5);">
+      <div style="width: 40px; height: 40px; margin: 0 auto var(--space-3); color: var(--accent);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">Tasks</div>
+      <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-1);">Task queue management</div>
+    </div>
+  </a>
+
+  <a href="/notifications" class="c-card" style="text-decoration: none; cursor: pointer; transition: transform var(--transition-fast);">
+    <div class="c-card__body" style="text-align: center; padding: var(--space-5);">
+      <div style="width: 40px; height: 40px; margin: 0 auto var(--space-3); color: var(--accent);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">Notifications</div>
+      <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-1);">System events</div>
+    </div>
+  </a>
+</div>
+
+{% if data and data.get('ok') %}
+{% set sys = data.get('data', {}) %}
+<div class="c-card" style="margin-top: var(--space-5);">
+  <div class="c-card__header">
+    <span class="c-card__title">System Status</span>
+  </div>
+  <div class="c-card__body">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4);">
+      {% if sys.get('hostname') %}
+      <div>
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Hostname</div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-family: var(--font-mono);">{{ sys['hostname'] }}</div>
+      </div>
+      {% endif %}
+      {% if sys.get('platform') %}
+      <div>
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Platform</div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary);">{{ sys['platform'] }}</div>
+      </div>
+      {% endif %}
+      {% if sys.get('uptime') is not none %}
+      <div>
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Uptime</div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary);">{{ sys['uptime'] }}s</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

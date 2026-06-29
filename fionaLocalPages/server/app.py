@@ -63,13 +63,15 @@ from fionaLocalPages.server.handlers import (
     macros,
     notifications_handler as notifications,
     phiconnect,
+    plugins,
     quiktieper,
     recall,
     sciretrieval,  # ADD
     settings_handler as settings,
     system,
+    tasks,
     terminal,
-    vsee,
+    tools_handler,
     voice,
 )
 
@@ -157,10 +159,8 @@ def _setup_static_routes(app: web.Application, static_path: Path) -> None:
         # Strip leading '/' and join with static_path.
         rel = path.lstrip("/")
         if not rel:
-            # Root path — serve index.html
-            if index_path.exists():
-                return web.FileResponse(index_path)
-            raise web.HTTPNotFound()
+            # Root path — redirect to Flask Pages server
+            raise web.HTTPFound("http://fiona.agent:5000/")
 
         file_candidate = (static_path / rel).resolve()
         try:
@@ -172,17 +172,12 @@ def _setup_static_routes(app: web.Application, static_path: Path) -> None:
         if file_candidate.is_file():
             return web.FileResponse(file_candidate)
 
-        # File not found — serve index.html for SPA routing
-        if index_path.exists():
-            return web.FileResponse(index_path)
-
-        raise web.HTTPNotFound()
+        # File not found — redirect to Flask Pages server for SPA routing
+        raise web.HTTPFound(f"http://fiona.agent:5000{path}")
 
     # Register root separately (don't go through the tail match).
     async def _serve_index(_request: web.Request) -> web.StreamResponse:
-        if index_path.exists():
-            return web.FileResponse(index_path)
-        raise web.HTTPNotFound()
+        raise web.HTTPFound("http://fiona.agent:5000/")
 
     app.router.add_get("/", _serve_index, name="index")
     app.router.add_get("/{tail:.*}", _static_or_spa, name="static_or_spa")
@@ -215,6 +210,12 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_get("/api/v1/actions", actions.list_actions)
     app.router.add_post("/api/v1/actions/run", actions.run_action)
     app.router.add_get("/api/v1/actions/history", actions.action_history)
+    # File-based action CRUD
+    app.router.add_get("/api/v1/actions/file/get", actions.file_get)
+    app.router.add_post("/api/v1/actions/file/save", actions.file_save)
+    app.router.add_post("/api/v1/actions/file/delete", actions.file_delete)
+    app.router.add_post("/api/v1/actions/file/toggle", actions.file_toggle)
+    app.router.add_post("/api/v1/actions/file/duplicate", actions.file_duplicate)
 
     # ── Voice ──────────────────────────────────────────────────────────
     app.router.add_post("/api/v1/voice/parse", voice.voice_parse)
@@ -231,6 +232,8 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_get("/api/v1/files/read", files.file_read)
     app.router.add_post("/api/v1/files/write", files.file_write)
     app.router.add_get("/api/v1/files/info", files.file_info)
+    app.router.add_post("/api/v1/files/rename", files.file_rename)
+    app.router.add_delete("/api/v1/files/delete", files.file_delete)
 
     # ── Config ─────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/config", config.list_configs)
@@ -250,6 +253,11 @@ def _setup_api_routes(app: web.Application) -> None:
     # ── Desktop ────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/desktop/active", desktop.desktop_active)
     app.router.add_get("/api/v1/desktop/snapshot", desktop.desktop_snapshot_handler)
+    app.router.add_get("/api/v1/desktop/processes", desktop.desktop_processes)
+    app.router.add_get("/api/v1/desktop/applications", desktop.desktop_applications)
+    app.router.add_get("/api/v1/desktop/workspaces", desktop.desktop_workspaces)
+    app.router.add_get("/api/v1/desktop/system-resources", desktop.desktop_system_resources)
+    app.router.add_post("/api/v1/desktop/launch", desktop.desktop_launch)
 
     # ── Recall ─────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/recall/search", recall.recall_search)
@@ -259,10 +267,25 @@ def _setup_api_routes(app: web.Application) -> None:
     # ── Macros ─────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/macros", macros.list_macros)
     app.router.add_post("/api/v1/macros/run", macros.run_macro_handler)
+    app.router.add_post("/api/v1/macros/save", macros.save_macro_handler)
+    app.router.add_delete("/api/v1/macros/delete", macros.delete_macro_handler)
+    app.router.add_get("/api/v1/macros/export", macros.export_macros_handler)
+    app.router.add_post("/api/v1/macros/import", macros.import_macros_handler)
 
     # ── CamComs ────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/camcoms/status", camcoms.camcoms_status)
     app.router.add_get("/api/v1/camcoms/identity", camcoms.camcoms_identity)
+    app.router.add_get("/api/v1/camcoms/config", camcoms.camcoms_config_get)
+    app.router.add_post("/api/v1/camcoms/config", camcoms.camcoms_config_post)
+    app.router.add_get("/api/v1/camcoms/logs", camcoms.camcoms_logs)
+    app.router.add_post("/api/v1/camcoms/start", camcoms.camcoms_start)
+    app.router.add_post("/api/v1/camcoms/stop", camcoms.camcoms_stop)
+    app.router.add_post("/api/v1/camcoms/restart", camcoms.camcoms_restart)
+    app.router.add_get("/api/v1/camcoms/trusted", camcoms.camcoms_trusted)
+    app.router.add_post("/api/v1/camcoms/trust/add", camcoms.camcoms_trust_add)
+    app.router.add_post("/api/v1/camcoms/trust/remove", camcoms.camcoms_trust_remove)
+    app.router.add_get("/api/v1/camcoms/pairing/status", camcoms.camcoms_pairing_status)
+    app.router.add_post("/api/v1/camcoms/keygen", camcoms.camcoms_keygen)
 
     # ── PhiConnect ─────────────────────────────────────────────────────
     app.router.add_get("/api/v1/phiconnect/status", phiconnect.phiconnect_status)
@@ -271,15 +294,36 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_post("/api/v1/phiconnect/send", phiconnect.phiconnect_send)
     app.router.add_post("/api/v1/phiconnect/trust", phiconnect.phiconnect_trust_key)
 
-    # ── Vsee ───────────────────────────────────────────────────────────
-    app.router.add_get("/api/v1/vsee/status", vsee.vsee_status)
-    app.router.add_post("/api/v1/vsee/launch", vsee.vsee_launch)
-    app.router.add_get("/api/v1/vsee/model", vsee.vsee_default_model)
+    # Peers / Contacts
+    app.router.add_get("/api/v1/phiconnect/peers", phiconnect.phiconnect_peers_list)
+    app.router.add_post("/api/v1/phiconnect/peers/add", phiconnect.phiconnect_peers_add)
+    app.router.add_delete("/api/v1/phiconnect/peers/remove", phiconnect.phiconnect_peers_remove)
+
+    # Trust management
+    app.router.add_get("/api/v1/phiconnect/trust/list", phiconnect.phiconnect_trust_list)
+    app.router.add_post("/api/v1/phiconnect/trust/revoke", phiconnect.phiconnect_trust_revoke)
+
+    # Configuration
+    app.router.add_get("/api/v1/phiconnect/config", phiconnect.phiconnect_get_config)
+    app.router.add_post("/api/v1/phiconnect/config", phiconnect.phiconnect_save_config)
+
+    # Key management
+    app.router.add_post("/api/v1/phiconnect/keys/regenerate", phiconnect.phiconnect_regenerate_keys)
 
     # ── Bindings ───────────────────────────────────────────────────────
     app.router.add_get("/api/v1/bindings", bindings.list_bindings)
     app.router.add_post("/api/v1/bindings/save", bindings.save_bindings)
     app.router.add_get("/api/v1/bindings/apps", bindings.get_apps)
+    # CRUD
+    app.router.add_post("/api/v1/bindings/create", bindings.create_binding)
+    app.router.add_post("/api/v1/bindings/update", bindings.update_binding)
+    app.router.add_delete("/api/v1/bindings/delete", bindings.delete_binding)
+    app.router.add_post("/api/v1/bindings/toggle", bindings.toggle_binding)
+    # Import / Export
+    app.router.add_get("/api/v1/bindings/export", bindings.export_bindings)
+    app.router.add_post("/api/v1/bindings/import", bindings.import_bindings)
+    # Conflict detection
+    app.router.add_post("/api/v1/bindings/check-conflicts", bindings.check_conflicts)
 
     # ── QuikTieper ─────────────────────────────────────────────────────
     app.router.add_get("/api/v1/quiktieper/status", quiktieper.quiktieper_status)
@@ -291,14 +335,33 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_post("/api/v1/quiktieper/launcher/stop", quiktieper.launcher_stop)
     app.router.add_get("/api/v1/quiktieper/launcher/status", quiktieper.launcher_status)
 
+    # ── Tasks ──────────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/tasks", tasks.list_tasks)
+    app.router.add_post("/api/v1/tasks/create", tasks.create_task)
+    app.router.add_post("/api/v1/tasks/update", tasks.update_task)
+    app.router.add_post("/api/v1/tasks/delete", tasks.delete_task)
+
     # ── Notifications ──────────────────────────────────────────────────
     app.router.add_get("/api/v1/notifications", notifications.list_notifications)
     app.router.add_post("/api/v1/notifications/create", notifications.create_notification)
     app.router.add_post("/api/v1/notifications/dismiss", notifications.dismiss_notifications)
+    app.router.add_post("/api/v1/notifications/mark-read", notifications.mark_read)
+    app.router.add_post("/api/v1/notifications/mark-all-read", notifications.mark_all_read)
+    app.router.add_delete("/api/v1/notifications/clear", notifications.clear_notifications)
 
     # ── Settings ───────────────────────────────────────────────────────
     app.router.add_get("/api/v1/settings", settings.get_settings)
     app.router.add_put("/api/v1/settings", settings.put_settings)
+    app.router.add_get("/api/v1/settings/{section}", settings.get_settings_section)
+    app.router.add_put("/api/v1/settings/{section}", settings.put_settings_section)
+
+    # ── Plugins ────────────────────────────────────────────────────────
+    app.router.add_get("/api/v1/plugins", plugins.list_plugins)
+    app.router.add_post("/api/v1/plugins/{id}/enable", plugins.enable_plugin)
+    app.router.add_post("/api/v1/plugins/{id}/disable", plugins.disable_plugin)
+    app.router.add_delete("/api/v1/plugins/{id}", plugins.uninstall_plugin)
+    app.router.add_post("/api/v1/plugins/install", plugins.install_plugin)
+    app.router.add_get("/api/v1/plugins/updates", plugins.check_updates)
 
     # ── SciRetrieval ───────────────────────────────────────────────────
     app.router.add_post("/api/v1/sciretrieval/search", sciretrieval.sciretrieval_search)

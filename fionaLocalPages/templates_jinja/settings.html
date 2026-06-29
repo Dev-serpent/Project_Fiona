@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Settings{% endblock %}
+
+{% block page_actions %}
+<button class="c-btn c-btn--primary c-btn--sm" id="btn-save-all-settings">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </svg>
+  </span>
+  Save All
+</button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .settings-section {
+    margin-bottom: var(--space-5);
+  }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-field {
+    display: grid; grid-template-columns: 200px 1fr;
+    gap: var(--space-3); padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+  }
+  .settings-field:last-child { border-bottom: none; }
+  .settings-field__key {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary); font-family: var(--font-mono);
+    word-break: break-all;
+  }
+  .settings-field__value {
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+    font-family: var(--font-mono); word-break: break-all;
+  }
+  .settings-field__value--null {
+    color: var(--text-muted); font-style: italic;
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+
+  /* ── Card header layout ── */
+  .settings-section .c-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-section .c-card__header .c-card__title {
+    flex: 1;
+  }
+
+  /* ── Edit mode toggle ── */
+  .settings-section.is-editing .display-mode { display: none; }
+  .settings-section.is-editing .edit-mode   { display: block; }
+
+  /* ── Inline form inputs ── */
+  .settings-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-mono);
+    background: var(--bg-input, #1a1d2e);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 4px);
+    outline: none;
+    transition: border-color 0.15s ease;
+    box-sizing: border-box;
+  }
+  .settings-input:focus {
+    border-color: var(--accent, #00f0ff);
+  }
+  select.settings-input {
+    appearance: auto;
+    cursor: pointer;
+  }
+  .edit-actions {
+    display: flex;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-2);
+  }
+  .c-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        System and user configuration.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if settings %}
+  {% for section_key, section_data in settings.items() %}
+    {% if section_data is mapping %}
+    <div class="c-card settings-section" data-section="{{ section_key }}">
+      <div class="c-card__header">
+        <span class="c-card__title">{{ section_key|replace('_', ' ')|title }}</span>
+        <button class="c-btn c-btn--ghost c-btn--sm btn-edit-section"
+                style="margin-left: var(--space-3);"
+                title="Edit this section">Edit</button>
+      </div>
+
+      {# ── Read-only mode ── #}
+      <div class="c-card__body display-mode" style="padding: var(--space-1) var(--space-4);">
+        {% for field_key, field_value in section_data.items() %}
+        <div class="settings-field">
+          <div class="settings-field__key">{{ field_key }}</div>
+          <div class="settings-field__value{% if field_value is none %} settings-field__value--null{% endif %}">
+            {% if field_value is none %}
+              null
+            {% elif field_value is boolean %}
+              {{ field_value|lower }}
+            {% elif field_value is mapping or field_value is sequence and field_value is not string %}
+              {{ field_value|tojson }}
+            {% else %}
+              {{ field_value }}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ── Edit mode (hidden by default) ── #}
+      <div class="c-card__body edit-mode" style="display: none; padding: var(--space-1) var(--space-4);">
+        {% for field_key, field_value in section_data.items() %}
+        <div class="settings-field">
+          <div class="settings-field__key">{{ field_key }}</div>
+          <div class="settings-field__value">
+            {% if field_value is boolean %}
+            <select class="settings-input" data-key="{{ field_key }}" data-type="boolean">
+              <option value="true"{% if field_value == true %} selected{% endif %}>true</option>
+              <option value="false"{% if field_value == false %} selected{% endif %}>false</option>
+            </select>
+            {% elif field_value is number %}
+            <input type="number" class="settings-input" data-key="{{ field_key }}" data-type="number"
+                   value="{{ field_value }}" step="any" />
+            {% elif field_value is mapping or field_value is sequence and field_value is not string %}
+            <input type="text" class="settings-input" data-key="{{ field_key }}" data-type="json"
+                   value="{{ field_value|tojson }}" />
+            {% elif field_value is none %}
+            <input type="text" class="settings-input" data-key="{{ field_key }}" data-type="string"
+                   value="" placeholder="null" />
+            {% else %}
+            <input type="text" class="settings-input" data-key="{{ field_key }}" data-type="string"
+                   value="{{ field_value|e }}" />
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        <div class="edit-actions">
+          <button class="c-btn c-btn--primary c-btn--sm btn-save-section">Save</button>
+          <button class="c-btn c-btn--ghost c-btn--sm btn-cancel-section">Cancel</button>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  {# ── Embedded full settings JSON for JS ── #}
+  <script id="settings-data" type="application/json">{{ settings | tojson | safe }}</script>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No settings available</div>
+  <div class="empty-state__description">
+    Configuration data will appear here once the backend provides it.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── Helpers ───────────────────────────────────────── */
+
+  function showToast(message, type) {
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'c-toast' + (type ? ' c-toast--' + type : '');
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(function () {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 5000);
+  }
+
+  /* ── Collect data from a section's edit-mode inputs ── */
+
+  function collectSectionData(card) {
+    var inputs = card.querySelectorAll('.edit-mode .settings-input');
+    var data = {};
+    inputs.forEach(function (input) {
+      var key = input.getAttribute('data-key');
+      var type = input.getAttribute('data-type');
+      var value;
+      switch (type) {
+        case 'boolean':
+          value = input.value === 'true';
+          break;
+        case 'number':
+          value = input.value === '' ? null : parseFloat(input.value);
+          break;
+        case 'json':
+          try {
+            value = JSON.parse(input.value);
+          } catch (_) {
+            value = input.value;
+          }
+          break;
+        default:
+          value = input.value;
+      }
+      data[key] = value;
+    });
+    return data;
+  }
+
+  /* ── Build the full settings object ─────────────────── */
+
+  function buildFullSettings() {
+    // Start with the original server-provided data
+    var settings = Object.assign({}, window.__settings || {});
+    // Override any sections currently being edited
+    document.querySelectorAll('.settings-section.is-editing').forEach(function (card) {
+      var sectionKey = card.getAttribute('data-section');
+      settings[sectionKey] = collectSectionData(card);
+    });
+    return settings;
+  }
+
+  /* ── Save to server ────────────────────────────────── */
+
+  function saveSettings(settings, saveBtn) {
+    var buttons = document.querySelectorAll('.btn-save-section, #btn-save-all-settings');
+    buttons.forEach(function (b) { b.disabled = true; });
+
+    fetch('/settings/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.ok && data.data && data.data.saved) {
+        window.location.reload();
+      } else {
+        showToast(data.error || 'Failed to save settings.', 'danger');
+        buttons.forEach(function (b) { b.disabled = false; });
+      }
+    })
+    .catch(function (err) {
+      showToast('Network error: ' + err.message, 'danger');
+      buttons.forEach(function (b) { b.disabled = false; });
+    });
+  }
+
+  /* ── Toggle edit mode ──────────────────────────────── */
+
+  function setEditMode(card, enabled) {
+    if (enabled) {
+      card.classList.add('is-editing');
+    } else {
+      card.classList.remove('is-editing');
+    }
+  }
+
+  /* ── Button event handlers ─────────────────────────── */
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Read the original settings from the embedded script tag
+    var dataScript = document.getElementById('settings-data');
+    if (dataScript) {
+      try {
+        window.__settings = JSON.parse(dataScript.textContent);
+      } catch (e) {
+        window.__settings = {};
+      }
+    }
+
+    /* Edit button — per-section */
+    document.querySelectorAll('.btn-edit-section').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        var card = e.currentTarget.closest('.settings-section');
+        setEditMode(card, true);
+      });
+    });
+
+    /* Cancel button — per-section */
+    document.querySelectorAll('.btn-cancel-section').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        var card = e.currentTarget.closest('.settings-section');
+        setEditMode(card, false);
+      });
+    });
+
+    /* Save button — per-section */
+    document.querySelectorAll('.btn-save-section').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        var card = e.currentTarget.closest('.settings-section');
+        var sectionKey = card.getAttribute('data-section');
+        var settings = Object.assign({}, window.__settings || {});
+        settings[sectionKey] = collectSectionData(card);
+        saveSettings(settings, btn);
+      });
+    });
+
+    /* Save All — global */
+    var saveAllBtn = document.getElementById('btn-save-all-settings');
+    if (saveAllBtn) {
+      saveAllBtn.addEventListener('click', function () {
+        saveSettings(buildFullSettings(), saveAllBtn);
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

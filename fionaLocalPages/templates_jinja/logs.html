@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Logs{% endblock %}
+
+{% block content %}
+<style>
+  .logs-terminal {
+    height: calc(100vh - 260px); min-height: 350px;
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    overflow: hidden; position: relative;
+  }
+  #logs-container {
+    width: 100%; height: 100%;
+    background: #0c0d14;
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 1.6;
+    padding: var(--space-4);
+    box-sizing: border-box;
+    overflow-y: auto;
+    color: #c0caf5;
+    position: relative;
+  }
+  .logs-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%;
+    text-align: center; gap: var(--space-3);
+    color: var(--text-muted);
+  }
+  .logs-placeholder__icon { opacity: 0.3; }
+  .logs-placeholder__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+  }
+  .logs-placeholder__note {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    max-width: 360px; line-height: 1.6;
+  }
+  .logs-fake-line {
+    display: flex; gap: var(--space-3);
+    font-size: var(--font-size-xs); opacity: 0.4;
+    margin-top: var(--space-2);
+  }
+  .logs-fake-line__timestamp { color: var(--text-muted); }
+  .logs-fake-line__level { color: var(--accent); }
+  .logs-fake-line__message { color: var(--text-secondary); }
+</style>
+
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        System log viewer — requires JavaScript and backend connection for live output.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="logs-terminal">
+  <div id="logs-container">
+    <div class="logs-placeholder">
+      <div class="logs-placeholder__icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <div class="logs-placeholder__title">Log viewer coming soon</div>
+      <div class="logs-placeholder__note">
+        The log viewer will display real-time system logs once the backend logging service is connected. This placeholder will be replaced with a live log stream.
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: var(--space-4); width: 280px;">
+        <div class="logs-fake-line">
+          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:00]</span>
+          <span class="logs-fake-line__level">INFO</span>
+          <span class="logs-fake-line__message">System initialized</span>
+        </div>
+        <div class="logs-fake-line">
+          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:01]</span>
+          <span class="logs-fake-line__level">INFO</span>
+          <span class="logs-fake-line__message">Backend connected</span>
+        </div>
+        <div class="logs-fake-line">
+          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:02]</span>
+          <span class="logs-fake-line__level">INFO</span>
+          <span class="logs-fake-line__message">Modules loaded</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Logs</strong> — This page provides a container for a live log viewer. To activate: connect to the backend logging endpoint and render log entries in real time.
+</p>
+{% endblock %}

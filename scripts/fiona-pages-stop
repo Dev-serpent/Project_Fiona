@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================================
-# fiona-pages-stop — Stop the Fiona Local Pages API Server
+# fiona-pages-stop — Stop the Fiona API Server + Pages Server
 # ============================================================================
-# Stops the server started by fiona-pages-start and optionally cleans up
-# the /etc/hosts fiona.agent entry.
+# Stops both servers started by fiona-pages-start:
+#   1. aiohttp API server (port 8765)
+#   2. Flask/Jinja2 pages server (port 5000)
+# Optionally cleans up the /etc/hosts fiona.agent entry.
 #
 # Usage:
 #   ./scripts/fiona-pages-stop
@@ -14,49 +16,92 @@ set -euo pipefail
 PIDFILE="/tmp/fiona-pages.pid"
 HOSTS_SENTINEL="/tmp/fiona-pages.hosts-added"
 
-# ── Kill the server ────────────────────────────────────────────────────────
+# ── Read PIDs ───────────────────────────────────────────────────────────────
+API_PID=""
+PAGES_PID=""
+if [ -f "$PIDFILE" ]; then
+  # Read first line → API PID, second line → Pages PID
+  LINE_NUM=0
+  while IFS= read -r line; do
+    if [ "$LINE_NUM" -eq 0 ]; then
+      # Extract PID: use last 7 digits to handle concatenation from old format
+      if [ ${#line} -gt 7 ]; then
+        API_PID="${line:0:7}"
+      else
+        API_PID="$line"
+      fi
+    elif [ "$LINE_NUM" -eq 1 ]; then
+      PAGES_PID="$line"
+    fi
+    LINE_NUM=$((LINE_NUM + 1))
+  done < "$PIDFILE"
+fi
+
+# Validate PIDs — must be numeric
+if ! [[ "$API_PID" =~ ^[0-9]+$ ]]; then
+  API_PID=""
+fi
+if ! [[ "$PAGES_PID" =~ ^[0-9]+$ ]]; then
+  PAGES_PID=""
+fi
+
 SERVER_KILLED=false
 
-if [ -f "$PIDFILE" ]; then
-  PID=$(cat "$PIDFILE")
-  if kill -0 "$PID" 2>/dev/null; then
-    echo -n "[fiona-pages] Stopping server (PID $PID) …"
-    kill "$PID" 2>/dev/null || true
-    for i in $(seq 1 10); do
-      if ! kill -0 "$PID" 2>/dev/null; then
-        echo " stopped"
-        SERVER_KILLED=true
-        rm -f "$PIDFILE"
-        break
-      fi
-      sleep 0.5
-      echo -n "."
-    done
-    if kill -0 "$PID" 2>/dev/null; then
-      echo -n " force-killing …"
-      kill -9 "$PID" 2>/dev/null || true
-      sleep 0.5
-      echo " done"
-      SERVER_KILLED=true
-      rm -f "$PIDFILE"
-    fi
-  else
-    echo "[fiona-pages] PID $PID not found — server already stopped"
-    rm -f "$PIDFILE"
+# ── Helper: kill a process by PID ──────────────────────────────────────────
+kill_pid() {
+  local PID="$1" LABEL="$2"
+  if [ -z "$PID" ] || [ "$PID" = "0" ]; then
+    return 1
   fi
-else
-  MATCHES=$(pgrep -f "fionaLocalPages/server/app.py" 2>/dev/null || true)
+  if ! kill -0 "$PID" 2>/dev/null; then
+    return 1
+  fi
+  echo -n "[fiona-pages] Stopping $LABEL (PID $PID) …"
+  kill "$PID" 2>/dev/null || true
+  for i in $(seq 1 10); do
+    if ! kill -0 "$PID" 2>/dev/null; then
+      echo " stopped"
+      return 0
+    fi
+    sleep 0.5
+    echo -n "."
+  done
+  echo -n " force-killing …"
+  kill -9 "$PID" 2>/dev/null || true
+  sleep 0.5
+  echo " done"
+  return 0
+}
+
+# ── Kill both servers by PID ───────────────────────────────────────────────
+if kill_pid "$API_PID" "API server"; then
+  SERVER_KILLED=true
+fi
+if kill_pid "$PAGES_PID" "Pages server"; then
+  SERVER_KILLED=true
+fi
+
+# ── Clean up PID file ──────────────────────────────────────────────────────
+if [ -f "$PIDFILE" ]; then
+  rm -f "$PIDFILE"
+fi
+
+# ── Stray process cleanup (defensive) ──────────────────────────────────────
+# Kill any remaining fiona server processes not tracked by PID file
+for PATTERN in "fionaLocalPages/server/app.py" "fionaLocalPages/server/flask_app.py"; do
+  MATCHES=$(pgrep -f "$PATTERN" 2>/dev/null || true)
   if [ -n "$MATCHES" ]; then
-    echo "[fiona-pages] No PID file found, but found running server process(es):"
-    echo "$MATCHES" | while read -r PID; do
+    echo "[fiona-pages] Found stray $(basename "$PATTERN") process(es):"
+    while read -r PID; do
       echo "  Killing PID $PID …"
       kill "$PID" 2>/dev/null || kill -9 "$PID" 2>/dev/null || true
-    done
-    echo "[fiona-pages] Stopped"
+    done <<< "$MATCHES"
     SERVER_KILLED=true
-  else
-    echo "[fiona-pages] No server process found"
   fi
+done
+
+if [ "$SERVER_KILLED" = false ]; then
+  echo "[fiona-pages] No server processes found"
 fi
 
 # ── Clean up /etc/hosts entry (if we added it) ────────────────────────────
@@ -72,3 +117,5 @@ if [ -f "$HOSTS_SENTINEL" ]; then
   fi
   rm -f "$HOSTS_SENTINEL"
 fi
+
+echo "[fiona-pages] All servers stopped"

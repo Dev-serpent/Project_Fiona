@@ -1,9 +1,12 @@
-"""Notification system handler — create, list, and dismiss in-memory notifications.
+"""Notification system handler — create, list, dismiss, clear, and mark-read.
 
-Provides three REST endpoints:
-  - GET  /api/v1/notifications      → list notifications
-  - POST /api/v1/notifications/create → create a notification
-  - POST /api/v1/notifications/dismiss → dismiss one or all notifications
+Provides REST endpoints:
+  - GET    /api/v1/notifications              → list notifications
+  - POST   /api/v1/notifications/create       → create a notification
+  - POST   /api/v1/notifications/dismiss      → dismiss one or all notifications
+  - POST   /api/v1/notifications/mark-read    → mark a notification as read
+  - POST   /api/v1/notifications/mark-all-read → mark all as read
+  - DELETE /api/v1/notifications/clear        → clear all notifications
 
 Notifications are stored in a simple in-memory list (FIFO, capped at 200).
 When a notification is created, it is optionally broadcast to all connected
@@ -26,17 +29,62 @@ logger = logging.getLogger(__name__)
 # In-memory store
 # ---------------------------------------------------------------------------
 
-_notifications: list[dict[str, str]] = []
+_notifications: list[dict[str, Any]] = []
 _max_notifications = 200
 
 
-def _add_notification(n: Notification) -> dict[str, str]:
-    """Insert a Notification at the front of the list, enforcing the cap."""
-    d = n.to_dict()
+def _make_notification_dict(
+    n: Notification,
+    *,
+    read: bool = False,
+    category: str = "System",
+    agent_id: str | None = None,
+    notification_id: str | None = None,
+) -> dict[str, Any]:
+    """Convert a Notification to a stored dict with extra metadata."""
+    import uuid
+    return {
+        "id": notification_id or str(uuid.uuid4()),
+        "title": n.title,
+        "body": n.body,
+        "urgency": n.urgency,
+        "read": read,
+        "category": category,
+        "agent_id": agent_id,
+        "timestamp": __import__("time").time(),
+    }
+
+
+def _add_notification(
+    n: Notification,
+    *,
+    category: str = "System",
+    agent_id: str | None = None,
+) -> dict[str, Any]:
+    """Insert a Notification at the front of the list, enforcing the cap.
+
+    Returns the stored dict with id, read, category, and timestamp fields.
+    """
+    d = _make_notification_dict(n, category=category, agent_id=agent_id)
     _notifications.insert(0, d)
     if len(_notifications) > _max_notifications:
         _notifications.pop()
     return d
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _get_unread_count() -> int:
+    return sum(1 for n in _notifications if not n.get("read", False))
+
+
+def _get_notification_by_id(nid: str) -> dict[str, Any] | None:
+    for n in _notifications:
+        if n.get("id") == nid:
+            return n
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -48,8 +96,8 @@ async def list_notifications(request: Request) -> Response:
     """GET /api/v1/notifications
 
     Query parameters:
-        limit (int, optional)  — max items to return (default 50, max 200).
-        unread_only (bool)     — if true, filter to unread items (default false).
+        limit (int, optional)      — max items to return (default 50, max 200).
+        unread_only (bool, optional) — if true, filter to unread items (default false).
 
     Returns:
         ``{"ok": true, "data": {"items": [...], "total": N, "unread": N}}``
@@ -64,10 +112,10 @@ async def list_notifications(request: Request) -> Response:
 
     items = _notifications
     if unread_only:
-        items = [n for n in items if n.get("urgency") != "read"]
+        items = [n for n in items if not n.get("read", False)]
 
     total = len(_notifications)
-    unread = sum(1 for n in _notifications if n.get("urgency") != "read")
+    unread = _get_unread_count()
     sliced = items[:limit]
 
     return json_response({
@@ -88,12 +136,13 @@ async def create_notification(request: Request) -> Response:
         body     (str, required) — notification body text.
         urgency  (str, optional) — one of ``"normal"``, ``"critical"``, ``"low"``
                                    (default ``"normal"``).
+        category (str, optional) — notification category (default ``"System"``).
 
     Optionally broadcasts the new notification to all WebSocket peers if
     ``request.app["ws_manager"]`` is present.
 
     Returns:
-        ``{"ok": true, "data": {title, body, urgency}}``
+        ``{"ok": true, "data": {id, title, body, urgency, read, category, timestamp}}``
     """
     try:
         body_data: dict[str, Any] = await request.json()
@@ -103,6 +152,7 @@ async def create_notification(request: Request) -> Response:
     title = body_data.get("title")
     body_str = body_data.get("body")
     urgency = body_data.get("urgency", "normal")
+    category = body_data.get("category", "System")
 
     # ── Validate required fields ──────────────────────────────────────
     if not title or not isinstance(title, str):
@@ -116,7 +166,7 @@ async def create_notification(request: Request) -> Response:
         )
 
     notification = Notification(title=title, body=body_str, urgency=urgency)
-    created = _add_notification(notification)
+    created = _add_notification(notification, category=category)
 
     # ── Optional WebSocket broadcast ──────────────────────────────────
     ws_manager = request.app.get("ws_manager")
@@ -167,3 +217,58 @@ async def dismiss_notifications(request: Request) -> Response:
         )
 
     return json_response({"ok": True, "data": {"dismissed": dismissed}})
+
+
+async def mark_read(request: Request) -> Response:
+    """POST /api/v1/notifications/mark-read
+
+    Request body (JSON):
+        ``{"id": "notification-uuid"}`` — mark the notification with the given id as read.
+
+    Returns:
+        ``{"ok": true, "data": {"read": true}}``
+    """
+    try:
+        body_data: dict[str, Any] = await request.json()
+    except Exception:
+        raise ApiError(status=400, message="Invalid JSON body")
+
+    nid = body_data.get("id")
+    if not nid or not isinstance(nid, str):
+        raise ApiError(status=400, message="'id' is required and must be a string")
+
+    notif = _get_notification_by_id(nid)
+    if notif is None:
+        raise ApiError(status=404, message=f"Notification with id '{nid}' not found")
+
+    notif["read"] = True
+    return json_response({"ok": True, "data": {"read": True}})
+
+
+async def mark_all_read(request: Request) -> Response:
+    """POST /api/v1/notifications/mark-all-read
+
+    Marks every notification as read.
+
+    Returns:
+        ``{"ok": true, "data": {"marked": count}}``
+    """
+    count = 0
+    for n in _notifications:
+        if not n.get("read", False):
+            n["read"] = True
+            count += 1
+    return json_response({"ok": True, "data": {"marked": count}})
+
+
+async def clear_notifications(request: Request) -> Response:
+    """DELETE /api/v1/notifications/clear
+
+    Removes all notifications from the store (same as dismiss-all).
+
+    Returns:
+        ``{"ok": true, "data": {"cleared": count}}``
+    """
+    count = len(_notifications)
+    _notifications.clear()
+    return json_response({"ok": True, "data": {"cleared": count}})

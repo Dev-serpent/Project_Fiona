@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0f111a" />
+  <meta name="application-name" content="Fiona" />
+  <meta name="description" content="Fiona — Desktop-class automation and AI agent frontend" />
+
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Google Fonts: Inter + JetBrains Mono -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        media="print" onload="this.media='all'" />
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  </noscript>
+
+  <!-- Application Stylesheets -->
+  <link rel="stylesheet" href="/css/globals.css" />
+  <link rel="stylesheet" href="/css/themes.css" />
+  <link rel="stylesheet" href="/css/animations.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+
+  <title>{% block title %}Fiona{% endblock %}</title>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ─── App Header ──────────────────────────────────────────────── -->
+  <header class="app-header" role="banner">
+    <div class="app-header__left">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <span class="breadcrumb__item breadcrumb__item--current" id="breadcrumb-current">
+          {% block breadcrumb %}{{ breadcrumb|default('Dashboard') }}{% endblock %}
+        </span>
+      </nav>
+    </div>
+
+    <div class="app-header__center">
+      <button class="search-trigger" id="search-trigger"
+              aria-label="Open command palette"
+              data-action="open-command-palette">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span>Quick actions…</span>
+        <span class="search-trigger__kbd">
+          <kbd>⌘</kbd><kbd>K</kbd>
+        </span>
+      </button>
+    </div>
+
+    <div class="app-header__right">
+      <div class="connection-indicator connection-indicator--disconnected"
+           id="connection-indicator"
+           role="status" aria-live="polite"
+           title="Connection status">
+        <span class="connection-indicator__dot"></span>
+        <span class="connection-indicator__label">Disconnected</span>
+      </div>
+
+      <button class="c-btn c-btn--icon c-btn--ghost"
+              aria-label="Notifications"
+              data-action="open-notifications"
+              id="header-notifications-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      </button>
+
+      <button class="c-btn c-btn--icon c-btn--ghost"
+              aria-label="Settings"
+              data-action="open-settings"
+              id="header-settings-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── App Main ────────────────────────────────────────────────── -->
+  <main class="app-main" id="app-main" role="main">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__header">
+        <div class="sidebar__logo">
+          <span class="sidebar__logo-icon">F</span>
+          <span>Fiona</span>
+        </div>
+      </div>
+
+      <nav class="sidebar__nav" id="sidebar-nav">
+        <!-- Primary -->
+        <div class="sidebar__nav-section">
+          <a class="nav-item {% if request.path == '/' %}nav-item--active{% endif %}" href="/">
+            <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+            <span class="nav-item__label">Dashboard</span>
+          </a>
+          <a class="nav-item {% if request.path == '/chat' %}nav-item--active{% endif %}" href="/chat">
+            <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="nav-item__label">AI Chat</span>
+          </a>
+          <a class="nav-item {% if request.path == '/terminal' %}nav-item--active{% endif %}" href="/terminal">
+            <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+            <span class="nav-item__label">Terminal</span>
+          </a>
+          <a class="nav-item {% if request.path == '/files' %}nav-item--active{% endif %}" href="/files">
+            <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="nav-item__label">Files</span>
+          </a>
+          <a class="nav-item {% if request.path == '/browser' %}nav-item--active{% endif %}" href="/browser">
+            <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span class="nav-item__label">Browser</span>
+          </a>
+        </div>
+
+        <!-- Intelligence -->
+        <div class="sidebar__nav-section">
+          <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="intelligence" role="button" tabindex="0" aria-expanded="true">
+            <span>Intelligence</span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div class="sidebar__nav-section-content">
+            <a class="nav-item {% if request.path == '/agents' %}nav-item--active{% endif %}" href="/agents">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 5v6"/><path d="M8 11l-2 5"/><path d="M16 11l2 5"/></svg></span>
+              <span class="nav-item__label">Agents</span>
+            </a>
+            <a class="nav-item {% if request.path == '/actions' %}nav-item--active{% endif %}" href="/actions">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+              <span class="nav-item__label">Actions</span>
+            </a>
+            <a class="nav-item {% if request.path == '/recall' %}nav-item--active{% endif %}" href="/recall">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+              <span class="nav-item__label">RecallVault</span>
+            </a>
+            <a class="nav-item {% if request.path == '/voice' %}nav-item--active{% endif %}" href="/voice">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>
+              <span class="nav-item__label">Voice Commands</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tools -->
+        <div class="sidebar__nav-section">
+          <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="tools" role="button" tabindex="0" aria-expanded="true">
+            <span>Tools</span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div class="sidebar__nav-section-content">
+            <a class="nav-item {% if request.path == '/macros' %}nav-item--active{% endif %}" href="/macros">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+              <span class="nav-item__label">Macros</span>
+            </a>
+            <a class="nav-item {% if request.path == '/camcoms' %}nav-item--active{% endif %}" href="/camcoms">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
+              <span class="nav-item__label">CamComs</span>
+            </a>
+            <a class="nav-item {% if request.path == '/desktop' %}nav-item--active{% endif %}" href="/desktop">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+              <span class="nav-item__label">SeeOnDesk</span>
+            </a>
+            <a class="nav-item {% if request.path == '/bindings' %}nav-item--active{% endif %}" href="/bindings">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01"/></svg></span>
+              <span class="nav-item__label">Key Bindings</span>
+            </a>
+            <a class="nav-item {% if request.path == '/phiconnect' %}nav-item--active{% endif %}" href="/phiconnect">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <span class="nav-item__label">PhiConnect</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- System -->
+        <div class="sidebar__nav-section">
+          <div class="sidebar__nav-section-title" data-action="toggle-section" data-section-id="system" role="button" tabindex="0" aria-expanded="true">
+            <span>System</span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div class="sidebar__nav-section-content">
+            <a class="nav-item {% if request.path == '/tasks' %}nav-item--active{% endif %}" href="/tasks">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+              <span class="nav-item__label">Tasks</span>
+            </a>
+            <a class="nav-item {% if request.path == '/notifications' %}nav-item--active{% endif %}" href="/notifications">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+              <span class="nav-item__label">Notifications</span>
+            </a>
+            <a class="nav-item {% if request.path == '/workspace' %}nav-item--active{% endif %}" href="/workspace">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+              <span class="nav-item__label">Workspace</span>
+            </a>
+            <a class="nav-item {% if request.path == '/performance' %}nav-item--active{% endif %}" href="/performance">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+              <span class="nav-item__label">Performance</span>
+            </a>
+            <a class="nav-item {% if request.path == '/plugins' %}nav-item--active{% endif %}" href="/plugins">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>
+              <span class="nav-item__label">Plugins</span>
+            </a>
+            <a class="nav-item {% if request.path == '/diagnostics' %}nav-item--active{% endif %}" href="/diagnostics">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+              <span class="nav-item__label">Diagnostics</span>
+            </a>
+            <a class="nav-item {% if request.path == '/settings' %}nav-item--active{% endif %}" href="/settings">
+              <span class="nav-item__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+              <span class="nav-item__label">Settings</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar__footer">
+        <span class="sidebar__footer-version">v0.2.0</span>
+        <div class="sidebar__footer-actions">
+          <button class="sidebar__footer-btn" data-action="settings" title="Settings" aria-label="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button class="sidebar__footer-btn" data-action="help" title="Help" aria-label="Help">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <section class="content-area" id="content-area">
+      <div class="content-area__header" id="page-header">
+        <h1 class="content-area__title" id="page-title">{% block page_title %}{{ page_title|default('Dashboard') }}{% endblock %}</h1>
+        <div class="content-area__actions" id="page-actions">
+          {% block page_actions %}{% endblock %}
+        </div>
+      </div>
+
+      <div class="content-area__body" id="page-content">
+        {% block content %}
+        <div class="empty-state" id="initial-loading">
+          <div class="empty-state__icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                 stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div class="empty-state__title">Loading Fiona…</div>
+          <div class="empty-state__description">
+            Connecting to the backend server. Please wait…
+          </div>
+        </div>
+        {% endblock %}
+      </div>
+    </section>
+
+    <!-- Right Panel -->
+    <aside class="right-panel right-panel--hidden" id="right-panel" aria-label="Context panel">
+      <div class="panel__header">
+        <span class="panel__title" id="panel-title">Details</span>
+        <button class="panel__close" id="panel-close-btn" aria-label="Close panel" data-action="close-panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="panel__tabs" id="panel-tabs">
+        <button class="panel__tab panel__tab--active" data-panel-tab="properties">Properties</button>
+        <button class="panel__tab" data-panel-tab="info">Info</button>
+      </div>
+      <div class="panel__content" id="panel-content">
+        <div class="empty-state">
+          <div class="empty-state__description">Select an item to view details</div>
+        </div>
+      </div>
+      <div class="panel__footer" id="panel-footer"></div>
+    </aside>
+
+  </main>
+
+  <!-- ─── Status Bar ───────────────────────────────────────────────── -->
+  <footer class="status-bar" id="status-bar" role="status">
+    <div class="status-bar__left">
+      <span class="status-bar__item" id="status-message">Ready</span>
+    </div>
+    <div class="status-bar__center">
+        <span class="status-bar__item status-bar__item--interactive" id="status-module" title="Active module">
+          {% block status_module %}{{ status_module|default('Dashboard') }}{% endblock %}
+        </span>
+      <span class="status-bar__separator" aria-hidden="true"></span>
+      <span class="status-bar__item" id="status-connection">Disconnected</span>
+    </div>
+    <div class="status-bar__right">
+      <span class="status-bar__item status-bar__item--interactive" id="status-notifications" title="Notifications" data-action="open-notifications">
+        <span class="status-bar__icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+        </span>
+        <span id="status-notification-count">0</span>
+      </span>
+      <span class="status-bar__separator" aria-hidden="true"></span>
+      <span class="status-bar__item" id="status-clock">--:-- --</span>
+    </div>
+  </footer>
+
+</div><!-- /#app -->
+
+<!-- Overlay Containers -->
+<div class="c-toast-container" id="toast-container" role="alert" aria-live="polite" aria-atomic="true"></div>
+<div id="modal-container"></div>
+<div id="context-menu-container"></div>
+<div id="command-palette-container"></div>
+<div id="tooltip-container"></div>
+
+<!-- Minimal shared JS -->
+<script src="/js/flask-shared.js"></script>
+
+{% block scripts %}{% endblock %}
+
+<!-- Prevent FOUC -->
+<script>
+  (function() {
+    document.documentElement.style.colorScheme = 'dark';
+  })();
+</script>
+
+</body>
+</html>

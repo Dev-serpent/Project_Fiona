@@ -96,6 +96,9 @@ async def error_middleware(
             content_type="application/json",
         )
     except HTTPException as exc:
+        # Let redirect responses (3xx) propagate as actual HTTP redirects
+        if 300 <= exc.status <= 399:
+            raise
         body = {
             "ok": False,
             "error": {

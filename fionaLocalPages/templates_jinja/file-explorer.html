@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Files{% endblock %}
+
+{% block content %}
+<style>
+  .files-placeholder {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: calc(100vh - 260px); min-height: 350px;
+    text-align: center; gap: var(--space-4);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  .files-placeholder__icon { color: var(--text-muted); opacity: 0.3; }
+  .files-placeholder__title {
+    font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  .files-placeholder__desc {
+    font-size: var(--font-size-sm); color: var(--text-muted);
+    max-width: 420px; line-height: 1.6;
+  }
+  .files-fake-browser {
+    margin-top: var(--space-4); width: 100%; max-width: 500px;
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+    overflow: hidden; opacity: 0.6;
+  }
+  .files-fake-browser__header {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised); border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .files-fake-browser__path {
+    flex: 1; text-align: left;
+  }
+  .files-fake-browser__body {
+    padding: var(--space-4);
+  }
+  .files-fake-browser__row {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-sm);
+  }
+  .files-fake-browser__row:last-child { border-bottom: none; }
+  .files-fake-browser__row-icon { color: var(--text-muted); width: 16px; }
+  .files-fake-browser__row-name { color: var(--text-primary); }
+  .files-fake-browser__row-size {
+    margin-left: auto; color: var(--text-muted);
+    font-size: var(--font-size-xs); font-family: var(--font-mono);
+  }
+</style>
+
+<div style="margin-bottom: var(--space-4);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        File explorer — browse, upload, and manage files on the connected system.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="files-placeholder">
+  <div class="files-placeholder__icon">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    </svg>
+  </div>
+  <div class="files-placeholder__title">File browser coming soon</div>
+  <div class="files-placeholder__desc">
+    The file explorer will let you browse directories, view file contents, upload and download files, and manage the filesystem directly from Fiona.
+  </div>
+
+  <div class="files-fake-browser">
+    <div class="files-fake-browser__header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span class="files-fake-browser__path">/home/user/projects/</span>
+    </div>
+    <div class="files-fake-browser__body">
+      <div class="files-fake-browser__row">
+        <span class="files-fake-browser__row-icon">📁</span>
+        <span class="files-fake-browser__row-name">src</span>
+        <span class="files-fake-browser__row-size">—</span>
+      </div>
+      <div class="files-fake-browser__row">
+        <span class="files-fake-browser__row-icon">📁</span>
+        <span class="files-fake-browser__row-name">docs</span>
+        <span class="files-fake-browser__row-size">—</span>
+      </div>
+      <div class="files-fake-browser__row">
+        <span class="files-fake-browser__row-icon">📄</span>
+        <span class="files-fake-browser__row-name">README.md</span>
+        <span class="files-fake-browser__row-size">2.1 KB</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>Files</strong> — This page provides a placeholder for the file explorer. Full functionality will be available once the backend file service is connected.
+</p>
+{% endblock %}

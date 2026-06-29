@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — Key Bindings{% endblock %}
+
+{% block content %}
+<style>
+  .bindings-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .bindings-table {
+    width: 100%; border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+  .bindings-table th {
+    text-align: left; padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    color: var(--text-secondary); font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-xs); text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .bindings-table td {
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+  .bindings-table tr:last-child td { border-bottom: none; }
+  .bindings-table tr:hover td { background: var(--surface-raised); }
+  .bindings-table__name {
+    font-weight: var(--font-weight-medium); white-space: nowrap;
+  }
+  .bindings-table__shortcut {
+    font-family: var(--font-mono); font-size: var(--font-size-xs);
+    color: var(--accent); white-space: nowrap;
+  }
+  .bindings-table__source {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+  }
+  .bindings-table__desc {
+    color: var(--text-secondary); max-width: 300px;
+  }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Keyboard shortcuts and key bindings configured for Fiona.
+      </p>
+    </div>
+  </div>
+</div>
+
+{% if bindings %}
+<div class="bindings-table-wrapper">
+  <table class="bindings-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Command</th>
+        <th>Description</th>
+        <th>Shortcut</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for binding in bindings %}
+      <tr>
+        <td class="bindings-table__name">{{ binding.name|default('—') }}</td>
+        <td style="font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--text-secondary);">{{ binding.command|default('—') }}</td>
+        <td class="bindings-table__desc">{{ binding.description|default('—') }}</td>
+        <td class="bindings-table__shortcut">{{ binding.shortcut|default('—') }}</td>
+        <td class="bindings-table__source">{{ binding.source|default('—') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01"/>
+    </svg>
+  </div>
+  <div class="empty-state__title">No bindings configured</div>
+  <div class="empty-state__description">
+    Key bindings will appear here once they are defined in your configuration.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

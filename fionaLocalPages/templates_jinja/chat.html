@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — AI Chat{% endblock %}
+
+{% block page_actions %}
+{% if sessions %}
+<button class="c-btn c-btn--primary c-btn--sm" id="btn-new-chat">
+  <span class="c-btn__icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </span>
+  New Chat
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .chat-layout {
+    display: grid; grid-template-columns: 280px 1fr; gap: var(--space-4);
+    height: calc(100vh - 220px); min-height: 400px;
+  }
+  .chat-sessions { overflow-y: auto; }
+  .chat-session-item {
+    display: block; padding: var(--space-3); margin-bottom: var(--space-1);
+    border-radius: var(--radius-md); cursor: pointer; text-decoration: none;
+    transition: background var(--transition-fast);
+    border: 1px solid transparent;
+  }
+  .chat-session-item:hover { background: var(--surface-raised); }
+  .chat-session-item--active {
+    background: var(--surface-raised); border-color: var(--accent);
+  }
+  .chat-session-item__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-session-item__meta {
+    font-size: var(--font-size-xxs); color: var(--text-muted);
+    margin-top: var(--space-1);
+  }
+  .chat-main {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: var(--space-4);
+  }
+  .chat-message {
+    margin-bottom: var(--space-4); max-width: 80%;
+  }
+  .chat-message--user { margin-left: auto; }
+  .chat-message--assistant { margin-right: auto; }
+  .chat-message__role {
+    font-size: var(--font-size-xxs); color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: var(--space-1);
+  }
+  .chat-message__bubble {
+    padding: var(--space-3); border-radius: var(--radius-md);
+    font-size: var(--font-size-sm); line-height: 1.6;
+    word-wrap: break-word;
+  }
+  .chat-message--user .chat-message__bubble {
+    background: var(--accent); color: var(--text-on-accent);
+  }
+  .chat-message--assistant .chat-message__bubble {
+    background: var(--surface-raised); color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+  }
+  .chat-message__time {
+    font-size: var(--font-size-xxs); color: var(--text-muted);
+    margin-top: var(--space-1); text-align: right;
+  }
+  .chat-input-area {
+    padding: var(--space-4); border-top: 1px solid var(--border);
+    display: flex; gap: var(--space-3);
+  }
+  .chat-input {
+    flex: 1; padding: var(--space-3);
+    background: var(--surface-raised); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); color: var(--text-primary);
+    font-size: var(--font-size-sm); font-family: var(--font-body);
+    outline: none; transition: border-color var(--transition-fast);
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .empty-state { text-align: center; padding: 10vh var(--space-4); }
+</style>
+
+<div class="chat-layout">
+  <!-- Sessions Sidebar -->
+  <aside class="chat-sessions">
+    <div class="c-card" style="height: 100%; display: flex; flex-direction: column;">
+      <div class="c-card__header" style="flex-shrink: 0;">
+        <span class="c-card__title">Sessions</span>
+      </div>
+      <div class="c-card__body" style="flex: 1; overflow-y: auto; padding: var(--space-2);">
+        {% if sessions %}
+          {% for session in sessions %}
+          <a href="?session={{ session.id }}" class="chat-session-item
+            {% if active_session_id and session.id == active_session_id %}chat-session-item--active{% endif %}">
+            <div class="chat-session-item__title">{{ session.title|default('Untitled') }}</div>
+            <div class="chat-session-item__meta">
+              {% if session.message_count is not none %}{{ session.message_count }} message{% if session.message_count != 1 %}s{% endif %}{% endif %}
+              {% if session.created_at %} &middot; {{ session.created_at[:10] }}{% endif %}
+            </div>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">
+            No sessions yet
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </aside>
+
+  <!-- Chat Main Area -->
+  <div class="chat-main">
+    {% if messages %}
+      <div class="chat-messages" id="chat-messages">
+        {% for msg in messages %}
+        <div class="chat-message chat-message--{{ msg.role|default('assistant') }}">
+          <div class="chat-message__role">{{ msg.role|default('assistant') }}</div>
+          <div class="chat-message__bubble">{{ msg.content|default('') }}</div>
+          {% if msg.created_at %}
+          <div class="chat-message__time">{{ msg.created_at[:19] }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="empty-state__title">Start a new chat</div>
+        <div class="empty-state__description">
+          Select a session from the sidebar or create a new one to begin.
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Message Input -->
+    <div class="chat-input-area">
+      <input type="text" class="chat-input" id="chat-input"
+             placeholder="Type a message…" aria-label="Chat message input" />
+      <button class="c-btn c-btn--primary" id="btn-send-message">
+        <span class="c-btn__icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </span>
+        Send
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if sessions is none %}
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  Chat sessions are not yet available. This page will be fully interactive in a subsequent update.
+</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+  var activeSessionId = '{{ active_session_id|default('') }}';
+
+  /* ── DOM refs ───────────────────────────────────────────────────────── */
+  var chatInput     = document.getElementById('chat-input');
+  var sendBtn       = document.getElementById('btn-send-message');
+  var newChatBtn    = document.getElementById('btn-new-chat');
+  var toastContainer = document.getElementById('toast-container');
+
+  /* ── Helper: get (or create) the messages container ─────────────────── */
+  function getMessagesContainer() {
+    var el = document.getElementById('chat-messages');
+    if (el) return el;
+
+    // Transition from empty-state → messages view
+    var chatMain = document.querySelector('.chat-main');
+    if (!chatMain) return null;
+
+    var emptyState = chatMain.querySelector('.empty-state');
+    if (emptyState) emptyState.style.display = 'none';
+
+    el = document.createElement('div');
+    el.className = 'chat-messages';
+    el.id = 'chat-messages';
+
+    var inputArea = chatMain.querySelector('.chat-input-area');
+    if (inputArea) {
+      chatMain.insertBefore(el, inputArea);
+    } else {
+      chatMain.appendChild(el);
+    }
+    return el;
+  }
+
+  /* ── Helper: auto-scroll messages container ─────────────────────────── */
+  function scrollToBottom() {
+    var container = document.getElementById('chat-messages');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  /* ── Toast error display ────────────────────────────────────────────── */
+  function showError(message) {
+    if (!toastContainer) return;
+    var toast = document.createElement('div');
+    toast.className = 'c-toast c-toast--error';
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(function () {
+      if (toast.parentNode) toast.remove();
+    }, 4000);
+  }
+
+  /* ── Append a message bubble ────────────────────────────────────────── */
+  function addMessage(role, content) {
+    var container = getMessagesContainer();
+    if (!container) return;
+
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-message chat-message--' + role;
+
+    var roleDiv = document.createElement('div');
+    roleDiv.className = 'chat-message__role';
+    roleDiv.textContent = role;
+
+    var bubbleDiv = document.createElement('div');
+    bubbleDiv.className = 'chat-message__bubble';
+    bubbleDiv.textContent = content;
+
+    msgDiv.appendChild(roleDiv);
+    msgDiv.appendChild(bubbleDiv);
+    container.appendChild(msgDiv);
+
+    scrollToBottom();
+  }
+
+  /* ── Send a message ─────────────────────────────────────────────────── */
+  function sendMessage() {
+    var text = chatInput ? chatInput.value.trim() : '';
+    if (!text) return;
+
+    if (chatInput) chatInput.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
+
+    fetch('/chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        session_id: activeSessionId
+      })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok && data.data) {
+        addMessage('user', text);
+        addMessage('assistant', data.data.response);
+        if (chatInput) chatInput.value = '';
+      } else {
+        showError(data.error || 'Failed to send message');
+      }
+    })
+    .catch(function (err) {
+      showError('Network error: ' + err.message);
+    })
+    .finally(function () {
+      if (chatInput) chatInput.disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
+      if (chatInput) chatInput.focus();
+    });
+  }
+
+  /* ── Create a new chat ──────────────────────────────────────────────── */
+  function newChat() {
+    fetch('/chat/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Chat' })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        window.location.reload();
+      } else {
+        showError(data.error || 'Failed to create new chat');
+      }
+    })
+    .catch(function (err) {
+      showError('Network error: ' + err.message);
+    });
+  }
+
+  /* ── Wire up event listeners ────────────────────────────────────────── */
+  if (sendBtn) {
+    sendBtn.addEventListener('click', sendMessage);
+  }
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+  if (newChatBtn) {
+    newChatBtn.addEventListener('click', newChat);
+  }
+
+  /* ── Auto-scroll on page load (if messages exist) ──────────────────── */
+  scrollToBottom();
+
+})();
+</script>
+{% endblock %}

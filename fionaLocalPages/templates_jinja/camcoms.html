@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Fiona — CamComs{% endblock %}
+
+{% block content %}
+<style>
+  .camcoms-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4); margin-bottom: var(--space-5);
+  }
+  .camcoms-status {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-4); margin-bottom: var(--space-5);
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .camcoms-status__dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--text-muted); flex-shrink: 0;
+  }
+  .camcoms-status__label {
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+  }
+  .camcoms-status__value {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+  .camcoms-feature {
+    padding: var(--space-4);
+    text-align: center;
+  }
+  .camcoms-feature__icon {
+    width: 40px; height: 40px; margin: 0 auto var(--space-3);
+    color: var(--accent);
+  }
+  .camcoms-feature__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    color: var(--text-primary); margin-bottom: var(--space-1);
+  }
+  .camcoms-feature__desc {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    line-height: 1.5;
+  }
+</style>
+
+<div style="margin-bottom: var(--space-5);">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
+        Camera and communications interface — video, audio, and device management.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Status -->
+<div class="camcoms-status">
+  <div class="camcoms-status__dot" id="camcoms-indicator"></div>
+  <div>
+    <div class="camcoms-status__label">CamComs Service</div>
+    <div class="camcoms-status__value" id="camcoms-status-text">Not initialized</div>
+  </div>
+</div>
+
+<!-- Feature Cards -->
+<div class="camcoms-grid">
+  <div class="c-card">
+    <div class="camcoms-feature">
+      <div class="camcoms-feature__icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 7l-7 5 7 5V7z"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+      </div>
+      <div class="camcoms-feature__title">Camera</div>
+      <div class="camcoms-feature__desc">Capture and stream video from connected cameras.</div>
+    </div>
+  </div>
+
+  <div class="c-card">
+    <div class="camcoms-feature">
+      <div class="camcoms-feature__icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <div class="camcoms-feature__title">Audio</div>
+      <div class="camcoms-feature__desc">Microphone input and audio stream management.</div>
+    </div>
+  </div>
+
+  <div class="c-card">
+    <div class="camcoms-feature">
+      <div class="camcoms-feature__icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
+          <path d="M6 6h.01M6 10h.01M6 14h.01M6 18h.01"/>
+        </svg>
+      </div>
+      <div class="camcoms-feature__title">Devices</div>
+      <div class="camcoms-feature__desc">Manage connected cameras, microphones, and speakers.</div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+  <strong>CamComs</strong> — This page provides a placeholder for camera and communications interfaces. Full functionality will be available once the backend CamComs service is connected.
+</p>
+{% endblock %}
