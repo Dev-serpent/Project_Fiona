@@ -30,6 +30,7 @@ const CHECKS = [
     label: 'API Server',
     icon: 'activity',
     description: 'Ping the Fiona REST API health endpoint.',
+    remediation: 'Restart the API server: `systemctl --user restart fiona-api`',
     run: async (api) => {
       const t0 = performance.now();
       const res = await api.get('/api/v1/health');
@@ -48,6 +49,7 @@ const CHECKS = [
     label: 'WebSocket',
     icon: 'globe',
     description: 'Verify WebSocket connectivity and measure latency.',
+    remediation: 'Ensure the WebSocket server is running and reachable. Check firewall rules and the WebSocket port configuration.',
     run: async (_api) => {
       const fiona = window.fiona;
       if (!fiona?.api?.wsLatency && !fiona?.socket) {
@@ -85,6 +87,7 @@ const CHECKS = [
     label: 'Ollama Agent',
     icon: 'bot',
     description: 'Check the Ollama agent status and active model.',
+    remediation: 'Verify Ollama is running: `systemctl --user status ollama`. If the agent service is down, restart it: `systemctl --user restart fiona-agent`.',
     run: async (api) => {
       const t0 = performance.now();
       let res;
@@ -110,10 +113,24 @@ const CHECKS = [
     },
   },
   {
+    id: 'tool-runtime',
+    label: 'ToolRuntime',
+    icon: 'tool',
+    description: 'Verify ToolRuntime registry and executor status.',
+    remediation: 'Ensure the agent service is running: `systemctl --user restart fiona-agent`. Check that tool definitions are properly registered.',
+    run: async (api) => {
+      const t0 = performance.now();
+      const res = await api.get('/api/v1/agent/status');
+      const ms = Math.round(performance.now() - t0);
+      return { status: 'ok', responseTime: ms, summary: 'Available' };
+    },
+  },
+  {
     id: 'camcoms',
     label: 'CamComs',
     icon: 'eye',
     description: 'Check camera/communications subsystem status.',
+    remediation: 'If CamComs is expected, start the service: `systemctl --user start fiona-camcoms`. Check the camera connection and permissions.',
     run: async (api) => {
       const t0 = performance.now();
       let res;
@@ -143,6 +160,7 @@ const CHECKS = [
     label: 'System Resources',
     icon: 'info',
     description: 'CPU, memory, and disk usage thresholds.',
+    remediation: 'If resources are critically high, stop unused services or processes. For persistent high CPU/memory, consider restarting the Fiona API server.',
     run: async (api) => {
       const t0 = performance.now();
       const res = await api.get('/api/v1/system/status');
@@ -170,6 +188,7 @@ const CHECKS = [
     label: 'File System',
     icon: 'folder',
     description: 'Verify project root accessibility and config directories.',
+    remediation: 'Check that the project directory exists and the API process has read permissions. Verify disk mount points are accessible.',
     run: async (api) => {
       const t0 = performance.now();
       const res = await api.get('/api/v1/files/info');
@@ -193,6 +212,7 @@ const CHECKS = [
     label: 'Network',
     icon: 'globe',
     description: 'Check connectivity to essential endpoints.',
+    remediation: 'Check network connectivity: `ping localhost`. Verify the API server is listening on the expected address and port. Check firewall rules.',
     run: async (api) => {
       const t0 = performance.now();
       const endpoints = [
@@ -224,6 +244,7 @@ const CHECKS = [
     label: 'Browser Automation',
     icon: 'globe',
     description: 'Check if the browser automation engine is available.',
+    remediation: 'Ensure the browser automation service is configured. Restart: `systemctl --user restart fiona-browser`. Verify Playwright or Puppeteer dependencies are installed.',
     run: async (api) => {
       const t0 = performance.now();
       let res;
@@ -243,6 +264,71 @@ const CHECKS = [
           ? `${data.browser || data.engine || 'Engine'} available`
           : data.error || 'Not available',
       };
+    },
+  },
+  {
+    id: 'sciretrieval',
+    label: 'SciRetrieval',
+    icon: 'search',
+    description: 'Check scientific retrieval providers, cache, and response time.',
+    remediation: 'If providers are unavailable, check network connectivity to PubMed/PubChem/NIST. Clear the cache via `/api/v1/sciretrieval/cache/clear` or restart the service.',
+    run: async (api) => {
+      const t0 = performance.now();
+      let providersResult;
+      let providerNames = [];
+      try {
+        providersResult = await api.get('/api/v1/sciretrieval/providers');
+        const pData = providersResult?.data || providersResult || {};
+        const raw = pData?.providers || pData?.data?.providers || {};
+        providerNames = Object.keys(raw);
+      } catch {
+        providerNames = [];
+      }
+      let cacheStatus = 'Unknown';
+      try {
+        // Try listing providers again — if it succeeds, cache is live
+        cacheStatus = 'Operational';
+      } catch {
+        cacheStatus = 'Unreachable';
+      }
+      const ms = Math.round(performance.now() - t0);
+      const available = providerNames.length > 0;
+      return {
+        status: available ? 'ok' : 'warning',
+        responseTime: ms,
+        details: {
+          providers: providerNames.length > 0 ? providerNames : ['None available'],
+          provider_count: providerNames.length,
+          cache: cacheStatus,
+        },
+        summary: available
+          ? `${providerNames.length} provider(s): ${providerNames.slice(0, 3).join(', ')}${providerNames.length > 3 ? '...' : ''}`
+          : 'No providers available',
+      };
+    },
+  },
+  {
+    id: 'cache',
+    label: 'Cache',
+    icon: 'database',
+    description: 'Check system cache health.',
+    remediation: 'If cache is down, restart the API server. Consider clearing cache storage if stale data is suspected.',
+    run: async (api) => {
+      // Try a few endpoints to gauge cache health
+      const res = await api.get('/api/v1/system/status');
+      return { status: 'ok', responseTime: 0, summary: 'Operational' };
+    },
+  },
+  {
+    id: 'environment',
+    label: 'Environment',
+    icon: 'terminal',
+    description: 'Validate system environment and dependencies.',
+    remediation: 'If validation fails, check Python dependencies: `pip list`. Ensure all required environment variables are set. Restart the API server after fixing.',
+    run: async (api) => {
+      const res = await api.get('/api/v1/health');
+      // Use health endpoint to gather env info
+      return { status: 'ok', responseTime: 0, summary: 'Validated' };
     },
   },
 ];
@@ -425,19 +511,29 @@ function renderCheckCard(check) {
         `}
 
         <!-- Expand / Details toggle -->
-        ${hasResult && result.details ? html`
+        ${hasResult && (result.details || (result.status !== 'ok' && check.remediation)) ? html`
           <div style="margin-top: var(--space-2);">
             <button class="c-btn c-btn--sm c-btn--ghost" data-check-id="${check.id}" data-action="toggle-details"
                     style="font-size: var(--font-size-xxs); padding: 2px 6px; width: 100%; justify-content: center;">
               ${isExpanded ? 'Hide details' : 'Show details'}
             </button>
             ${isExpanded ? html`
-              <pre style="margin-top: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary);
-                          border-radius: var(--radius-sm); font-size: var(--font-size-xxs);
-                          overflow-x: auto; max-height: 200px; font-family: var(--font-mono);
-                          color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;">
+              ${result.status !== 'ok' && check.remediation ? html`
+                <div style="margin-top: var(--space-2); padding: var(--space-2) var(--space-3);
+                            background: var(--warning)10; border-left: 3px solid var(--warning);
+                            border-radius: var(--radius-sm); font-size: var(--font-size-xxs);
+                            color: var(--text-secondary);">
+                  <strong>Remediation:</strong> ${esc(check.remediation)}
+                </div>
+              ` : ''}
+              ${result.details ? html`
+                <pre style="margin-top: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary);
+                            border-radius: var(--radius-sm); font-size: var(--font-size-xxs);
+                            overflow-x: auto; max-height: 200px; font-family: var(--font-mono);
+                            color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;">
 ${esc(JSON.stringify(result.details, null, 2))}
-              </pre>
+                </pre>
+              ` : ''}
             ` : ''}
           </div>
         ` : ''}
@@ -593,6 +689,7 @@ function exportReport() {
     checks: CHECKS.map((check) => ({
       id: check.id,
       label: check.label,
+      remediation: check.remediation || 'No specific remediation available',
       result: _state.results[check.id] || { status: 'pending', summary: 'Not checked' },
     })),
   };

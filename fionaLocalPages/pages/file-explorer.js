@@ -13,6 +13,7 @@ import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
 import { contextMenu } from '../js/components/ContextMenu.js';
 import { modal } from '../js/components/Modal.js';
+import { toast } from '../js/components/Toast.js';
 import { loadTemplate } from '../js/template-loader.js';
 
 /* ── API Helper ─────────────────────────────────────────────────────────── */
@@ -166,6 +167,36 @@ async function writeFile(path, content) {
   const api = getApi();
   if (!api) throw new Error('API not available');
   return api.post('/api/v1/files/write', { path, content });
+}
+
+async function renameFileApi(path, newName) {
+  const api = getApi();
+  if (!api) throw new Error('API not available');
+  return api.post('/api/v1/files/rename', { path, newName });
+}
+
+async function deleteFileApi(path) {
+  const api = getApi();
+  if (!api) throw new Error('API not available');
+  return api.delete('/api/v1/files/delete', { body: { path } });
+}
+
+/* ── Workspace Integration ──────────────────────────────────────────────── */
+
+/**
+ * Read the current workspace path from the global store, if available.
+ * Falls back to the hardcoded DEFAULT_ROOT if no workspace is set.
+ */
+function getWorkspaceRoot() {
+  try {
+    const store = window.fiona?.store;
+    if (store && typeof store.get === 'function') {
+      return store.get('workspace.currentPath') || store.get('workspace.path') || '';
+    }
+  } catch (e) {
+    // Store not available — ignore
+  }
+  return '';
 }
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
@@ -522,17 +553,29 @@ function renderPreview() {
       </div>
       <div class="fe-preview__meta-row">
         <span class="fe-preview__meta-label">Modified</span>
-        <span class="fe-preview__meta-value">${formatDate(info.modified ?? _state.selectedEntry.modified)}</span>
+        <span class="fe-preview__meta-value">${info.modified ? new Date(info.modified * 1000).toLocaleString() : formatDate(info.modified ?? _state.selectedEntry.modified)}</span>
       </div>
+      ${info.created ? html`
+      <div class="fe-preview__meta-row">
+        <span class="fe-preview__meta-label">Created</span>
+        <span class="fe-preview__meta-value">${new Date(info.created * 1000).toLocaleString()}</span>
+      </div>
+      ` : ''}
       ${info.permissions ? html`
       <div class="fe-preview__meta-row">
         <span class="fe-preview__meta-label">Permissions</span>
         <span class="fe-preview__meta-value">${_escapeHtml(info.permissions)}</span>
       </div>
       ` : ''}
-      ${info.path ? html`
+      ${info.owner != null ? html`
       <div class="fe-preview__meta-row">
-        <span class="fe-preview__meta-label">Path</span>
+        <span class="fe-preview__meta-label">Owner (UID)</span>
+        <span class="fe-preview__meta-value">${_escapeHtml(String(info.owner))}</span>
+      </div>
+      ` : ''}
+      ${info.path ? html`
+      <div class="fe-preview__meta-row" style="align-items: flex-start;">
+        <span class="fe-preview__meta-label" style="padding-top: 2px;">Path</span>
         <span class="fe-preview__meta-value fe-preview__meta-value--path">${_escapeHtml(info.path)}</span>
       </div>
       ` : ''}
@@ -814,7 +857,55 @@ function showFileContextMenu(x, y, entry) {
     },
   ];
 
+  // Workspace-related options for directories
+  if (entry.type === 'directory') {
+    items.push({ divider: true });
+    items.push({
+      label: 'Set as Workspace Root',
+      icon: 'folder',
+      handler: () => {
+        setWorkspaceRoot(entry.path);
+      },
+    });
+    items.push({
+      label: 'Open in Workspace',
+      icon: 'externalLink',
+      handler: () => {
+        openInWorkspace(entry.path);
+      },
+    });
+  }
+
   contextMenu.showContextMenu(x, y, items);
+}
+
+function setWorkspaceRoot(dirPath) {
+  const store = window.fiona?.store;
+  if (store && typeof store.set === 'function') {
+    store.set('workspace.currentPath', dirPath);
+    toast.showToast('success', 'Workspace Root Set', `Root changed to "${dirPath.split('/').pop()}"`);
+    // Reload the file explorer with the new root
+    _state.rootPath = dirPath;
+    navigateTo(dirPath);
+    renderTree();
+  } else {
+    toast.showToast('warning', 'Not Available', 'Workspace store is not available');
+  }
+}
+
+function openInWorkspace(dirPath) {
+  const router = window.fiona?.router;
+  if (router && typeof router.navigate === 'function') {
+    // Navigate to the workspace tab, optionally passing the path
+    router.navigate('/workspace');
+    // Set the workspace path for the workspace page to pick up
+    const store = window.fiona?.store;
+    if (store && typeof store.set === 'function') {
+      store.set('workspace.currentPath', dirPath);
+    }
+  } else {
+    toast.showToast('warning', 'Not Available', 'Router is not available');
+  }
 }
 
 function downloadFile(path, name) {
@@ -853,26 +944,24 @@ async function showRenameDialog(entry) {
   const newName = renameInput.value.trim();
   if (!newName || newName === oldName) return;
 
-  // TODO: API doesn't have a rename endpoint yet; we'll do a copy + delete
   try {
-    const api = getApi();
-    const content = await fetchFileContent(entry.path);
-    const dir = entry.path.split('/').slice(0, -1).join('/');
-    const newPath = dir + '/' + newName;
-    await writeFile(newPath, content);
+    await renameFileApi(entry.path, newName);
+    toast.showToast('success', 'Renamed', `Renamed to "${newName}"`);
     // Refresh current directory
     navigateTo(_state.currentPath);
   } catch (err) {
     console.error('[FileExplorer] rename failed:', err);
+    toast.showToast('error', 'Rename Failed', err.message || 'Could not rename file');
   }
 }
 
 async function showDeleteDialog(entry) {
+  const isDir = entry.type === 'directory';
   const result = await modal.showModal({
     title: 'Delete',
     content: html`
       <p>Are you sure you want to delete <strong>${_escapeHtml(entry.name)}</strong>?</p>
-      ${entry.type === 'directory' ? '<p style="margin-top: 8px; color: var(--danger);">This directory and all its contents will be permanently deleted.</p>' : ''}
+      ${isDir ? '<p style="margin-top: 8px; color: var(--warning);">Only empty directories can be deleted. Files inside must be removed first.</p>' : ''}
     `,
     size: 'sm',
     buttons: [
@@ -883,9 +972,15 @@ async function showDeleteDialog(entry) {
 
   if (result !== 'delete') return;
 
-  // TODO: API doesn't have a delete endpoint yet
-  console.log('[FileExplorer] Delete requested:', entry.path);
-  // navigateTo(_state.currentPath);
+  try {
+    await deleteFileApi(entry.path);
+    toast.showToast('success', 'Deleted', `"${entry.name}" has been deleted`);
+    // Refresh current directory
+    navigateTo(_state.currentPath);
+  } catch (err) {
+    console.error('[FileExplorer] delete failed:', err);
+    toast.showToast('error', 'Delete Failed', err.message || 'Could not delete file');
+  }
 }
 
 /* ── New File / Folder ────────────────────────────────────────────────────── */
@@ -1175,10 +1270,14 @@ function bindGlobalKeys() {
  * @returns {string} HTML string
  */
 function render(routeInfo) {
+  // Detect workspace root path from the global store
+  const wsPath = getWorkspaceRoot();
+  const root = wsPath || DEFAULT_ROOT;
+
   // Initialize state
-  _state.rootPath = DEFAULT_ROOT;
-  _state.currentPath = DEFAULT_ROOT;
-  _state.breadcrumb = buildBreadcrumb(DEFAULT_ROOT);
+  _state.rootPath = root;
+  _state.currentPath = root;
+  _state.breadcrumb = buildBreadcrumb(root);
   _state.expandedDirs = new Set();
   _state.isLoading = false;
   _state.hasError = false;
@@ -1197,11 +1296,15 @@ async function mount(container) {
   _container = container;
   _isDestroyed = false;
 
+  // Detect workspace root path from the global store
+  const wsPath = getWorkspaceRoot();
+  const root = wsPath || DEFAULT_ROOT;
+
   // Load and inject the HTML template
   try {
     const rootEl = container.querySelector('#file-explorer-root') || container;
     const templateHtml = await loadTemplate('file-explorer', {
-      rootPath: DEFAULT_ROOT,
+      rootPath: root,
     });
     rootEl.innerHTML = templateHtml;
   } catch (err) {

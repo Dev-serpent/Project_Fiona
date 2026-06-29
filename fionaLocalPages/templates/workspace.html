@@ -17,6 +17,10 @@
         </p>
       </div>
       <div style="display: flex; align-items: center; gap: var(--space-2);">
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-create-btn" title="Create a new workspace">
+          <span class="c-btn__icon">{{{plusIcon}}}</span>
+          New Workspace
+        </button>
         <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-explorer" title="Open in file explorer">
           <span class="c-btn__icon">{{{folderIcon}}}</span>
           Open Folder
@@ -28,6 +32,84 @@
       </div>
     </div>
   </div>
+
+  <!-- Workspace List Section -->
+  <div class="c-card" style="margin-bottom: var(--space-5);">
+    <div class="c-card__header">
+      <span class="c-card__title">Workspaces</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-2); max-height: 200px; overflow-y: auto;">
+      {{{workspaceListHtml}}}
+    </div>
+  </div>
+
+  <!-- Active Workspace Config Section -->
+  {{#if hasActiveWorkspace}}
+  <div class="c-card" style="margin-bottom: var(--space-5);">
+    <div class="c-card__header">
+      <span class="c-card__title">Active Workspace</span>
+      <div style="display: flex; gap: var(--space-2);">
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-in-files" title="Open workspace root in Files tab">
+          <span class="c-btn__icon">{{{folderIcon}}}</span>
+          Open in Files
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-open-terminal-here" title="Open terminal at workspace root">
+          <span class="c-btn__icon">{{{terminalIcon}}}</span>
+          Terminal Here
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="ws-delete-active" title="Delete this workspace"
+                style="color: var(--danger);">
+          <span class="c-btn__icon">{{{trashIcon}}}</span>
+        </button>
+      </div>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-3);">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px;">Name</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: var(--font-weight-medium);">
+            {{activeWorkspaceName}}
+          </div>
+        </div>
+        <div>
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px;">Path</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-family: var(--font-mono);">
+            {{activeWorkspacePath}}
+          </div>
+        </div>
+        {{#if activeWorkspaceDescription}}
+        <div style="grid-column: 1 / -1;">
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px;">Description</div>
+          <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">
+            {{activeWorkspaceDescription}}
+          </div>
+        </div>
+        {{/if}}
+      </div>
+      <!-- Open files from store -->
+      {{#if hasOpenFiles}}
+      <div style="margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border);">
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-2);">
+          Open Files ({{openFileCount}})
+        </div>
+        {{{openFilesHtml}}}
+      </div>
+      {{/if}}
+    </div>
+  </div>
+  {{/if}}
+
+  <!-- Recent Projects Section -->
+  {{#if hasRecentProjects}}
+  <div class="c-card" style="margin-bottom: var(--space-5);">
+    <div class="c-card__header">
+      <span class="c-card__title">Recently Opened</span>
+    </div>
+    <div class="c-card__body" style="padding: var(--space-2); max-height: 160px; overflow-y: auto;">
+      {{{recentProjectsHtml}}}
+    </div>
+  </div>
+  {{/if}}
 
   <!-- Top Row: Project Info Cards -->
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">

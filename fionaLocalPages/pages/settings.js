@@ -21,7 +21,7 @@ import { loadTemplate } from '../js/template-loader.js';
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
 const SETTINGS_KEY = 'fiona_settings';
-const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION = 2;
 
 /** Default settings — built-in values used when nothing is stored. */
 const DEFAULT_SETTINGS = {
@@ -111,20 +111,142 @@ const DEFAULT_SETTINGS = {
     gitEnabled: true,
     dockerEnabled: false,
   },
+
+  /* ── ToolRuntime ──────────────────────────────────────────────────── */
+  toolRuntime: {
+    sandboxEnabled: true,
+    executionTimeout: 30,
+    maxParallelTools: 5,
+    allowFileAccess: true,
+    allowNetworkAccess: false,
+    logExecution: true,
+  },
+
+  /* ── SciRetrieval ─────────────────────────────────────────────────── */
+  sciRetrieval: {
+    enabled: true,
+    defaultProvider: 'auto',
+    cacheEnabled: true,
+    cacheTTL: 3600,
+    maxResults: 10,
+    enrichmentEnabled: true,
+    apiTimeout: 15,
+  },
+
+  /* ── Plugins ──────────────────────────────────────────────────────── */
+  plugins: {
+    autoUpdate: true,
+    allowThirdParty: false,
+    pluginPath: '',
+    developmentMode: false,
+    strictMode: true,
+  },
+
+  /* ── Workspace ────────────────────────────────────────────────────── */
+  workspace: {
+    autoSave: true,
+    autoSaveInterval: 60,
+    defaultWorkspace: '',
+    sessionRestore: true,
+    maxRecentWorkspaces: 10,
+  },
+
+  /* ── Performance ──────────────────────────────────────────────────── */
+  performance: {
+    hardwareAcceleration: true,
+    animationQuality: 'high',
+    memoryLimit: 0,
+    throttleCPU: false,
+    throttlePercentage: 50,
+    powerSaver: false,
+  },
+
+  /* ── Logging ──────────────────────────────────────────────────────── */
+  logging: {
+    level: 'info',
+    maxFiles: 5,
+    maxFileSize: 10485760,
+    includeTimestamps: true,
+    logToFile: true,
+    logToConsole: true,
+  },
+
+  /* ── Key Bindings ─────────────────────────────────────────────────── */
+  keyBindings: {
+    enabled: true,
+    globalShortcuts: true,
+    showInMenu: true,
+    conflictDetection: true,
+  },
+
+  /* ── PhiConnect ───────────────────────────────────────────────────── */
+  phiConnect: {
+    enabled: true,
+    autoConnect: false,
+    defaultTimeout: 30,
+    encryptionEnabled: true,
+    maxRetries: 3,
+    heartbeatInterval: 15,
+  },
+
+  /* ── CamComs ──────────────────────────────────────────────────────── */
+  camComs: {
+    enabled: true,
+    autoConnect: false,
+    port: 0,
+    encryptionEnabled: true,
+    heartbeatInterval: 30,
+    maxReconnectAttempts: 5,
+    logLevel: 'info',
+  },
 };
 
 /** Section definitions for the settings navigation. */
 const SECTIONS = [
-  { id: 'general',       label: 'General',         icon: 'gear' },
-  { id: 'appearance',    label: 'Appearance',      icon: 'activity' },
-  { id: 'keyboard',      label: 'Keyboard Shortcuts', icon: 'keyboard' },
-  { id: 'notifications', label: 'Notifications',    icon: 'bell' },
-  { id: 'privacy',       label: 'Privacy',          icon: 'lock' },
-  { id: 'agent',         label: 'Agent',            icon: 'bot' },
-  { id: 'terminal',      label: 'Terminal',         icon: 'terminal' },
-  { id: 'fileExplorer',  label: 'File Explorer',    icon: 'folder' },
-  { id: 'integrations',  label: 'Integrations',     icon: 'globe' },
+  { id: 'general',       label: 'General',            icon: 'gear' },
+  { id: 'appearance',    label: 'Appearance',         icon: 'activity' },
+  { id: 'keyboard',      label: 'Keyboard Shortcuts',  icon: 'keyboard' },
+  { id: 'notifications', label: 'Notifications',       icon: 'bell' },
+  { id: 'privacy',       label: 'Privacy',             icon: 'lock' },
+  { id: 'terminal',      label: 'Terminal',            icon: 'terminal' },
+  { id: 'agent',         label: 'Agent',               icon: 'bot' },
+  { id: 'toolRuntime',   label: 'ToolRuntime',         icon: 'tool' },
+  { id: 'sciRetrieval',  label: 'SciRetrieval',        icon: 'search' },
+  { id: 'plugins',       label: 'Plugins',             icon: 'puzzle' },
+  { id: 'workspace',     label: 'Workspace',           icon: 'folder' },
+  { id: 'performance',   label: 'Performance',         icon: 'activity' },
+  { id: 'logging',       label: 'Logging',             icon: 'fileText' },
+  { id: 'keyBindings',   label: 'Key Bindings',        icon: 'keyboard' },
+  { id: 'phiConnect',    label: 'PhiConnect',          icon: 'wifi' },
+  { id: 'camComs',       label: 'CamComs',             icon: 'database' },
+  { id: 'fileExplorer',  label: 'File Explorer',       icon: 'folder' },
+  { id: 'integrations',  label: 'Integrations',        icon: 'globe' },
 ];
+
+/**
+ * Mapping of section IDs to available icon names.
+ * Sections with duplicate icons use distinct icon keys.
+ */
+const SECTION_ICON_MAP = {
+  general: 'gear',
+  appearance: 'activity',
+  keyboard: 'keyboard',
+  notifications: 'bell',
+  privacy: 'lock',
+  terminal: 'terminal',
+  agent: 'bot',
+  toolRuntime: 'tool',
+  sciRetrieval: 'search',
+  plugins: 'puzzle',
+  workspace: 'folderOpen',
+  performance: 'trendingUp',
+  logging: 'fileText',
+  keyBindings: 'keyboard',
+  phiConnect: 'wifi',
+  camComs: 'database',
+  fileExplorer: 'folder',
+  integrations: 'globe',
+};
 
 /** Shortcut labels for the keyboard section. */
 const SHORTCUT_LABELS = {
@@ -217,6 +339,10 @@ const _state = {
   showImportDialog: false,
   toastContainer: null,
   previewStyles: null,      // <style> element for instant preview
+  /** Set of section IDs that have been modified since last save. */
+  dirtySections: new Set(),
+  /** Per-section save in progress flag. */
+  savingSection: null,
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -288,6 +414,43 @@ function saveSettings() {
   applyPreviews();
 }
 
+/**
+ * Save a single section to the backend API and persist to localStorage.
+ * Falls back to full localStorage save if the API is unavailable.
+ */
+async function saveSection(sectionId) {
+  if (!_state.settings || !_state.settings[sectionId]) return;
+
+  const api = getApi();
+  if (api) {
+    try {
+      _state.savingSection = sectionId;
+      renderSettingsPage(_state.container);
+      await api.put(`/api/v1/settings/${sectionId}`, _state.settings[sectionId]);
+    } catch (err) {
+      console.warn(`[settings] Server save failed for section "${sectionId}" (non-fatal):`, err);
+    } finally {
+      _state.savingSection = null;
+    }
+  }
+
+  // Persist to localStorage (full)
+  try {
+    const toStore = {
+      ..._state.settings,
+      version: SETTINGS_VERSION,
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(toStore));
+  } catch (e) {
+    console.warn('[settings] Failed to save settings to localStorage:', e);
+  }
+
+  // Mark section as clean
+  _state.dirtySections.delete(sectionId);
+  applyPreviews();
+  renderSettingsPage(_state.container);
+}
+
 function migrateSettings(settings) {
   const version = settings.version || 0;
   let migrated = { ...settings };
@@ -297,17 +460,36 @@ function migrateSettings(settings) {
     migrated = {
       ...deepClone(DEFAULT_SETTINGS),
       ...migrated,
-      general:     { ...deepClone(DEFAULT_SETTINGS.general),     ...(migrated.general || {}) },
-      appearance:  { ...deepClone(DEFAULT_SETTINGS.appearance),  ...(migrated.appearance || {}) },
-      keyboard:    { ...deepClone(DEFAULT_SETTINGS.keyboard),    ...(migrated.keyboard || {}) },
+      general:       { ...deepClone(DEFAULT_SETTINGS.general),       ...(migrated.general || {}) },
+      appearance:    { ...deepClone(DEFAULT_SETTINGS.appearance),    ...(migrated.appearance || {}) },
+      keyboard:      { ...deepClone(DEFAULT_SETTINGS.keyboard),      ...(migrated.keyboard || {}) },
       notifications: { ...deepClone(DEFAULT_SETTINGS.notifications), ...(migrated.notifications || {}) },
-      privacy:     { ...deepClone(DEFAULT_SETTINGS.privacy),     ...(migrated.privacy || {}) },
-      agent:       { ...deepClone(DEFAULT_SETTINGS.agent),       ...(migrated.agent || {}) },
-      terminal:    { ...deepClone(DEFAULT_SETTINGS.terminal),    ...(migrated.terminal || {}) },
-      fileExplorer: { ...deepClone(DEFAULT_SETTINGS.fileExplorer), ...(migrated.fileExplorer || {}) },
-      integrations: { ...deepClone(DEFAULT_SETTINGS.integrations), ...(migrated.integrations || {}) },
+      privacy:       { ...deepClone(DEFAULT_SETTINGS.privacy),       ...(migrated.privacy || {}) },
+      agent:         { ...deepClone(DEFAULT_SETTINGS.agent),         ...(migrated.agent || {}) },
+      terminal:      { ...deepClone(DEFAULT_SETTINGS.terminal),      ...(migrated.terminal || {}) },
+      fileExplorer:  { ...deepClone(DEFAULT_SETTINGS.fileExplorer),  ...(migrated.fileExplorer || {}) },
+      integrations:  { ...deepClone(DEFAULT_SETTINGS.integrations),  ...(migrated.integrations || {}) },
       version: SETTINGS_VERSION,
     };
+  }
+
+  if (version < 2) {
+    // Migration v1 → v2: add new sections with defaults merged
+    const newSections = {
+      toolRuntime:  deepClone(DEFAULT_SETTINGS.toolRuntime),
+      sciRetrieval: deepClone(DEFAULT_SETTINGS.sciRetrieval),
+      plugins:      deepClone(DEFAULT_SETTINGS.plugins),
+      workspace:    deepClone(DEFAULT_SETTINGS.workspace),
+      performance:  deepClone(DEFAULT_SETTINGS.performance),
+      logging:      deepClone(DEFAULT_SETTINGS.logging),
+      keyBindings:  deepClone(DEFAULT_SETTINGS.keyBindings),
+      phiConnect:   deepClone(DEFAULT_SETTINGS.phiConnect),
+      camComs:      deepClone(DEFAULT_SETTINGS.camComs),
+    };
+    for (const [key, defaults] of Object.entries(newSections)) {
+      migrated[key] = { ...defaults, ...(migrated[key] || {}) };
+    }
+    migrated.version = SETTINGS_VERSION;
   }
 
   return migrated;
@@ -456,7 +638,8 @@ async function renderSettingsPage(container) {
     <nav style="padding: var(--space-2) 0;">
       ${filteredSections.map((s) => {
         const isActive = s.id === _state.activeSection;
-        const iconSvg = ICONS[s.icon] ? ICONS[s.icon].html : ICONS.gear.html;
+        const iconName = SECTION_ICON_MAP[s.id] || s.icon || 'gear';
+        const iconSvg = ICONS[iconName] ? ICONS[iconName].html : ICONS.gear.html;
         return `
           <button class="settings-nav__item${isActive ? ' settings-nav__item--active' : ''}"
                   data-section="${s.id}" data-action="nav-section"
@@ -487,6 +670,9 @@ async function renderSettingsPage(container) {
   const sectionDesc = getSectionDescription(_state.activeSection);
   const formHtml = activeSectionData ? renderSectionControls(_state.activeSection, activeSectionData) : '<p style="color: var(--text-muted);">Select a category to view settings.</p>';
 
+  const sectionDirty = _state.dirtySections.has(_state.activeSection);
+  const sectionSaving = _state.savingSection === _state.activeSection;
+
   const contentHtml = `
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6);">
       <div>
@@ -502,6 +688,13 @@ async function renderSettingsPage(container) {
           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--warning);"></span>
           <span class="settings-unsaved__count">Unsaved changes</span>
         </span>
+        <button class="c-btn c-btn--sm ${sectionDirty ? 'c-btn--primary' : 'c-btn--ghost'}"
+                data-action="save-section"
+                ${sectionSaving ? 'disabled' : ''}
+                title="${sectionDirty ? 'Save this section to backend' : 'No changes'}">
+          <span class="c-btn__icon">${ICONS.check.html}</span>
+          ${sectionSaving ? 'Saving…' : 'Save'}
+        </button>
         <button class="c-btn c-btn--sm c-btn--ghost" data-action="reset-section" title="Reset to defaults">
           <span class="c-btn__icon">${ICONS.refresh.html}</span>
           Reset
@@ -534,6 +727,15 @@ function getSectionDescription(sectionId) {
     terminal:      'Terminal emulator settings: shell, font, scrollback.',
     fileExplorer:  'File browsing preferences: hidden files, default view, sort order.',
     integrations:  'External service connections: Ollama, browser automation, etc.',
+    toolRuntime:   'Tool execution sandbox, timeouts, and parallel execution limits.',
+    sciRetrieval:  'Scientific literature retrieval providers, cache, and enrichment.',
+    plugins:       'Plugin auto-update, third-party policy, and development mode.',
+    workspace:     'Auto-save intervals, session restore, and recent workspaces.',
+    performance:   'Hardware acceleration, animation quality, and CPU throttling.',
+    logging:       'Log level, file rotation, and output destinations.',
+    keyBindings:   'Global keyboard shortcut system and conflict detection.',
+    phiConnect:    'PhiConnect peer-to-peer encrypted messaging configuration.',
+    camComs:       'CamComs device communication and encryption settings.',
   };
   return descs[sectionId] || 'Configure Fiona settings.';
 }
@@ -579,6 +781,15 @@ function renderSectionControls(sectionId, data) {
     case 'terminal':      return renderTerminalControls(data);
     case 'fileExplorer':  return renderFileExplorerControls(data);
     case 'integrations':  return renderIntegrationControls(data);
+    case 'toolRuntime':   return renderToolRuntimeControls(data);
+    case 'sciRetrieval':  return renderSciRetrievalControls(data);
+    case 'plugins':       return renderPluginsControls(data);
+    case 'workspace':     return renderWorkspaceControls(data);
+    case 'performance':   return renderPerformanceControls(data);
+    case 'logging':       return renderLoggingControls(data);
+    case 'keyBindings':   return renderKeyBindingsControls(data);
+    case 'phiConnect':    return renderPhiConnectControls(data);
+    case 'camComs':       return renderCamComsControls(data);
     default:              return html`<p style="color: var(--text-muted);">Unknown section.</p>`;
   }
 }
@@ -715,6 +926,129 @@ function renderIntegrationControls(data) {
   `;
 }
 
+function renderToolRuntimeControls(data) {
+  return html`
+    ${toggleControl('toolRuntime.sandboxEnabled', 'Sandbox Mode', 'Run tools in isolated sandbox environment', data.sandboxEnabled)}
+    ${numberControl('toolRuntime.executionTimeout', 'Execution Timeout (s)', data.executionTimeout, 1, 300)}
+    ${numberControl('toolRuntime.maxParallelTools', 'Max Parallel Tools', data.maxParallelTools, 1, 50)}
+    ${toggleControl('toolRuntime.allowFileAccess', 'File System Access', 'Allow tools to read/write files', data.allowFileAccess)}
+    ${toggleControl('toolRuntime.allowNetworkAccess', 'Network Access', 'Allow tools to make network requests', data.allowNetworkAccess)}
+    ${toggleControl('toolRuntime.logExecution', 'Log Execution', 'Record tool execution details to logs', data.logExecution)}
+  `;
+}
+
+function renderSciRetrievalControls(data) {
+  return html`
+    ${toggleControl('sciRetrieval.enabled', 'Enable SciRetrieval', 'Master switch for scientific literature retrieval', data.enabled)}
+    ${textControl('sciRetrieval.defaultProvider', 'Default Provider', data.defaultProvider, 'auto, arxiv, pubmed, crossref')}
+    ${toggleControl('sciRetrieval.cacheEnabled', 'Enable Cache', 'Cache search results to reduce API calls', data.cacheEnabled)}
+    ${numberControl('sciRetrieval.cacheTTL', 'Cache TTL (seconds)', data.cacheTTL, 60, 86400)}
+    ${numberControl('sciRetrieval.maxResults', 'Max Results', data.maxResults, 1, 100)}
+    ${toggleControl('sciRetrieval.enrichmentEnabled', 'Enrichment', 'Auto-enrich agent context with relevant literature', data.enrichmentEnabled)}
+    ${numberControl('sciRetrieval.apiTimeout', 'API Timeout (s)', data.apiTimeout, 5, 120)}
+  `;
+}
+
+function renderPluginsControls(data) {
+  return html`
+    ${toggleControl('plugins.autoUpdate', 'Auto-Update', 'Automatically check for and apply plugin updates', data.autoUpdate)}
+    ${toggleControl('plugins.allowThirdParty', 'Allow Third-Party', 'Enable installation of third-party plugins', data.allowThirdParty)}
+    ${textControl('plugins.pluginPath', 'Plugin Path', data.pluginPath, 'Custom plugin directory')}
+    ${toggleControl('plugins.developmentMode', 'Development Mode', 'Enable plugin development features and hot-reload', data.developmentMode)}
+    ${toggleControl('plugins.strictMode', 'Strict Mode', 'Enforce strict security policies on all plugins', data.strictMode)}
+  `;
+}
+
+function renderWorkspaceControls(data) {
+  return html`
+    ${toggleControl('workspace.autoSave', 'Auto-Save', 'Automatically save workspace state at intervals', data.autoSave)}
+    ${numberControl('workspace.autoSaveInterval', 'Auto-Save Interval (s)', data.autoSaveInterval, 10, 600)}
+    ${textControl('workspace.defaultWorkspace', 'Default Workspace', data.defaultWorkspace, 'Path to default workspace')}
+    ${toggleControl('workspace.sessionRestore', 'Session Restore', 'Restore last workspace on startup', data.sessionRestore)}
+    ${numberControl('workspace.maxRecentWorkspaces', 'Max Recent Workspaces', data.maxRecentWorkspaces, 1, 50)}
+  `;
+}
+
+function renderPerformanceControls(data) {
+  return html`
+    ${toggleControl('performance.hardwareAcceleration', 'Hardware Acceleration', 'Use GPU for rendering and computation', data.hardwareAcceleration)}
+    ${selectControl('performance.animationQuality', 'Animation Quality', [
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+    ], data.animationQuality)}
+    ${numberControl('performance.memoryLimit', 'Memory Limit (MB, 0 = unlimited)', data.memoryLimit, 0, 65536)}
+    ${toggleControl('performance.throttleCPU', 'Throttle CPU', 'Limit CPU usage during background tasks', data.throttleCPU)}
+    ${sliderControl('performance.throttlePercentage', 'Throttle Percentage', data.throttlePercentage, 10, 100, 5)}
+    ${toggleControl('performance.powerSaver', 'Power Saver', 'Reduce resource usage on battery power', data.powerSaver)}
+  `;
+}
+
+function renderLoggingControls(data) {
+  return html`
+    ${selectControl('logging.level', 'Log Level', [
+      { value: 'debug', label: 'Debug' },
+      { value: 'info', label: 'Info' },
+      { value: 'warn', label: 'Warning' },
+      { value: 'error', label: 'Error' },
+    ], data.level)}
+    ${numberControl('logging.maxFiles', 'Max Log Files', data.maxFiles, 1, 50)}
+    ${numberControl('logging.maxFileSize', 'Max File Size (bytes)', data.maxFileSize, 102400, 104857600)}
+    ${toggleControl('logging.includeTimestamps', 'Include Timestamps', 'Prepend timestamps to log entries', data.includeTimestamps)}
+    ${toggleControl('logging.logToFile', 'Log to File', 'Write logs to rotating file on disk', data.logToFile)}
+    ${toggleControl('logging.logToConsole', 'Log to Console', 'Output logs to terminal console', data.logToConsole)}
+  `;
+}
+
+function renderKeyBindingsControls(data) {
+  return html`
+    <div class="c-alert c-alert--info" style="margin-bottom: var(--space-4);">
+      <span class="c-alert__icon">${ICONS.info}</span>
+      <div class="c-alert__content">Global key binding system for application launchers and shortcuts.</div>
+    </div>
+    ${toggleControl('keyBindings.enabled', 'Enable Key Bindings', 'Master switch for the key binding system', data.enabled)}
+    ${toggleControl('keyBindings.globalShortcuts', 'Global Shortcuts', 'Allow shortcuts to work when Fiona is in background', data.globalShortcuts)}
+    ${toggleControl('keyBindings.showInMenu', 'Show in Menu', 'Display available key bindings in the menu bar', data.showInMenu)}
+    ${toggleControl('keyBindings.conflictDetection', 'Conflict Detection', 'Warn when two bindings use the same key combination', data.conflictDetection)}
+  `;
+}
+
+function renderPhiConnectControls(data) {
+  return html`
+    <div class="c-alert c-alert--info" style="margin-bottom: var(--space-4);">
+      <span class="c-alert__icon">${ICONS.info}</span>
+      <div class="c-alert__content">Configure PhiConnect encrypted peer-to-peer messaging.</div>
+    </div>
+    ${toggleControl('phiConnect.enabled', 'Enable PhiConnect', 'Master switch for PhiConnect service', data.enabled)}
+    ${toggleControl('phiConnect.autoConnect', 'Auto-Connect', 'Automatically connect to known peers on startup', data.autoConnect)}
+    ${numberControl('phiConnect.defaultTimeout', 'Default Timeout (s)', data.defaultTimeout, 5, 300)}
+    ${toggleControl('phiConnect.encryptionEnabled', 'End-to-End Encryption', 'Encrypt all messages between peers', data.encryptionEnabled)}
+    ${numberControl('phiConnect.maxRetries', 'Max Retries', data.maxRetries, 0, 20)}
+    ${numberControl('phiConnect.heartbeatInterval', 'Heartbeat Interval (s)', data.heartbeatInterval, 5, 120)}
+  `;
+}
+
+function renderCamComsControls(data) {
+  return html`
+    <div class="c-alert c-alert--info" style="margin-bottom: var(--space-4);">
+      <span class="c-alert__icon">${ICONS.info}</span>
+      <div class="c-alert__content">Configure CamComs device communication settings.</div>
+    </div>
+    ${toggleControl('camComs.enabled', 'Enable CamComs', 'Master switch for CamComs device communication', data.enabled)}
+    ${toggleControl('camComs.autoConnect', 'Auto-Connect', 'Automatically connect to paired devices', data.autoConnect)}
+    ${numberControl('camComs.port', 'Port (0 = auto)', data.port, 0, 65535)}
+    ${toggleControl('camComs.encryptionEnabled', 'Encryption', 'Encrypt device communication channels', data.encryptionEnabled)}
+    ${numberControl('camComs.heartbeatInterval', 'Heartbeat Interval (s)', data.heartbeatInterval, 5, 120)}
+    ${numberControl('camComs.maxReconnectAttempts', 'Max Reconnect Attempts', data.maxReconnectAttempts, 0, 50)}
+    ${selectControl('camComs.logLevel', 'Log Level', [
+      { value: 'debug', label: 'Debug' },
+      { value: 'info', label: 'Info' },
+      { value: 'warn', label: 'Warning' },
+      { value: 'error', label: 'Error' },
+    ], data.logLevel)}
+  `;
+}
+
 /* ── Form Control Primitives ────────────────────────────────────────────── */
 
 function toggleControl(settingPath, label, description, value) {
@@ -835,6 +1169,11 @@ function mountComponents(container) {
 
   // ── Form control changes ──
   bindFormControls(container);
+
+  // ── Save section ──
+  container.querySelector('[data-action="save-section"]')?.addEventListener('click', () => {
+    saveSection(_state.activeSection);
+  });
 
   // ── Reset section ──
   container.querySelector('[data-action="reset-section"]')?.addEventListener('click', () => {
@@ -1030,13 +1369,18 @@ function setSettingByPath(path, value) {
 }
 
 function markUnsaved() {
+  // Track the current section as dirty
+  if (_state.activeSection) {
+    _state.dirtySections.add(_state.activeSection);
+  }
   updateUnsavedIndicator();
 
-  // Debounced auto-save
+  // Debounced auto-save (full settings)
   if (_state.saveTimer) clearTimeout(_state.saveTimer);
   _state.saveTimer = setTimeout(() => {
     saveSettings();
     markSaved();
+    _state.dirtySections.clear();
     updateUnsavedIndicator();
   }, 800);
 }
@@ -1089,9 +1433,11 @@ function showResetDialog() {
   modalContainer.querySelector('[data-action="confirm-reset"]')?.addEventListener('click', () => {
     if (_state.settings && _state.activeSection) {
       _state.settings[_state.activeSection] = deepClone(DEFAULT_SETTINGS[_state.activeSection]);
-      markUnsaved();
-      if (_state.container) renderSettingsPage(_state.container);
-      showToast('success', 'Section reset to defaults.');
+      // Save to backend and localStorage, then re-render
+      saveSection(_state.activeSection).then(() => {
+        if (_state.container) renderSettingsPage(_state.container);
+        showToast('success', 'Section reset to defaults.');
+      });
     }
     close();
   });
@@ -1122,13 +1468,50 @@ async function loadSettings() {
         saveSettings();
       }
     } catch (err) {
-      // Server not available — local settings only
-      console.log('[settings] Server settings unavailable, using local');
+      // Server not available — try per-section loading
+      console.log('[settings] Server settings unavailable, trying per-section…');
+      await loadAllSectionsFromServer();
     }
   }
 
   if (!_state.destroyed && _state.container) {
     await renderSettingsPage(_state.container);
+  }
+}
+
+/**
+ * Attempt to load each section from the per-section API endpoints.
+ * Merges successful responses on top of existing local settings.
+ */
+async function loadAllSectionsFromServer() {
+  const api = getApi();
+  if (!api) return;
+
+  const sectionIds = SECTIONS.map(s => s.id);
+  let anyLoaded = false;
+
+  for (const sectionId of sectionIds) {
+    try {
+      const result = await api.get(`/api/v1/settings/${sectionId}`);
+      if (result && typeof result === 'object') {
+        const sectionData = result.data || result;
+        if (sectionData && typeof sectionData === 'object' && Object.keys(sectionData).length > 0) {
+          _state.settings[sectionId] = {
+            ...deepClone(DEFAULT_SETTINGS[sectionId] || {}),
+            ..._state.settings[sectionId],
+            ...sectionData,
+          };
+          anyLoaded = true;
+        }
+      }
+    } catch (err) {
+      // Per-section endpoint not available — skip
+    }
+  }
+
+  if (anyLoaded) {
+    _state.originalSettings = deepClone(_state.settings);
+    saveSettings();
   }
 }
 
@@ -1157,6 +1540,8 @@ export function destroy() {
   _state.container = null;
   _state.settings = null;
   _state.originalSettings = null;
+  _state.dirtySections.clear();
+  _state.savingSection = null;
 
   // Remove preview styles
   if (_state.previewStyles) {

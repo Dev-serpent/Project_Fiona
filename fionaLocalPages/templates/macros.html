@@ -15,6 +15,78 @@
   </div>
 </div>
 
+<!-- Toolbar: New Macro, Recording, Import/Export -->
+<div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap;">
+  <!-- New Macro Button -->
+  <button class="c-btn c-btn--primary c-btn--sm" data-action="new-macro">
+    <span class="c-btn__icon">{{{plusIcon}}}</span>
+    New Macro
+  </button>
+
+  <!-- Recording Controls -->
+  <div style="display: flex; align-items: center; gap: var(--space-2);">
+    {{#if isRecording}}
+    <span class="macro-recording-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; flex-shrink: 0;"></span>
+    <input type="text" class="c-input" id="macro-recording-name"
+           placeholder="Macro name…" value="{{recordingName}}"
+           style="width: 160px; height: 34px;" autocomplete="off" />
+    <button class="c-btn c-btn--sm c-btn--danger" data-action="stop-recording">
+      <span class="c-btn__icon">{{{stopIcon}}}</span>
+      Stop
+    </button>
+    {{else}}
+    <button class="c-btn c-btn--sm c-btn--ghost" data-action="start-recording">
+      <span class="c-btn__icon">{{{recordIcon}}}</span>
+      Record
+    </button>
+    {{/if}}
+  </div>
+
+  <!-- Import / Export -->
+  <button class="c-btn c-btn--sm c-btn--ghost" data-action="import-macros">
+    <span class="c-btn__icon">{{{importIcon}}}</span>
+    Import
+  </button>
+  <button class="c-btn c-btn--sm c-btn--ghost" data-action="export-macros">
+    <span class="c-btn__icon">{{{exportIcon}}}</span>
+    Export
+  </button>
+</div>
+
+<!-- Recording Step List (only visible when recording) -->
+{{#if isRecording}}
+<div id="macro-recording-panel" style="margin-bottom: var(--space-4); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-alt);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2);">
+    <span style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-muted);">
+      Recording Steps ({{recordingStepCount}})
+    </span>
+  </div>
+  <div style="display: flex; gap: var(--space-2); margin-bottom: var(--space-2);">
+    <input type="text" class="c-input" id="macro-recording-command"
+           placeholder="Step command…" style="flex: 1; height: 34px;" autocomplete="off" />
+    <button class="c-btn c-btn--sm c-btn--primary" data-action="capture-step">
+      <span class="c-btn__icon">{{{addIcon}}}</span>
+      Add Step
+    </button>
+  </div>
+  <div id="recording-steps-list" style="font-size: var(--font-size-xs);">
+    {{{recordingStepsHtml}}}
+  </div>
+</div>
+{{/if}}
+
+<!-- Recording indicator animation -->
+<style>
+@keyframes macro-recording-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.macro-recording-dot {
+  animation: macro-recording-pulse 1.2s ease-in-out infinite;
+}
+</style>
+
+<!-- Search -->
 <div style="position: relative; margin-bottom: var(--space-4); max-width: 360px;">
   <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
     {{{searchIcon}}}
@@ -29,3 +101,6 @@
 <div id="macros-list">
   {{{macrosListContent}}}
 </div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="macro-import-file-input" accept=".json,application/json" style="display: none;" />

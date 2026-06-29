@@ -59,7 +59,7 @@ def install_host_service_unit(
 
 
 def run_user_service_command(action: str, *, service_name: str = DEFAULT_SERVICE_NAME) -> subprocess.CompletedProcess[str]:
-    allowed_actions = {"enable", "disable", "restart", "stop"}
+    allowed_actions = {"enable", "disable", "restart", "start", "stop"}
     if action not in allowed_actions:
         raise ValueError(f"unsupported service action: {action}")
 

@@ -1,7 +1,7 @@
 """QuikTieper access layer for Fiona."""
 
 from QuikTieper.bindings import parse_bindings
-from QuikTieper.config import DEFAULT_CONFIG_PATH, ensure_config, load_config, save_config
+from QuikTieper.config import DEFAULT_CONFIG_PATH, ensure_config, load_config, normalize_config, save_config
 from QuikTieper.launcher import AppLauncher, Binding
 
 
@@ -23,6 +23,7 @@ __all__ = [
     "DEFAULT_CONFIG_PATH",
     "ensure_config",
     "load_config",
+    "normalize_config",
     "normalize_key",
     "parse_bindings",
     "save_config",

@@ -191,6 +191,113 @@ async def file_info(request: Request) -> Response:
         raise ApiError(500, str(exc)) from exc
 
 
+# ── File Rename Handler ─────────────────────────────────────────────────────
+
+
+async def file_rename(request: Request) -> Response:
+    """POST /api/v1/files/rename
+
+    Body: { path: str, newName: str }
+    """
+    try:
+        body: dict[str, Any] = await request.json()
+    except Exception:
+        raise ApiError(400, "Invalid JSON body")
+
+    raw_path: str | None = body.get("path")
+    new_name: str | None = body.get("newName")
+
+    if not raw_path:
+        raise ApiError(400, "Missing required field: path")
+    if not new_name:
+        raise ApiError(400, "Missing required field: newName")
+    if "/" in new_name or new_name in (".", ".."):
+        raise ApiError(400, "Invalid name: must be a single file or directory name")
+
+    target = _resolve_path(raw_path)
+
+    if not target.exists():
+        raise ApiError(404, f"Path does not exist: {raw_path}")
+
+    new_path = target.parent / new_name
+    if new_path.exists():
+        raise ApiError(409, f"A file or directory named '{new_name}' already exists")
+
+    try:
+        target.rename(new_path)
+        stat = new_path.stat()
+        return json_response({
+            "ok": True,
+            "data": {
+                "name": new_path.name,
+                "path": str(new_path),
+                "type": "directory" if new_path.is_dir() else "file",
+                "size": stat.st_size,
+                "modified": stat.st_mtime,
+            },
+        })
+    except PermissionError:
+        raise ApiError(403, f"Permission denied: {raw_path}")
+    except OSError as exc:
+        logger.exception("File rename failed")
+        raise ApiError(500, str(exc))
+
+
+# ── File Delete Handler ─────────────────────────────────────────────────────
+
+
+async def file_delete(request: Request) -> Response:
+    """DELETE /api/v1/files/delete
+
+    Body: { path: str }
+    """
+    # Support both JSON body and query parameters for flexibility.
+    raw_path: str | None = None
+    content_type = request.content_type or ""
+
+    if "json" in content_type:
+        try:
+            body: dict[str, Any] = await request.json()
+            raw_path = body.get("path")
+        except Exception:
+            raise ApiError(400, "Invalid JSON body")
+    else:
+        raw_path = request.query.get("path")
+
+    if not raw_path:
+        raise ApiError(400, "Missing required field: path")
+
+    target = _resolve_path(raw_path)
+
+    if not target.exists():
+        raise ApiError(404, f"Path does not exist: {raw_path}")
+
+    try:
+        if target.is_dir():
+            contents = list(target.iterdir())
+            if contents:
+                raise ApiError(
+                    400,
+                    f"Directory is not empty ({len(contents)} items). "
+                    "Refusing to delete non-empty directory for safety.",
+                )
+            target.rmdir()
+        else:
+            target.unlink()
+
+        return json_response({
+            "ok": True,
+            "data": {"path": raw_path, "deleted": True},
+        })
+    except ApiError:
+        raise
+    except PermissionError:
+        raise ApiError(403, f"Permission denied: {raw_path}")
+    except OSError as exc:
+        logger.exception("File delete failed")
+        raise ApiError(500, str(exc))
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 

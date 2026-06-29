@@ -64,7 +64,7 @@
           <span>Config file</span>
           <span style="display: flex; align-items: center; gap: 4px; color: {{#if configExists}}var(--success){{else}}var(--text-muted){{/if}};">
             <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-            {{#if configExists}}Exists{{else}}Not found{{/if}}
+            {{#if configExists}}Exists{{/if}}{{#unless configExists}}Not found{{/unless}}
           </span>
         </div>
 
@@ -114,13 +114,14 @@
                          padding: 4px 8px; display: flex; align-items: center; gap: 4px;
                          font-size: var(--font-size-xxs);">
             <span style="width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;">
-              {{#if copyFeedback}}{{{checkIcon}}}{{{else}}}{{{copyIcon}}}{{/if}}
+              {{#if copyFeedback}}{{{checkIcon}}}{{/if}}{{#unless copyFeedback}}{{{copyIcon}}}{{/unless}}
             </span>
-            {{#if copyFeedback}}Copied!{{else}}Copy{{/if}}
+            {{#if copyFeedback}}Copied!{{/if}}{{#unless copyFeedback}}Copy{{/unless}}
           </button>
         </div>
       </div>
-      {{else}}
+      {{/if}}
+      {{#unless hasFingerprint}}
         {{#if hasIdentityError}}
         <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
           <div style="width: 48px; height: 48px; border-radius: 50%;
@@ -133,7 +134,8 @@
             {{identityError}}
           </div>
         </div>
-        {{else}}
+        {{/if}}
+        {{#unless hasIdentityError}}
         <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
           <div style="width: 48px; height: 48px; border-radius: 50%;
                       background: var(--bg-tertiary);
@@ -145,8 +147,245 @@
             Identity information unavailable.
           </div>
         </div>
-        {{/if}}
-      {{/if}}
+        {{/unless}}
+      {{/unless}}
     </div>
   </div>
+</div>
+
+<!-- ======================================================================
+     Extended Sections (Config, Logs, Service, Trust, Keys)
+     ====================================================================== -->
+
+<div style="margin-top: var(--space-5);">
+
+  <!-- ── Tab Bar ─────────────────────────────────────────────────────── -->
+  <div style="display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: var(--space-4); overflow-x: auto;">
+    <button class="c-tab {{#if isConfigTabActive}}c-tab--active{{/if}}" data-camcoms-tab="config">Configuration</button>
+    <button class="c-tab {{#if isLogsTabActive}}c-tab--active{{/if}}" data-camcoms-tab="logs">Audit Log</button>
+    <button class="c-tab {{#if isServiceTabActive}}c-tab--active{{/if}}" data-camcoms-tab="service">Service</button>
+    <button class="c-tab {{#if isTrustTabActive}}c-tab--active{{/if}}" data-camcoms-tab="trust">Trust</button>
+    <button class="c-tab {{#if isKeysTabActive}}c-tab--active{{/if}}" data-camcoms-tab="keys">Keys</button>
+  </div>
+
+  <!-- ── Configuration Tab ────────────────────────────────────────── -->
+  <div id="camcoms-tab-config" style="display: {{#if isConfigTabActive}}block{{/if}}{{#unless isConfigTabActive}}none{{/unless}};">
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+          <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{settingsIcon}}}</span>
+          Host Service Configuration
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);" id="camcoms-config-form">
+          {{#if configAvailable}}
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Receiver Host</label>
+            <input type="text" id="camcoms-config-host" value="{{configHost}}" class="c-input" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Receiver Port</label>
+            <input type="number" id="camcoms-config-port" value="{{configPort}}" class="c-input" style="width: 100%;">
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Key Path</label>
+            <input type="text" id="camcoms-config-key-path" value="{{configKeyPath}}" class="c-input" style="width: 100%; font-family: var(--font-mono); font-size: var(--font-size-xs);">
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Trusted Directory</label>
+            <input type="text" id="camcoms-config-trusted-dir" value="{{configTrustedDir}}" class="c-input" style="width: 100%; font-family: var(--font-mono); font-size: var(--font-size-xs);">
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Audit Log Path</label>
+            <input type="text" id="camcoms-config-audit-path" value="{{configAuditPath}}" class="c-input" style="width: 100%; font-family: var(--font-mono); font-size: var(--font-size-xs);">
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Execute Remote Actions</label>
+            <select id="camcoms-config-execute-actions" class="c-input" style="width: 100%;">
+              <option value="true" {{#if configExecuteActions}}selected{{/if}}>Enabled</option>
+              <option value="false" {{#unless configExecuteActions}}selected{{/unless}}>Disabled (dry-run)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Allowed Remote Actions</label>
+            <input type="text" id="camcoms-config-allowed-actions" value="{{configAllowedActions}}" class="c-input" style="width: 100%; font-family: var(--font-mono); font-size: var(--font-size-xs);">
+          </div>
+          <div style="display: flex; gap: var(--space-2); margin-top: var(--space-2);">
+            <button class="c-btn c-btn--primary" id="camcoms-config-save-btn">
+              <span class="c-btn__icon">{{{checkIcon}}}</span>
+              Save Configuration
+            </button>
+            <span id="camcoms-config-feedback" style="font-size: var(--font-size-xs); color: var(--success); align-self: center; display: none;"></span>
+          </div>
+          {{/if}}
+          {{#unless configAvailable}}
+          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center;">
+              {{#if configError}}{{configError}}{{/if}}{{#unless configError}}Configuration unavailable.{{/unless}}
+            </div>
+            <button class="c-btn c-btn--sm c-btn--primary" id="camcoms-config-init-btn">Create Default Config</button>
+          </div>
+          {{/unless}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Audit Log Tab ─────────────────────────────────────────────── -->
+  <div id="camcoms-tab-logs" style="display: {{#if isLogsTabActive}}block{{/if}}{{#unless isLogsTabActive}}none{{/unless}};">
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3);">
+          <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); display: flex; align-items: center; gap: var(--space-2);">
+            <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{listIcon}}}</span>
+            Recent Audit Log Entries
+          </div>
+          <button class="c-btn c-btn--sm c-btn--ghost" id="camcoms-logs-refresh-btn" title="Refresh logs">
+            <span class="c-btn__icon">{{{refreshIcon}}}</span>
+            Refresh
+          </button>
+        </div>
+
+        <div id="camcoms-logs-content">
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-xs);">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Time</th>
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Type</th>
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Details</th>
+                </tr>
+              </thead>
+              <tbody id="camcoms-logs-tbody"></tbody>
+            </table>
+          </div>
+          <div id="camcoms-logs-empty" style="display: none; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-4) 0;">
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center;" id="camcoms-logs-message">No audit log entries found.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Service Controls Tab ──────────────────────────────────────── -->
+  <div id="camcoms-tab-service" style="display: {{#if isServiceTabActive}}block{{/if}}{{#unless isServiceTabActive}}none{{/unless}};">
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+          <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{playIcon}}}</span>
+          Service Controls
+        </div>
+
+        <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; padding: var(--space-3) 0;">
+          <button class="c-btn c-btn--primary" id="camcoms-service-start-btn" title="Start the CamComs host service">
+            <span class="c-btn__icon">{{{playIcon}}}</span>
+            Start
+          </button>
+          <button class="c-btn c-btn--danger" id="camcoms-service-stop-btn" title="Stop the CamComs host service">
+            <span class="c-btn__icon">{{{closeIcon}}}</span>
+            Stop
+          </button>
+          <button class="c-btn c-btn--warning" id="camcoms-service-restart-btn" title="Restart the CamComs host service">
+            <span class="c-btn__icon">{{{refreshIcon}}}</span>
+            Restart
+          </button>
+        </div>
+
+        <div id="camcoms-service-feedback" style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center; min-height: 20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Trust Management Tab ──────────────────────────────────────── -->
+  <div id="camcoms-tab-trust" style="display: {{#if isTrustTabActive}}block{{/if}}{{#unless isTrustTabActive}}none{{/unless}};">
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+          <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{shieldIcon}}}</span>
+          Trusted Senders
+        </div>
+
+        <!-- Trusted senders list -->
+        <div id="camcoms-trust-list" style="margin-bottom: var(--space-3);">
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-xs);">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border);">
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Device ID</th>
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Added</th>
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Expires</th>
+                  <th style="text-align: left; padding: var(--space-2) var(--space-1); color: var(--text-muted); font-weight: var(--font-weight-medium);">Action</th>
+                </tr>
+              </thead>
+              <tbody id="camcoms-trust-tbody"></tbody>
+            </table>
+          </div>
+          <div id="camcoms-trust-empty" style="display: none; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-3) 0;">
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center;" id="camcoms-trust-message">No trusted senders configured.</div>
+          </div>
+        </div>
+
+        <!-- Add trusted sender -->
+        <details style="border-top: 1px solid var(--border); padding-top: var(--space-3);">
+          <summary style="font-size: var(--font-size-xs); color: var(--accent); cursor: pointer; font-weight: var(--font-weight-medium);">Add Trusted Sender</summary>
+          <div style="margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3);">
+            <div>
+              <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Public Key JSON</label>
+              <textarea id="camcoms-trust-key-input" rows="4" class="c-input" style="width: 100%; font-family: var(--font-mono, monospace); font-size: var(--font-size-xs); resize: vertical;" placeholder='{"device_id": "...", "encryption_public_key": "...", "signing_public_key": "..."}'></textarea>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Expires in (days):</label>
+              <input type="number" id="camcoms-trust-expiry" value="0" min="0" class="c-input" style="width: 80px; font-size: var(--font-size-xs);">
+              <span style="font-size: var(--font-size-xxs, 10px); color: var(--text-muted);">(0 = no expiry)</span>
+            </div>
+            <div>
+              <button class="c-btn c-btn--primary" id="camcoms-trust-add-btn">
+                <span class="c-btn__icon">{{{plusIcon}}}</span>
+                Add Trusted Sender
+              </button>
+              <span id="camcoms-trust-feedback" style="font-size: var(--font-size-xs); margin-left: var(--space-2);"></span>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Keys Tab ──────────────────────────────────────────────────── -->
+  <div id="camcoms-tab-keys" style="display: {{#if isKeysTabActive}}block{{/if}}{{#unless isKeysTabActive}}none{{/unless}};">
+    <div class="c-card">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary); margin-bottom: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+          <span style="width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent);">{{{keyIcon}}}</span>
+          Key Management
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <div style="font-size: var(--font-size-xs); color: var(--text-muted);">
+            Generate a new device identity key pair. This is a destructive operation —
+            existing trusted senders will need to re-pair using the new public key.
+          </div>
+
+          <div style="display: flex; align-items: center; gap: var(--space-2);">
+            <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Device ID:</label>
+            <input type="text" id="camcoms-keygen-device-id" value="host" class="c-input" style="width: 200px; font-size: var(--font-size-xs); font-family: var(--font-mono, monospace);">
+          </div>
+
+          <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+            <button class="c-btn c-btn--danger" id="camcoms-keygen-btn">
+              <span class="c-btn__icon">{{{keyIcon}}}</span>
+              Generate New Keys
+            </button>
+            <button class="c-btn c-btn--ghost" id="camcoms-copy-pubkey-btn" title="Copy public key to clipboard">
+              <span class="c-btn__icon">{{{copyIcon}}}</span>
+              Copy Public Key
+            </button>
+          </div>
+
+          <div id="camcoms-keygen-feedback" style="font-size: var(--font-size-xs); color: var(--text-muted); min-height: 20px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>

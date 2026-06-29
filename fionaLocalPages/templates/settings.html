@@ -35,6 +35,36 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* Section action bar styling */
+    .settings-section__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .settings-section__save-btn {
+      transition: all var(--transition-fast);
+    }
+
+    .settings-section__save-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .settings-section__dirty-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--warning);
+      display: inline-block;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
   </style>
 
   <!-- Left Nav -->

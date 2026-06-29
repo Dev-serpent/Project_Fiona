@@ -35,6 +35,8 @@ class Binding:
     app_name: str | None = None
     window_match: str | None = None
     binding_type: str = "launch"
+    enabled: bool = True
+    category: str = ""
 
 
 def write_debug_log(message: str) -> None:

@@ -1,8 +1,8 @@
-<!-- bindings.html — Key Bindings Viewer Template -->
+<!-- bindings.html — Key Bindings Page Template -->
 <div class="bindings-page" style="height: 100%; display: flex; flex-direction: column;">
 
   <!-- Page Header -->
-  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); flex-shrink: 0;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-3); flex-shrink: 0;">
     <div>
       <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: var(--space-3);">
         <span style="width: 24px; height: 24px; display: inline-flex; color: var(--accent);">{{{keyboardIcon}}}</span>
@@ -12,32 +12,67 @@
         QuikTieper application bindings
       </p>
     </div>
-    <div style="display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; flex-wrap: wrap;">
       <span class="c-badge c-badge--accent" style="font-size: var(--font-size-xxs);">{{totalCount}} binding{{#unless singular}}s{{/unless}}</span>
+      <button class="c-btn c-btn--primary c-btn--sm" id="bindings-create-btn"
+              title="Create a new binding">
+        <span class="c-btn__icon">{{{plusIcon}}}</span>
+        Create
+      </button>
       <button class="c-btn c-btn--primary c-btn--sm" id="bindings-save-btn"
-              {{#if saving}}disabled{{/if}}>
+              {{#if saving}}disabled{{/if}}
+              title="Save current config to disk">
         <span class="c-btn__icon">{{{saveBtnIcon}}}</span>
         {{saveBtnText}}
       </button>
+      <div class="c-btn-group" style="display: flex; gap: 1px;">
+        <button class="c-btn c-btn--sm c-btn--ghost" id="bindings-export-btn"
+                title="Export bindings as JSON">
+          <span class="c-btn__icon">{{{downloadIcon}}}</span>
+          Export
+        </button>
+        <button class="c-btn c-btn--sm c-btn--ghost" id="bindings-import-btn"
+                title="Import bindings from JSON file">
+          <span class="c-btn__icon">{{{uploadIcon}}}</span>
+          Import
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Search Bar -->
-  <div style="position: relative; margin-bottom: var(--space-4); max-width: 400px; flex-shrink: 0;">
-    <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
-      {{{searchIcon}}}
-    </span>
-    <input type="text" class="c-input" id="bindings-search-input"
-           placeholder="Search by app, key, command&hellip;"
-           value="{{searchQuery}}"
-           style="padding-left: 32px; height: 34px; width: 100%;"
-           autocomplete="off" />
+  <!-- Toolbar: Search + Category Filter + Group Toggle -->
+  <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); flex-shrink: 0; flex-wrap: wrap;">
+    <!-- Search -->
+    <div style="position: relative; flex: 1; min-width: 200px; max-width: 360px;">
+      <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: flex; color: var(--text-muted); width: 16px; height: 16px; pointer-events: none;">
+        {{{searchIcon}}}
+      </span>
+      <input type="text" class="c-input" id="bindings-search-input"
+             placeholder="Search by app, key, command&hellip;"
+             value="{{searchQuery}}"
+             style="padding-left: 32px; height: 34px; width: 100%;"
+             autocomplete="off" />
+    </div>
+
+    <!-- Category Filter -->
+    <select class="c-input" id="bindings-category-filter"
+            style="width: auto; min-width: 130px; height: 34px; font-size: var(--font-size-xs);">
+      <option value="">All Categories</option>
+      {{{categoryOptions}}}
+    </select>
+
+    <!-- Group Toggle -->
+    <button class="c-btn c-btn--sm c-btn--ghost" id="bindings-group-toggle"
+            title="Toggle grouping mode">
+      <span class="c-btn__icon">{{{groupIcon}}}</span>
+      <span id="bindings-group-label">{{groupLabel}}</span>
+    </button>
   </div>
 
   <!-- Main Content Area -->
   <div style="display: flex; gap: var(--space-4); flex: 1; min-height: 0;">
 
-    <!-- App List Panel -->
+    <!-- Binding List Panel -->
     <div style="flex: 1; min-width: 280px; overflow-y: auto; padding-right: var(--space-2);">
       {{{appListContent}}}
     </div>
@@ -47,4 +82,8 @@
       {{{detailPanelContent}}}
     </div>
   </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="bindings-import-input" accept=".json,application/json"
+         style="display: none;" />
 </div>

@@ -310,6 +310,20 @@ def register_sci_retrieval(container: FionaContainer) -> None:
     )
 
 
+def register_tool_runtime(container: FionaContainer) -> None:
+    """Register the ToolRuntime in the DI container.
+
+    Args:
+        container: A FionaContainer instance.
+    """
+    from Agent.tool_runtime import ToolRuntime
+
+    def _factory() -> ToolRuntime:
+        return ToolRuntime()
+
+    container.register_factory("tool.runtime", _factory)
+
+
 def get_sci_retrieval_bridge(
     container: FionaContainer | None = None,
 ) -> "MainTextBridge":

@@ -4,7 +4,13 @@ from Agent.cancellation import CancellationToken, CancelledError
 from Agent.chat_handler import AgentChatHandler
 from Agent.chat_store import ChatMessage, ChatStore, ChatStoreError, estimate_tokens
 from Agent.command_registry import CommandSpec, command_registry
-from Agent.ollama import DEFAULT_OLLAMA_BASE_URL, OllamaClient, OllamaError
+from Agent.ollama import (
+    ChatResponse,
+    DEFAULT_OLLAMA_BASE_URL,
+    OllamaClient,
+    OllamaError,
+    ToolCall,
+)
 LMStudioClient = OllamaClient
 LMStudioError = OllamaError
 from Agent.orchestration import (
@@ -35,6 +41,7 @@ __all__ = [
     "CancellationToken",
     "CancelledError",
     "ChatMessage",
+    "ChatResponse",
     "ChatStore",
     "ChatStoreError",
     "CommandSpec",
@@ -58,6 +65,7 @@ __all__ = [
     "SubAgentResult",
     "SubGoalSpec",
     "TaskPlan",
+    "ToolCall",
     "command_registry",
     "estimate_tokens",
     "run_agent_goal",

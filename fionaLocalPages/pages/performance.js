@@ -102,6 +102,16 @@ const _state = {
   tooltipX: 0,
   tooltipY: 0,
 
+  // Service status (for Active Fiona Services)
+  services: {
+    api: 'unknown',
+    websocket: 'unknown',
+    agent: 'unknown',
+    camcoms: 'unknown',
+    phiconnect: 'unknown',
+    quiktieper: 'unknown',
+  },
+
   // Kill process dialog
   killTarget: null,
 
@@ -210,6 +220,185 @@ async function loadProcesses() {
   }
 }
 
+/* ── Service Status ─────────────────────────────────────────────────────── */
+
+async function loadServiceStatus() {
+  if (_state.destroyed) return;
+  const api = getApi();
+  if (!api) return;
+
+  const now = Date.now();
+
+  // API Server — use health endpoint
+  try {
+    await api.get('/api/v1/health');
+    _state.services.api = 'running';
+  } catch {
+    _state.services.api = 'stopped';
+  }
+
+  // WebSocket — check store or window.fiona socket
+  const fiona = window.fiona;
+  const connStatus = fiona?.store?.get?.('system.status') || 'disconnected';
+  _state.services.websocket = connStatus === 'connected' ? 'connected' : 'disconnected';
+
+  // Agent — check agent status
+  try {
+    const res = await api.get('/api/v1/agent/status');
+    const data = res?.data || res || {};
+    if (data.status === 'ok' || data.status === 'running' || data.running === true) {
+      _state.services.agent = data.model || data.default_model ? 'running' : 'idle';
+    } else {
+      _state.services.agent = 'idle';
+    }
+  } catch {
+    _state.services.agent = 'idle';
+  }
+
+  // CamComs
+  try {
+    const res = await api.get('/api/v1/camcoms/status');
+    const data = res?.data || res || {};
+    _state.services.camcoms = (data.status === 'ok' || data.connected === true) ? 'active' : 'inactive';
+  } catch {
+    _state.services.camcoms = 'inactive';
+  }
+
+  // PhiConnect — try a lightweight endpoint
+  _state.services.phiconnect = 'inactive';
+  try {
+    const res = await api.get('/api/v1/phiconnect/status');
+    const data = res?.data || res || {};
+    if (data.status === 'ok' || data.connected === true || data.running === true) {
+      _state.services.phiconnect = 'active';
+    }
+  } catch {
+    // Look for alternative indicators
+    if (window.fiona?.api?.baseUrl?.includes('phiconnect')) {
+      _state.services.phiconnect = 'active';
+    }
+  }
+
+  // QuikTieper
+  _state.services.quiktieper = 'stopped';
+  try {
+    const res = await api.get('/api/v1/quiktieper/status');
+    const data = res?.data || res || {};
+    if (data.status === 'ok' || data.running === true) {
+      _state.services.quiktieper = 'running';
+    }
+  } catch {
+    // Try alt endpoint
+    try {
+      const res2 = await api.get('/api/v1/typing/status');
+      const d2 = res2?.data || res2 || {};
+      if (d2.status === 'ok' || d2.running === true) {
+        _state.services.quiktieper = 'running';
+      }
+    } catch {
+      // Service probably not running
+    }
+  }
+
+  // Update the services UI
+  if (!_state.destroyed && _state.container) {
+    updateServiceCards();
+  }
+}
+
+function getServiceColor(serviceKey, value) {
+  const okValues = {
+    api: ['running'],
+    websocket: ['connected'],
+    agent: ['running', 'idle'],
+    camcoms: ['active'],
+    phiconnect: ['active'],
+    quiktieper: ['running'],
+  };
+  const warnValues = {
+    api: [],
+    websocket: [],
+    agent: ['idle'],
+    camcoms: [],
+    phiconnect: [],
+    quiktieper: [],
+  };
+  const okSet = okValues[serviceKey] || [];
+  const warnSet = warnValues[serviceKey] || [];
+  if (okSet.includes(value)) return 'var(--success)';
+  if (warnSet.includes(value)) return 'var(--warning)';
+  return 'var(--danger)';
+}
+
+function getServiceLabel(key, value) {
+  const labels = {
+    running: 'Running',
+    stopped: 'Stopped',
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    idle: 'Idle',
+    active: 'Active',
+    inactive: 'Inactive',
+    unknown: 'Unknown',
+  };
+  return labels[value] || value || 'Unknown';
+}
+
+function updateServiceCards() {
+  const container = _state.container;
+  if (!container) return;
+  const el = container.querySelector('#perf-services');
+  if (!el) return;
+  el.innerHTML = renderServicesSection();
+}
+
+function renderServicesSection() {
+  const services = [
+    { key: 'api', label: 'API Server', icon: 'activity' },
+    { key: 'websocket', label: 'WebSocket', icon: 'globe' },
+    { key: 'agent', label: 'Agent', icon: 'bot' },
+    { key: 'camcoms', label: 'CamComs', icon: 'eye' },
+    { key: 'phiconnect', label: 'PhiConnect', icon: 'puzzle' },
+    { key: 'quiktieper', label: 'QuikTieper', icon: 'terminal' },
+  ];
+
+  return html`
+    <div class="c-card" id="perf-services-card">
+      <div class="c-card__header">
+        <span class="c-card__title">Active Fiona Services</span>
+        <span style="font-size: var(--font-size-xs); color: var(--text-muted);">Live status</span>
+      </div>
+      <div class="c-card__body" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3);">
+        ${html.raw(services.map((svc) => {
+          const value = _state.services[svc.key] || 'unknown';
+          const color = getServiceColor(svc.key, value);
+          const label = getServiceLabel(svc.key, value);
+          return html`
+            <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3);
+                        background: var(--surface); border-radius: var(--radius-md);
+                        border: 1px solid var(--border-subtle);">
+              <div style="width: 28px; height: 28px; border-radius: var(--radius-md);
+                          background: ${color}20; display: flex; align-items: center;
+                          justify-content: center; color: ${color}; flex-shrink: 0;">
+                ${ICONS[svc.icon] || ICONS.help}
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-primary);">
+                  ${esc(svc.label)}
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 1px;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: ${color}; flex-shrink: 0;"></span>
+                  <span style="font-size: var(--font-size-xxs); color: var(--text-muted);">${esc(label)}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join(''))}
+      </div>
+    </div>
+  `;
+}
+
 function updateMetrics(metrics) {
   if (_state.destroyed) return;
 
@@ -309,6 +498,7 @@ async function renderPage(container) {
 
   // Build raw HTML sections
   const metricCards = renderCpuCard() + renderMemoryCard() + renderDiskCard() + renderNetworkCard();
+  const serviceCards = renderServicesSection();
 
   const intervalOptions = REFRESH_INTERVALS.map((i) =>
     `<option value="${i.value}"${_state.refreshInterval === i.value ? ' selected' : ''}>${esc(i.label)}</option>`
@@ -347,6 +537,7 @@ async function renderPage(container) {
     searchIcon: ICONS.search.html,
     intervalOptions,
     metricCards,
+    serviceCards,
     timeRangeButtons,
     processHeaders,
     processTableRows,
@@ -1313,6 +1504,10 @@ async function doPoll() {
   if (_state.processes.length === 0 || Math.random() < 0.3) {
     loadProcesses();
   }
+  // Refresh service status periodically (every ~5 polls)
+  if (Math.random() < 0.2) {
+    loadServiceStatus();
+  }
 }
 
 /* ── Visibility Handling ────────────────────────────────────────────────── */
@@ -1359,6 +1554,7 @@ export function render(container) {
   loadMetrics().then(() => {
     if (!_state.destroyed) {
       loadProcesses();
+      loadServiceStatus();
       startPolling();
     }
   });

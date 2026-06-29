@@ -6,8 +6,10 @@ The frontend calls these endpoints to persist settings server-side
 
 Handlers
 --------
-* ``get_settings``   —  GET  /api/v1/settings
-* ``put_settings``   —  PUT  /api/v1/settings
+* ``get_settings``          —  GET  /api/v1/settings
+* ``put_settings``          —  PUT  /api/v1/settings
+* ``get_settings_section``  —  GET  /api/v1/settings/{section}
+* ``put_settings_section``  —  PUT  /api/v1/settings/{section}
 """
 
 from __future__ import annotations
@@ -28,6 +30,31 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SETTINGS_PATH = Path.home() / ".config" / "fiona" / "settings.txt"
+
+# ---------------------------------------------------------------------------
+# Valid sections
+# ---------------------------------------------------------------------------
+
+VALID_SECTIONS: set[str] = {
+    "appearance",
+    "terminal",
+    "agent",
+    "toolRuntime",
+    "sciRetrieval",
+    "plugins",
+    "workspace",
+    "notifications",
+    "performance",
+    "logging",
+    "keyBindings",
+    "phiConnect",
+    "camComs",
+    "general",
+    "keyboard",
+    "privacy",
+    "fileExplorer",
+    "integrations",
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -115,6 +142,61 @@ async def put_settings(request: Request) -> Response:
         "ok": True,
         "data": {
             "path": str(SETTINGS_PATH),
+            "saved": True,
+        },
+    })
+
+
+async def get_settings_section(request: Request) -> Response:
+    """GET /api/v1/settings/{section} — return a single section.
+
+    Response shape
+    --------------
+    .. code-block:: json
+
+        { "ok": true, "data": { … } }
+    """
+    section = request.match_info.get("section", "")
+    if section not in VALID_SECTIONS:
+        raise ApiError(404, f"Unknown settings section: {section}")
+
+    settings = _load_settings()
+    section_data = settings.get(section, {})
+    return json_response({"ok": True, "data": section_data})
+
+
+async def put_settings_section(request: Request) -> Response:
+    """PUT /api/v1/settings/{section} — update a single section.
+
+    Request body should be a JSON object with the section's settings.
+    Only the named section is updated in the persisted file.
+
+    Response shape
+    --------------
+    .. code-block:: json
+
+        { "ok": true, "data": { "section": "…", "saved": true } }
+    """
+    section = request.match_info.get("section", "")
+    if section not in VALID_SECTIONS:
+        raise ApiError(404, f"Unknown settings section: {section}")
+
+    try:
+        body: Any = await request.json()
+    except Exception:
+        raise ApiError(400, "Invalid JSON body")
+
+    if not isinstance(body, dict):
+        raise ApiError(400, "Request body must be a JSON object")
+
+    settings = _load_settings()
+    settings[section] = body
+    _save_settings(settings)
+
+    return json_response({
+        "ok": True,
+        "data": {
+            "section": section,
             "saved": True,
         },
     })

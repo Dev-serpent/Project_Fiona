@@ -1,15 +1,22 @@
 /* ==========================================================================
-   bindings.js — Key Bindings Viewer Page
+   bindings.js — Key Bindings Management Page
    ==========================================================================
-   Displays QuikTieper application key bindings grouped by app.
-   Provides search/filter, inline expandable details, and a dedicated
-   detail side panel when a binding is selected. Read-only display with
-   a save action to persist the config back to the backend.
+   Full CRUD display of QuikTieper application key bindings.
+   Provides search/filter, inline expandable details, detail side panel,
+   create/edit/delete operations, enable/disable toggle, import/export,
+   conflict detection, and category-based grouping/filtering.
 
    Backend APIs:
-     GET  /api/v1/bindings       → { ok, data: { config, apps: [...] } }
-     GET  /api/v1/bindings/apps  → { ok, data: { apps: [...] } }
-     POST /api/v1/bindings/save  → { ok, data: { path, saved } }
+     GET  /api/v1/bindings              → { ok, data: { config, apps } }
+     GET  /api/v1/bindings/apps         → { ok, data: { apps } }
+     POST /api/v1/bindings/save         → { ok, data: { path, saved } }
+     POST /api/v1/bindings/create       → { ok, data: { binding, app } }
+     POST /api/v1/bindings/update       → { ok, data: { binding, app } }
+     DELETE /api/v1/bindings/delete     → { ok, data: { deleted } }
+     POST /api/v1/bindings/toggle       → { ok, data: { enabled } }
+     GET  /api/v1/bindings/export       → JSON file download
+     POST /api/v1/bindings/import       → { ok, data: { count } }
+     POST /api/v1/bindings/check-conflicts → { ok, data: { conflicts } }
 
    Exports: { render(container?), mount(container), destroy() }
    Default export: factory for the SPA router.
@@ -25,6 +32,7 @@ import {
   skeletonButton,
 } from '../js/components/LoadingSkeleton.js';
 import { toast } from '../js/components/Toast.js';
+import { modal } from '../js/components/Modal.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
@@ -56,6 +64,10 @@ const _state = {
   selectedBinding: null,  // The binding object currently selected for detail
   expandedBindings: new Set(),  // Set of binding composite keys expanded inline
   saving: false,
+  categoryFilter: '',      // Current category filter value
+  groupByCategory: false,  // True = group by category, false = group by app
+  categoryNames: [],       // Unique category names extracted from bindings
+  working: false,          // Generic busy flag for async operations
 
   _boundListeners: [],
 };
@@ -88,7 +100,11 @@ function esc(str) {
  */
 function persistState() {
   try {
-    const data = { searchQuery: _state.searchQuery };
+    const data = {
+      searchQuery: _state.searchQuery,
+      categoryFilter: _state.categoryFilter,
+      groupByCategory: _state.groupByCategory,
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     // Silently fail
@@ -104,6 +120,8 @@ function loadPersistedState() {
     if (stored) {
       const data = JSON.parse(stored);
       _state.searchQuery = data.searchQuery || '';
+      _state.categoryFilter = data.categoryFilter || '';
+      _state.groupByCategory = data.groupByCategory || false;
     }
   } catch (e) {
     // Silently fail
@@ -266,6 +284,87 @@ function formatCooldown(seconds) {
   return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
 }
 
+/**
+ * Extract unique category names from all bindings.
+ * @param {Array<Object>} bindings
+ * @returns {string[]}
+ */
+function extractCategories(bindings) {
+  const cats = new Set();
+  for (const b of bindings) {
+    if (b.category) cats.add(b.category);
+  }
+  return Array.from(cats).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Group a flat array of bindings by category name.
+ * Bindings without a category go into "General".
+ * @param {Array<Object>} bindings
+ * @returns {Object} { categoryName: [binding, ...] }
+ */
+function groupByCategory(bindings) {
+  const groups = {};
+  for (const entry of bindings) {
+    const cat = entry.category || 'General';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(entry);
+  }
+  return groups;
+}
+
+/**
+ * Build a key string from an array of key parts or a keys field.
+ * Normalises to a sorted, lower-case, joined string for comparison.
+ * @param {string|string[]|Object} keys
+ * @returns {string}
+ */
+function normalizeKeyString(keys) {
+  const parts = parseKeys(keys);
+  return parts.map((k) => k.toLowerCase().replace(/[^a-z0-9]/g, '')).sort().join('+');
+}
+
+/**
+ * Serialise the current rawBindings into the config { apps: [...] } format
+ * expected by the backend save endpoint.
+ * @returns {Object}
+ */
+function buildConfigPayload() {
+  // Group by app
+  const appMap = {};
+  for (const b of _state.rawBindings) {
+    const appName = b._appName || 'Unnamed';
+    if (!appMap[appName]) {
+      appMap[appName] = { name: appName, window_match: '', launch: {}, shortcuts: [] };
+    }
+  }
+  // Populate launch & shortcuts
+  for (const b of _state.rawBindings) {
+    const appName = b._appName || 'Unnamed';
+    const app = appMap[appName];
+    const bindingType = b.binding_type || 'shortcut';
+    const shortName = b.name && b.name.includes(':') ? b.name.split(':').slice(1).join(':') : (b.name || 'binding');
+
+    const entry = {
+      name: shortName,
+      keys: Array.isArray(b.keys) ? b.keys.map((k) => k.toLowerCase()) : [],
+      cmd: b.command || '',
+      instruction: b.instruction || '',
+      fiona_cmds: b.fiona_cmds || [],
+      cooldown_seconds: b.cooldown_seconds || 0.8,
+      enabled: b.enabled !== false,
+      category: b.category || '',
+    };
+
+    if (bindingType === 'launch') {
+      app.launch = entry;
+    } else {
+      app.shortcuts.push(entry);
+    }
+  }
+  return { apps: Object.values(appMap) };
+}
+
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
 
 async function renderPage(container) {
@@ -282,30 +381,46 @@ async function renderPage(container) {
     return;
   }
 
-  // Filter by search query
+  // Filter by search query and category
   const query = _state.searchQuery.toLowerCase().trim();
-  const filteredBindings = query
-    ? _state.rawBindings.filter((entry) => {
-        const appName = (entry._appName || '').toLowerCase();
-        const keys = (entry.keys || '').toLowerCase();
-        const command = (entry.command || '').toLowerCase();
-        const instruction = (entry.instruction || '').toLowerCase();
-        const name = (entry.name || '').toLowerCase();
-        return (
-          appName.includes(query) ||
-          keys.includes(query) ||
-          command.includes(query) ||
-          instruction.includes(query) ||
-          name.includes(query)
-        );
-      })
-    : _state.rawBindings;
+  const catFilter = _state.categoryFilter;
 
-  // Re-group filtered results
-  const filteredGroups = groupByApp(filteredBindings);
-  const filteredAppOrder = Object.keys(filteredGroups).sort((a, b) =>
-    a.localeCompare(b)
-  );
+  const filteredBindings = _state.rawBindings.filter((entry) => {
+    // Category filter
+    if (catFilter && (entry.category || '') !== catFilter) return false;
+    // Search query
+    if (query) {
+      const appName = (entry._appName || '').toLowerCase();
+      const keys = (entry.keys || '').toLowerCase();
+      const command = (entry.command || '').toLowerCase();
+      const instruction = (entry.instruction || '').toLowerCase();
+      const name = (entry.name || '').toLowerCase();
+      const category = (entry.category || '').toLowerCase();
+      return (
+        appName.includes(query) ||
+        keys.includes(query) ||
+        command.includes(query) ||
+        instruction.includes(query) ||
+        name.includes(query) ||
+        category.includes(query)
+      );
+    }
+    return true;
+  });
+
+  // Re-group filtered results (by app or by category)
+  let filteredGroups, filteredOrder;
+  if (_state.groupByCategory) {
+    filteredGroups = groupByCategory(filteredBindings);
+    filteredOrder = Object.keys(filteredGroups).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  } else {
+    filteredGroups = groupByApp(filteredBindings);
+    filteredOrder = Object.keys(filteredGroups).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }
 
   const totalCount = _state.rawBindings.length;
 
@@ -318,13 +433,13 @@ async function renderPage(container) {
       appListContent = html`
         <div style="text-align: center; padding: var(--space-10); color: var(--text-muted);">
           <div style="font-size: 28px; margin-bottom: var(--space-3); opacity: 0.3;">${ICONS.search}</div>
-          <div style="font-size: var(--font-size-md);">No bindings match &quot;${esc(query)}&quot;</div>
+          <div style="font-size: var(--font-size-md);">No bindings match${query ? ` &quot;${esc(query)}&quot;` : ''}${catFilter ? ` in category &quot;${esc(catFilter)}&quot;` : ''}</div>
         </div>
       `;
     }
   } else {
-    appListContent = html.raw(filteredAppOrder.map((appName) =>
-      renderAppSection(appName, filteredGroups[appName])
+    appListContent = html.raw(filteredOrder.map((groupName) =>
+      renderAppSection(groupName, filteredGroups[groupName])
     ).join(''));
   }
 
@@ -335,9 +450,22 @@ async function renderPage(container) {
     : ICONS.check;
   const saveBtnText = _state.saving ? 'Saving&hellip;' : 'Save';
 
+  // Category options for filter dropdown
+  const categoryOptions = _state.categoryNames.map((cat) => html`
+    <option value="${esc(cat)}" ${_state.categoryFilter === cat ? 'selected' : ''}>${esc(cat)}</option>
+  `).join('');
+
+  const groupLabel = _state.groupByCategory ? 'By Category' : 'By App';
+
   const data = {
     keyboardIcon: ICONS.keyboard.html,
     searchIcon: ICONS.search.html,
+    plusIcon: ICONS.plus.html,
+    downloadIcon: ICONS.download.html,
+    uploadIcon: ICONS.upload.html,
+    groupIcon: (_state.groupByCategory ? ICONS.folder : ICONS.terminal).html,
+    groupLabel,
+    categoryOptions,
     totalCount: String(totalCount),
     singular: totalCount === 1,
     saving: _state.saving,
@@ -372,10 +500,14 @@ function renderEmptyState() {
  * @param {Array<Object>} bindings
  * @returns {string} HTML
  */
-function renderAppSection(appName, bindings) {
+function renderAppSection(sectionName, bindings) {
+  // Determine icon based on grouping mode
+  const isCategoryGroup = _state.groupByCategory;
+  const sectionIcon = isCategoryGroup ? ICONS.folder : ICONS.terminal;
+
   return html`
     <div class="c-card binding-app-section" style="margin-bottom: var(--space-3); overflow: hidden;">
-      <!-- App Header -->
+      <!-- Section Header -->
       <div class="binding-app-header"
            style="display: flex; align-items: center; justify-content: space-between;
                   padding: var(--space-2) var(--space-3);
@@ -384,8 +516,11 @@ function renderAppSection(appName, bindings) {
                   cursor: default;
                   user-select: none;">
         <div style="display: flex; align-items: center; gap: var(--space-2); min-width: 0;">
-          <span style="width: 16px; height: 16px; display: inline-flex; color: var(--text-muted); flex-shrink: 0;">${ICONS.terminal}</span>
-          <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">${esc(appName)}</span>
+          <span style="width: 16px; height: 16px; display: inline-flex; color: var(--text-muted); flex-shrink: 0;">${sectionIcon}</span>
+          <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">${esc(sectionName)}</span>
+          ${isCategoryGroup ? html`
+            <span style="font-size: var(--font-size-xxs); color: var(--text-muted);">category</span>
+          ` : ''}
         </div>
         <span class="c-badge" style="font-size: var(--font-size-xxs); padding: 0 6px; line-height: 18px;">
           ${bindings.length}
@@ -394,7 +529,7 @@ function renderAppSection(appName, bindings) {
 
       <!-- Binding List -->
       <div class="binding-list" style="padding: 0;">
-        ${html.raw(bindings.map((binding, idx) => renderBindingRow(binding, appName, idx)).join(''))}
+        ${html.raw(bindings.map((binding, idx) => renderBindingRow(binding, sectionName, idx)).join(''))}
       </div>
     </div>
   `;
@@ -414,32 +549,74 @@ function renderBindingRow(binding, appName, idx) {
   const keysChips = renderKeyChips(binding.keys);
   const command = binding.command || '';
   const instruction = binding.instruction || '';
+  const enabled = binding.enabled !== false;
+  const category = binding.category || '';
 
   return html`
-    <div class="binding-row${isSelected ? ' binding-row--selected' : ''}"
+    <div class="binding-row${isSelected ? ' binding-row--selected' : ''}${enabled ? '' : ' binding-row--disabled'}"
          data-binding-id="${esc(binding._id)}"
          style="border-bottom: 1px solid var(--border-subtle);
                 cursor: pointer;
                 transition: background var(--transition-fast);
                 ${isSelected ? 'background: var(--accent-muted);' : ''}
-                ${isSelected ? '' : 'background: transparent;'}"
+                ${isSelected ? '' : 'background: transparent;'}
+                ${enabled ? '' : 'opacity: 0.55;'}"
          data-action="select-binding">
       <!-- Compact row -->
       <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-width: 0;">
+        <!-- Toggle -->
+        <button class="c-toggle-btn binding-toggle-btn"
+                data-action="toggle-binding"
+                data-binding-id="${esc(binding._id)}"
+                title="${enabled ? 'Disable' : 'Enable'}"
+                style="flex-shrink: 0; width: 22px; height: 22px; padding: 0; border: none; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: ${enabled ? 'var(--success, #22c55e)' : 'var(--text-muted)'};">
+          <svg viewBox="0 0 24 24" fill="${enabled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <rect x="1" y="5" width="22" height="14" rx="7" ry="7"/>
+            <circle cx="${enabled ? '16' : '8'}" cy="12" r="5" fill="${enabled ? 'var(--surface)' : 'currentColor'}"/>
+          </svg>
+        </button>
+
         <!-- Key chips -->
         <div style="display: flex; align-items: center; gap: 1px; flex-shrink: 0; min-width: 60px; flex-wrap: wrap;">
           ${html.raw(keysChips.join(''))}
         </div>
+
+        <!-- Disabled badge -->
+        ${enabled ? '' : html`
+          <span class="c-badge" style="font-size: var(--font-size-xxs); padding: 0 5px; line-height: 16px; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);">Disabled</span>
+        `}
+
         <!-- Command -->
         <span style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-primary); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           ${esc(command)}
         </span>
+        <!-- Category badge -->
+        ${category ? html`
+          <span class="c-badge" style="font-size: var(--font-size-xxs); padding: 0 5px; line-height: 16px; background: var(--accent-muted); color: var(--accent); border: 1px solid var(--accent);">${esc(category)}</span>
+        ` : ''}
         <!-- Instruction (truncated) -->
         ${instruction ? html`
-          <span class="binding-instruction" style="font-size: var(--font-size-xxs); color: var(--text-muted); flex: 0 1 auto; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          <span class="binding-instruction" style="font-size: var(--font-size-xxs); color: var(--text-muted); flex: 0 1 auto; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             ${esc(instruction)}
           </span>
         ` : ''}
+        <!-- Action buttons -->
+        <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0;">
+          <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost binding-edit-btn"
+                  data-action="edit-binding"
+                  data-binding-id="${esc(binding._id)}"
+                  title="Edit binding"
+                  style="pointer-events: auto; width: 20px; height: 20px; padding: 0;">
+            ${ICONS.edit}
+          </button>
+          <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost binding-delete-btn"
+                  data-action="delete-binding"
+                  data-binding-id="${esc(binding._id)}"
+                  title="Delete binding"
+                  style="pointer-events: auto; width: 20px; height: 20px; padding: 0; color: var(--danger, #ef4444);">
+            ${ICONS.trash}
+          </button>
+        </div>
         <!-- Expand toggle -->
         <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost expand-binding-btn"
                 data-action="toggle-expand-binding"
@@ -466,6 +643,14 @@ function renderBindingRow(binding, appName, idx) {
             ${binding.cooldown_seconds != null ? html`
               <span style="color: var(--text-muted);">Cooldown</span>
               <span>${esc(formatCooldown(binding.cooldown_seconds))}</span>
+            ` : ''}
+            ${category ? html`
+              <span style="color: var(--text-muted);">Category</span>
+              <span>${esc(category)}</span>
+            ` : ''}
+            ${binding.enabled !== undefined ? html`
+              <span style="color: var(--text-muted);">Status</span>
+              <span style="color: ${enabled ? 'var(--success, #22c55e)' : 'var(--text-muted)'};">${enabled ? 'Active' : 'Disabled'}</span>
             ` : ''}
             ${instruction ? html`
               <span style="color: var(--text-muted);">Instruction</span>
@@ -507,6 +692,8 @@ function renderDetailPanel() {
   const bindingType = binding.binding_type;
   const cooldown = binding.cooldown_seconds;
   const bindingName = binding.name || binding.command || 'Binding';
+  const enabled = binding.enabled !== false;
+  const category = binding.category || '';
 
   return html`
     <div class="c-card binding-detail-panel" style="overflow: hidden;">
@@ -517,6 +704,9 @@ function renderDetailPanel() {
           <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--text-primary);">
             ${esc(bindingName)}
           </span>
+          ${enabled ? '' : html`
+            <span class="c-badge" style="font-size: var(--font-size-xxs); padding: 0 5px; line-height: 16px; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);">Disabled</span>
+          `}
         </div>
         <div style="display: flex; align-items: center; gap: 2px; flex-wrap: wrap;">
           ${html.raw(keysChips.join(''))}
@@ -563,6 +753,41 @@ function renderDetailPanel() {
             <span style="color: var(--text-muted);">Cooldown</span>
             <span>${esc(formatCooldown(cooldown))}</span>
           ` : ''}
+
+          ${category ? html`
+            <span style="color: var(--text-muted);">Category</span>
+            <span>${esc(category)}</span>
+          ` : ''}
+
+          <span style="color: var(--text-muted);">Status</span>
+          <span style="color: ${enabled ? 'var(--success, #22c55e)' : 'var(--text-muted)'}; display: flex; align-items: center; gap: 4px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: ${enabled ? 'var(--success, #22c55e)' : 'var(--text-muted)'};"></span>
+            ${enabled ? 'Active' : 'Disabled'}
+          </span>
+        </div>
+
+        <!-- Detail action buttons -->
+        <div style="display: flex; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border-subtle);">
+          <button class="c-btn c-btn--sm c-btn--ghost binding-toggle-btn"
+                  data-action="toggle-binding"
+                  data-binding-id="${esc(binding._id)}"
+                  style="flex: 1;">
+            ${enabled ? 'Disable' : 'Enable'}
+          </button>
+          <button class="c-btn c-btn--sm c-btn--ghost"
+                  data-action="edit-binding"
+                  data-binding-id="${esc(binding._id)}"
+                  style="flex: 1;">
+            <span class="c-btn__icon">${ICONS.edit}</span>
+            Edit
+          </button>
+          <button class="c-btn c-btn--sm c-btn--ghost"
+                  data-action="delete-binding"
+                  data-binding-id="${esc(binding._id)}"
+                  style="flex: 1; color: var(--danger, #ef4444);">
+            <span class="c-btn__icon">${ICONS.trash}</span>
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -647,12 +872,37 @@ function mountComponents(container) {
     listeners.push(() => searchEl.removeEventListener('input', handler));
   }
 
-  // Select binding (click on a binding row)
+  // Category filter
+  const catFilter = container.querySelector('#bindings-category-filter');
+  if (catFilter) {
+    const handler = async (e) => {
+      _state.categoryFilter = e.target.value;
+      await renderPage(container);
+    };
+    catFilter.addEventListener('change', handler);
+    listeners.push(() => catFilter.removeEventListener('change', handler));
+  }
+
+  // Group toggle (by app / by category)
+  const groupToggle = container.querySelector('#bindings-group-toggle');
+  if (groupToggle) {
+    const handler = async () => {
+      _state.groupByCategory = !_state.groupByCategory;
+      await renderPage(container);
+    };
+    groupToggle.addEventListener('click', handler);
+    listeners.push(() => groupToggle.removeEventListener('click', handler));
+  }
+
+  // Select binding (click on a binding row) — skip clicks on action buttons
   const bindingRows = container.querySelectorAll('[data-action="select-binding"]');
   bindingRows.forEach((row) => {
     const handler = async (e) => {
-      // Ignore if the click was on the expand button
+      // Ignore clicks on action buttons, toggle, expand
       if (e.target.closest('[data-action="toggle-expand-binding"]')) return;
+      if (e.target.closest('[data-action="toggle-binding"]')) return;
+      if (e.target.closest('[data-action="edit-binding"]')) return;
+      if (e.target.closest('[data-action="delete-binding"]')) return;
       const id = row.dataset.bindingId;
       if (!id) return;
       const binding = _state.rawBindings.find((b) => b._id === id);
@@ -687,6 +937,48 @@ function mountComponents(container) {
     listeners.push(() => btn.removeEventListener('click', handler));
   });
 
+  // Toggle binding enable/disable
+  const toggleBtns = container.querySelectorAll('[data-action="toggle-binding"]');
+  toggleBtns.forEach((btn) => {
+    const handler = async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.bindingId;
+      if (!id) return;
+      await handleToggleBinding(id);
+      await renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // Edit binding
+  const editBtns = container.querySelectorAll('[data-action="edit-binding"]');
+  editBtns.forEach((btn) => {
+    const handler = async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.bindingId;
+      if (!id) return;
+      await handleEditBinding(id);
+      await renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // Delete binding
+  const deleteBtns = container.querySelectorAll('[data-action="delete-binding"]');
+  deleteBtns.forEach((btn) => {
+    const handler = async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.bindingId;
+      if (!id) return;
+      await handleDeleteBinding(id);
+      await renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
   // Save button
   const saveBtn = container.querySelector('#bindings-save-btn');
   if (saveBtn) {
@@ -695,6 +987,48 @@ function mountComponents(container) {
     };
     saveBtn.addEventListener('click', handler);
     listeners.push(() => saveBtn.removeEventListener('click', handler));
+  }
+
+  // Create button
+  const createBtn = container.querySelector('#bindings-create-btn');
+  if (createBtn) {
+    const handler = async () => {
+      await handleCreateBinding();
+      await renderPage(container);
+    };
+    createBtn.addEventListener('click', handler);
+    listeners.push(() => createBtn.removeEventListener('click', handler));
+  }
+
+  // Export button
+  const exportBtn = container.querySelector('#bindings-export-btn');
+  if (exportBtn) {
+    const handler = () => {
+      handleExportBindings();
+    };
+    exportBtn.addEventListener('click', handler);
+    listeners.push(() => exportBtn.removeEventListener('click', handler));
+  }
+
+  // Import button
+  const importBtn = container.querySelector('#bindings-import-btn');
+  const importInput = container.querySelector('#bindings-import-input');
+  if (importBtn && importInput) {
+    const clickHandler = () => {
+      importInput.click();
+    };
+    importBtn.addEventListener('click', clickHandler);
+    listeners.push(() => importBtn.removeEventListener('click', clickHandler));
+
+    const changeHandler = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await handleImportBindings(file);
+      importInput.value = '';
+      await renderPage(container);
+    };
+    importInput.addEventListener('change', changeHandler);
+    listeners.push(() => importInput.removeEventListener('change', changeHandler));
   }
 
   _state._boundListeners = listeners;
@@ -764,6 +1098,564 @@ async function saveBindings() {
   }
 }
 
+/* ── CRUD: Create / Edit / Delete / Toggle ──────────────────────────────── */
+
+/**
+ * Show the create binding modal and handle submission.
+ */
+async function handleCreateBinding() {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  const data = await showBindingFormModal(null);
+  if (!data) return; // cancelled
+
+  // Check for conflicts
+  const conflicts = await checkConflicts(data.keys, null);
+  if (conflicts.length > 0) {
+    const override = await showConflictModal(conflicts);
+    if (!override) return; // user cancelled
+  }
+
+  try {
+    const result = await api.post('/api/v1/bindings/create', data);
+    if (result && result.ok) {
+      toast.showToast('success', 'Created', `Binding "${data.name}" created.`);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || (result && result.message) || 'Unknown error';
+      toast.showToast('error', 'Create Failed', msg);
+    }
+  } catch (err) {
+    console.error('[bindings] Create error:', err);
+    toast.showToast('error', 'Create Failed', err.message || 'Could not create binding.');
+  }
+}
+
+/**
+ * Show the edit binding modal and handle submission.
+ * @param {string} bindingId
+ */
+async function handleEditBinding(bindingId) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  const binding = _state.rawBindings.find((b) => b._id === bindingId);
+  if (!binding) {
+    toast.showToast('error', 'Error', 'Binding not found.');
+    return;
+  }
+
+  // Preserve original name for backend lookup (in case user renamed it)
+  const origShortName = binding.name && binding.name.includes(':')
+    ? binding.name.split(':').slice(1).join(':')
+    : binding.name || '';
+  const data = await showBindingFormModal(binding);
+  if (!data) return; // cancelled
+
+  // Add original identifier for backend lookup
+  data.origName = origShortName;
+
+  // Check for conflicts (excluding this binding)
+  const conflicts = await checkConflicts(data.keys, { app: binding._appName, name: binding.name });
+  if (conflicts.length > 0) {
+    const override = await showConflictModal(conflicts);
+    if (!override) return;
+  }
+
+  try {
+    const result = await api.post('/api/v1/bindings/update', data);
+    if (result && result.ok) {
+      toast.showToast('success', 'Updated', `Binding "${data.name}" updated.`);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || (result && result.message) || 'Unknown error';
+      toast.showToast('error', 'Update Failed', msg);
+    }
+  } catch (err) {
+    console.error('[bindings] Update error:', err);
+    toast.showToast('error', 'Update Failed', err.message || 'Could not update binding.');
+  }
+}
+
+/**
+ * Show delete confirmation and handle deletion.
+ * @param {string} bindingId
+ */
+async function handleDeleteBinding(bindingId) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  const binding = _state.rawBindings.find((b) => b._id === bindingId);
+  if (!binding) {
+    toast.showToast('error', 'Error', 'Binding not found.');
+    return;
+  }
+
+  const confirmed = await modal.showModal({
+    title: 'Delete Binding',
+    content: html`
+      <p style="color: var(--text-secondary); line-height: 1.5;">
+        Are you sure you want to delete the binding
+        <strong style="color: var(--text-primary);">${esc(binding.name || binding.command)}</strong>?
+      </p>
+      <p style="color: var(--text-muted); font-size: var(--font-size-xs); margin-top: var(--space-2);">
+        App: ${esc(binding._appName)} &middot;
+        Keys: ${esc(Array.isArray(binding.keys) ? binding.keys.join(' + ') : binding.keys)}
+      </p>
+    `,
+    size: 'sm',
+    buttons: [
+      { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+      { label: 'Delete', value: 'delete', variant: 'danger' },
+    ],
+  });
+
+  if (confirmed !== 'delete') return;
+
+  _state.working = true;
+  if (_state.container) await renderPage(_state.container);
+
+  try {
+    const result = await api.del('/api/v1/bindings/delete', {
+      body: {
+        app: binding._appName,
+        name: binding.name,
+      },
+    });
+    if (result && result.ok) {
+      toast.showToast('success', 'Deleted', `Binding "${binding.name}" deleted.`);
+      _state.selectedBinding = null;
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || (result && result.message) || 'Unknown error';
+      toast.showToast('error', 'Delete Failed', msg);
+    }
+  } catch (err) {
+    console.error('[bindings] Delete error:', err);
+    toast.showToast('error', 'Delete Failed', err.message || 'Could not delete binding.');
+  }
+
+  _state.working = false;
+  if (_state.container) await renderPage(_state.container);
+}
+
+/**
+ * Toggle a binding's enabled/disabled state.
+ * @param {string} bindingId
+ */
+async function handleToggleBinding(bindingId) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  const binding = _state.rawBindings.find((b) => b._id === bindingId);
+  if (!binding) return;
+
+  const newEnabled = binding.enabled === false;
+
+  try {
+    const result = await api.post('/api/v1/bindings/toggle', {
+      app: binding._appName,
+      name: binding.name,
+      enabled: newEnabled,
+    });
+    if (result && result.ok) {
+      binding.enabled = newEnabled;
+      toast.showToast('success', newEnabled ? 'Enabled' : 'Disabled',
+        `Binding "${binding.name}" ${newEnabled ? 'enabled' : 'disabled'}.`);
+    } else {
+      const msg = (result && result.data && result.data.error) || (result && result.message) || 'Unknown error';
+      toast.showToast('error', 'Toggle Failed', msg);
+    }
+  } catch (err) {
+    console.error('[bindings] Toggle error:', err);
+    toast.showToast('error', 'Toggle Failed', err.message || 'Could not toggle binding.');
+  }
+}
+
+
+/* ── Import / Export ────────────────────────────────────────────────────── */
+
+/**
+ * Export bindings as a JSON file download.
+ */
+async function handleExportBindings() {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    // Use raw API fetch if available, otherwise use GET
+    const response = await fetch('/api/v1/bindings/export');
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fiona-bindings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.showToast('success', 'Exported', 'Bindings exported as JSON.');
+  } catch (err) {
+    console.error('[bindings] Export error:', err);
+    toast.showToast('error', 'Export Failed', err.message || 'Could not export bindings.');
+  }
+}
+
+/**
+ * Import bindings from a JSON file.
+ * @param {File} file
+ */
+async function handleImportBindings(file) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      toast.showToast('error', 'Import Failed', 'Invalid JSON file.');
+      return;
+    }
+
+    // Validate basic structure
+    if (!json || !json.apps || !Array.isArray(json.apps)) {
+      // Try wrapping if the file contains a flat bindings array
+      if (Array.isArray(json)) {
+        json = { apps: json };
+      } else {
+        toast.showToast('error', 'Import Failed',
+          'JSON must contain an "apps" array. See export format.');
+        return;
+      }
+    }
+
+    // Confirm before replacing
+    const confirmed = await modal.showModal({
+      title: 'Import Bindings',
+      content: html`
+        <p style="color: var(--text-secondary); line-height: 1.5;">
+          This will <strong style="color: var(--text-primary);">replace</strong> all existing bindings
+          with the imported data. This action cannot be undone.
+        </p>
+        <p style="color: var(--text-muted); font-size: var(--font-size-xs);">
+          File: ${esc(file.name)}
+        </p>
+      `,
+      size: 'sm',
+      buttons: [
+        { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+        { label: 'Import', value: 'import', variant: 'primary' },
+      ],
+    });
+
+    if (confirmed !== 'import') return;
+
+    _state.working = true;
+    if (_state.container) await renderPage(_state.container);
+
+    const result = await api.post('/api/v1/bindings/import', json);
+    if (result && result.ok) {
+      toast.showToast('success', 'Imported',
+        `${result.data?.count || '?'} binding(s) imported successfully.`);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || (result && result.message) || 'Unknown error';
+      toast.showToast('error', 'Import Failed', msg);
+    }
+  } catch (err) {
+    console.error('[bindings] Import error:', err);
+    toast.showToast('error', 'Import Failed', err.message || 'Could not import bindings.');
+  }
+
+  _state.working = false;
+  if (_state.container) await renderPage(_state.container);
+}
+
+
+/* ── Conflict Detection ─────────────────────────────────────────────────── */
+
+/**
+ * Check for key combo conflicts with existing bindings.
+ * @param {string[]|string} keys
+ * @param {Object|null} exclude - { app, name } to exclude from check
+ * @returns {Promise<Array>} Array of conflicting binding objects
+ */
+async function checkConflicts(keys, exclude) {
+  const api = getApi();
+  if (!api) return [];
+
+  try {
+    const keysArray = Array.isArray(keys) ? keys : (typeof keys === 'string' ? keys.split('+').map(k => k.trim()) : []);
+    if (keysArray.length === 0) return [];
+
+    const payload = { keys: keysArray };
+    if (exclude) {
+      payload.exclude = exclude;
+    }
+
+    const result = await api.post('/api/v1/bindings/check-conflicts', payload);
+    if (result && result.ok && result.data) {
+      return result.data.conflicts || [];
+    }
+    return [];
+  } catch (err) {
+    console.error('[bindings] Conflict check error:', err);
+    return [];
+  }
+}
+
+/**
+ * Show a conflict warning modal allowing the user to override.
+ * @param {Array} conflicts
+ * @returns {Promise<boolean>} true if user chooses to override
+ */
+async function showConflictModal(conflicts) {
+  const conflictList = conflicts.map((c) => html`
+    <div style="display: flex; align-items: center; gap: var(--space-2); padding: 4px 0; font-size: var(--font-size-xs); border-bottom: 1px solid var(--border-subtle);">
+      <span style="width: 16px; height: 16px; flex-shrink: 0; color: var(--warning, #f59e0b);">${ICONS.warning}</span>
+      <span style="flex: 1; min-width: 0;">
+        <strong>${esc(c.app || c._appName || '?')}</strong>:
+        ${esc(c.name || '?')}
+      </span>
+      <span style="font-family: var(--font-mono); color: var(--text-muted); font-size: var(--font-size-xxs);">
+        ${esc(Array.isArray(c.keys) ? c.keys.join(' + ') : c.keys)}
+      </span>
+    </div>
+  `).join('');
+
+  const result = await modal.showModal({
+    title: 'Key Conflict Detected',
+    content: html`
+      <p style="color: var(--text-secondary); line-height: 1.5; margin-bottom: var(--space-3);">
+        The following binding(s) already use this key combination:
+      </p>
+      <div style="max-height: 200px; overflow-y: auto;">
+        ${html.raw(conflictList)}
+      </div>
+      <p style="color: var(--text-muted); font-size: var(--font-size-xs); margin-top: var(--space-3);">
+        You can still save this binding, but the conflicting bindings will share the same keys.
+      </p>
+    `,
+    size: 'md',
+    buttons: [
+      { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+      { label: 'Save Anyway', value: 'override', variant: 'warning' },
+    ],
+  });
+
+  return result === 'override';
+}
+
+
+/* ── Create / Edit Form Modal ────────────────────────────────────────────── */
+
+/**
+ * Show the create/edit binding form modal.
+ * @param {Object|null} binding - Existing binding to edit, or null for create
+ * @returns {Promise<Object|null>} Form data object, or null if cancelled
+ */
+function showBindingFormModal(binding) {
+  return new Promise((resolve) => {
+    const isEdit = !!binding;
+    const appName = binding ? binding._appName : '';
+    const shortName = binding && binding.name ? (binding.name.includes(':') ? binding.name.split(':').slice(1).join(':') : binding.name) : '';
+    const keysStr = binding ? (Array.isArray(binding.keys) ? binding.keys.join(' + ') : (binding.keys || '')) : '';
+    const command = binding ? (binding.command || '') : '';
+    const description = binding ? (binding.instruction || binding.description || '') : '';
+    const category = binding ? (binding.category || '') : '';
+    const enabled = binding ? (binding.enabled !== false) : true;
+
+    const formId = 'binding-form-' + Date.now();
+
+    const content = html`
+      <form id="${formId}" class="binding-form" style="display: flex; flex-direction: column; gap: var(--space-3);">
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">
+            App Name <span style="color: var(--danger);">*</span>
+          </label>
+          <input type="text" class="c-input" name="app"
+                 value="${esc(appName)}"
+                 placeholder="e.g. brave, vscode, terminal"
+                 required
+                 style="width: 100%; height: 34px; font-size: var(--font-size-sm);" />
+        </div>
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">
+            Binding Name <span style="color: var(--danger);">*</span>
+          </label>
+          <input type="text" class="c-input" name="name"
+                 value="${esc(shortName)}"
+                 placeholder="e.g. search, new-tab, open-file"
+                 required
+                 style="width: 100%; height: 34px; font-size: var(--font-size-sm);" />
+        </div>
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">
+            Keys / Chord <span style="color: var(--danger);">*</span>
+          </label>
+          <input type="text" class="c-input" name="keys"
+                 value="${esc(keysStr)}"
+                 placeholder="e.g. alt + s or Ctrl + Shift + T"
+                 required
+                 style="width: 100%; height: 34px; font-size: var(--font-size-sm); font-family: var(--font-mono);" />
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted); margin-top: 2px;">
+            Separate key names with <code>+</code> (e.g. <code>alt + s</code>)
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">
+            Command <span style="color: var(--danger);">*</span>
+          </label>
+          <input type="text" class="c-input" name="command"
+                 value="${esc(command)}"
+                 placeholder="e.g. ydotool key 29:1 33:1 33:0 29:0"
+                 required
+                 style="width: 100%; height: 34px; font-size: var(--font-size-sm); font-family: var(--font-mono);" />
+        </div>
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">
+            Description
+          </label>
+          <textarea class="c-input" name="description"
+                    placeholder="Optional description or instruction"
+                    style="width: 100%; min-height: 54px; font-size: var(--font-size-sm); resize: vertical;">${esc(description)}</textarea>
+        </div>
+        <div>
+          <label style="display: block; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 4px;">Category</label>
+          <select class="c-input" name="category" style="width: 100%; height: 34px; font-size: var(--font-size-sm);">
+            <option value="">General</option>
+            <option value="Navigation" ${category === 'Navigation' ? 'selected' : ''}>Navigation</option>
+            <option value="Editing" ${category === 'Editing' ? 'selected' : ''}>Editing</option>
+            <option value="System" ${category === 'System' ? 'selected' : ''}>System</option>
+            <option value="Custom" ${category === 'Custom' ? 'selected' : ''}>Custom</option>
+            ${_state.categoryNames.filter((c) => !['Navigation', 'Editing', 'System', 'Custom', ''].includes(c)).map((c) => html`
+              <option value="${esc(c)}" ${category === c ? 'selected' : ''}>${esc(c)}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <label class="c-toggle" style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: var(--font-size-xs); color: var(--text-secondary);">
+            <input type="checkbox" name="enabled" value="1" ${enabled ? 'checked' : ''} style="accent-color: var(--accent);" />
+            Enabled
+          </label>
+        </div>
+      </form>
+      <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--border);">
+        <button class="c-btn c-btn--ghost" data-action="binding-cancel">Cancel</button>
+        <button class="c-btn c-btn--primary" data-action="binding-save">
+          ${isEdit ? 'Update Binding' : 'Create Binding'}
+        </button>
+      </div>
+    `;
+
+    modal.showModal({
+      title: isEdit ? 'Edit Binding' : 'Create Binding',
+      content,
+      size: 'md',
+      closeable: false,
+      closeOnBackdrop: false,
+      closeOnEscape: false,
+      buttons: [], // We use our own buttons inside the content
+    });
+
+    // After modal renders, attach form handlers
+    requestAnimationFrame(() => {
+      const container = document.getElementById('modal-container');
+      const form = container.querySelector(`#${formId}`);
+      const saveBtn = container.querySelector('[data-action="binding-save"]');
+      const cancelBtn = container.querySelector('[data-action="binding-cancel"]');
+
+      if (!form || !saveBtn || !cancelBtn) return;
+
+      saveBtn.addEventListener('click', () => {
+        const fd = new FormData(form);
+
+        // Build keys array from the key string
+        const keysRaw = (fd.get('keys') || '').trim();
+        const app = (fd.get('app') || '').trim();
+        const name = (fd.get('name') || '').trim();
+        const commandVal = (fd.get('command') || '').trim();
+
+        // Validate required fields
+        if (!app) {
+          toast.showToast('warning', 'Validation', 'App name is required.');
+          return;
+        }
+        if (!name) {
+          toast.showToast('warning', 'Validation', 'Binding name is required.');
+          return;
+        }
+        if (!keysRaw) {
+          toast.showToast('warning', 'Validation', 'Keys/chord is required.');
+          return;
+        }
+        if (!commandVal) {
+          toast.showToast('warning', 'Validation', 'Command is required.');
+          return;
+        }
+
+        // Parse keys: split by '+' delimiter, trim each part
+        const keysList = keysRaw.split('+').map((k) => k.trim().toLowerCase()).filter(Boolean);
+
+        const formData = {
+          app,
+          name,
+          keys: keysList,
+          command: commandVal,
+          description: (fd.get('description') || '').trim(),
+          category: fd.get('category') || '',
+          enabled: fd.get('enabled') === '1',
+        };
+
+        modal.closeModal();
+        resolve(formData);
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        modal.closeModal();
+        resolve(null);
+      });
+
+      // Handle Enter key in form fields
+      form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          saveBtn.click();
+        }
+      });
+
+      // Focus first field
+      const firstInput = form.querySelector('input');
+      if (firstInput) setTimeout(() => firstInput.focus(), 100);
+    });
+  });
+}
+
+
 /* ── Data Loading ───────────────────────────────────────────────────────── */
 
 async function loadData() {
@@ -778,7 +1670,7 @@ async function loadData() {
   }
 
   try {
-    const result = await api.get('/api/v1/bindings');
+    const result = await api.get('/api/v1/bindings?parsed=true');
 
     if (!result || !result.ok) {
       const msg =
@@ -800,6 +1692,9 @@ async function loadData() {
     _state.appOrder = Object.keys(_state.groupedBindings).sort((a, b) =>
       a.localeCompare(b)
     );
+
+    // Extract categories
+    _state.categoryNames = extractCategories(bindings);
 
     // Clear stale selections
     _state.selectedBinding = null;
@@ -867,6 +1762,10 @@ export function destroy() {
   _state.selectedBinding = null;
   _state.expandedBindings = new Set();
   _state.saving = false;
+  _state.categoryFilter = '';
+  _state.groupByCategory = false;
+  _state.categoryNames = [];
+  _state.working = false;
 }
 
 /* ── Router-compatible default export ────────────────────────────────────── */

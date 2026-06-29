@@ -23,6 +23,8 @@ def parse_bindings(apps: Iterable[dict]) -> list[Binding]:
                     cooldown_seconds=float(launch.get("cooldown_seconds", 0.8)),
                     app_name=app_name,
                     binding_type="launch",
+                    enabled=launch.get("enabled", True),
+                    category=launch.get("category", ""),
                 )
             )
         for shortcut in app.get("shortcuts", []):
@@ -40,6 +42,8 @@ def parse_bindings(apps: Iterable[dict]) -> list[Binding]:
                     app_name=app_name,
                     window_match=window_match,
                     binding_type="shortcut",
+                    enabled=shortcut.get("enabled", True),
+                    category=shortcut.get("category", ""),
                 )
             )
     return bindings

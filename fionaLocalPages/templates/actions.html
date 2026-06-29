@@ -23,6 +23,11 @@
     History
     <span class="c-tab__count">{{historyCount}}</span>
   </div>
+  <div class="c-tab {{#if libraryTabActive}}c-tab--active{{/if}}" data-tab="library">
+    <span class="c-tab__icon">{{{libraryIcon}}}</span>
+    Library
+    <span class="c-tab__count">{{libraryCount}}</span>
+  </div>
 </div>
 
 <div id="actions-tab-content">

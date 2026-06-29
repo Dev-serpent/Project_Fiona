@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from Agent import OllamaClient, command_registry
+from Agent.ollama import OllamaError
 from Agent.personality import PersonalityRegistry
+from Agent.tool_runtime import ToolRuntime
 from FionaCore import ActionRouter, ActionResult
 from FionaCore.approval import (
     ApprovalManager, PlannedStep, PlanStatus,
@@ -108,6 +110,96 @@ class AgentOrchestrator:
         self.approval_manager.mark_completed(plan_id, summary=summary)
         
         return f"Plan completed.\n{summary}"
+
+    async def run_goal_async(
+        self,
+        goal: str,
+        tool_runtime: ToolRuntime | None = None,
+    ) -> str:
+        """Attempt to achieve a user goal using Ollama's native function-calling loop.
+
+        When *tool_runtime* is provided, tools are registered and the model can
+        invoke them through Ollama's tool-calling protocol.  When *tool_runtime*
+        is ``None``, falls back to plain text generation (no tools).
+
+        Args:
+            goal: The user's goal or request.
+            tool_runtime: Optional :class:`ToolRuntime` providing tool definitions
+                and execution.  If ``None``, no tools are advertised.
+
+        Returns:
+            The final response text, or an error message if something went wrong.
+        """
+        system_prompt = self._build_system_prompt()
+
+        if tool_runtime is not None:
+            tools = tool_runtime.get_ollama_tools()
+            if tools:
+                tool_names = [
+                    t.get("function", {}).get("name", "unknown")
+                    for t in tools
+                ]
+                tool_hint = (
+                    "You have access to tools. When a user asks a question that "
+                    "requires computation, lookup, or formatting, use the "
+                    "appropriate tool instead of guessing. Available tools: "
+                    f"{', '.join(tool_names)}"
+                )
+                system_prompt = system_prompt + "\n\n" + tool_hint
+        else:
+            tools = None
+
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": goal},
+        ]
+
+        for _round in range(self.max_turns):
+            try:
+                response = self.client.chat(messages=messages, tools=tools)
+            except OllamaError as e:
+                return f"Error communicating with Ollama: {e}"
+
+            if response.finish_reason == "stop":
+                return response.content or "Task completed."
+
+            if response.tool_calls:
+                # Append assistant message with tool_calls in Ollama's format
+                assistant_msg: dict[str, Any] = {
+                    "role": "assistant",
+                    "content": response.content or "",
+                }
+
+                raw_tool_calls: list[dict[str, Any]] = []
+                for tc in response.tool_calls:
+                    raw_tool_calls.append({
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function_name,
+                            "arguments": tc.arguments,
+                        },
+                    })
+                assistant_msg["tool_calls"] = raw_tool_calls
+                messages.append(assistant_msg)
+
+                # Execute each tool call and append its result
+                for tc in response.tool_calls:
+                    result = await tool_runtime.execute_tool(tc)
+                    messages.append({
+                        "role": "tool",
+                        "content": result.content,
+                        "tool_call_id": tc.id,
+                    })
+            else:
+                # finish_reason is neither "stop" nor do we have tool_calls
+                # (e.g. "length"). Return what we have.
+                return response.content or "Task completed."
+
+        return (
+            f"Max turns ({self.max_turns}) reached. "
+            f"Last response: {messages[-1].get('content', '')}"
+        )
 
     def _build_system_prompt(self) -> str:
         registry = command_registry()

@@ -16,6 +16,7 @@ import {
   skeletonHeading,
 } from '../js/components/LoadingSkeleton.js';
 import { toast } from '../js/components/Toast.js';
+import { modal } from '../js/components/Modal.js';
 import { loadTemplate } from '../js/template-loader.js';
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
@@ -45,6 +46,16 @@ const _state = {
   actionResults: {},            // { [actionName]: { loading, result, error } }
   expandedResults: new Set(),   // set of action names with expanded result
   expandedHistory: new Set(),   // set of history event IDs with expanded result
+
+  // Library / Editor state
+  activeLibraryView: 'list',    // 'list' | 'editor'
+  editorAction: null,           // the action being edited (or null for new)
+  editorCode: '',
+  editorDescription: '',
+  editorTags: '',
+  editorFilename: '',
+  editorIsNew: false,
+
   _boundListeners: [],
 };
 
@@ -175,14 +186,23 @@ async function renderPage(container) {
     return;
   }
 
+  const fileActions = _state.actions.filter((a) => a.source === 'file');
+
   const data = {
     boltIcon: ICONS.bolt.html,
     clockIcon: ICONS.clock.html,
     actionsTabActive: _state.activeTab === 'actions',
     historyTabActive: _state.activeTab === 'history',
+    libraryTabActive: _state.activeTab === 'library',
     actionsCount: _state.actions.length,
     historyCount: _state.history.length,
-    tabContent: _state.activeTab === 'actions' ? renderActionsTab() : renderHistoryTab(),
+    libraryCount: fileActions.length,
+    libraryIcon: ICONS.folder.html,
+    tabContent: _state.activeTab === 'actions'
+      ? renderActionsTab()
+      : _state.activeTab === 'history'
+        ? renderHistoryTab()
+        : renderLibraryView(),
   };
 
   container.innerHTML = await loadTemplate('actions', data);
@@ -647,6 +667,664 @@ function mountComponents(container) {
   }
 
   _state._boundListeners = listeners;
+
+  // Delegate events for the library tab content (rendered into #actions-tab-content)
+  const libContent = container.querySelector('#actions-tab-content');
+  if (libContent) {
+    // Library: Run action directly
+    const libRunHandler = async (e) => {
+      const btn = e.target.closest('[data-lib-action="run"]');
+      if (!btn) return;
+      const name = btn.dataset.actionName;
+      if (name) {
+        _state.confirmingAction = null;
+        runAction(name, false);
+      }
+    };
+    libContent.addEventListener('click', libRunHandler);
+    listeners.push(() => libContent.removeEventListener('click', libRunHandler));
+
+    // Library: Edit action (open editor modal)
+    const libEditHandler = (e) => {
+      const btn = e.target.closest('[data-lib-action="edit"]');
+      if (!btn) return;
+      const filename = btn.dataset.filename;
+      const action = _state.actions.find(
+        (a) => a.source === 'file' && a.filename === filename
+      );
+      if (action) openEditorForExisting(action);
+    };
+    libContent.addEventListener('click', libEditHandler);
+    listeners.push(() => libContent.removeEventListener('click', libEditHandler));
+
+    // Library: Toggle enabled status
+    const libToggleHandler = async (e) => {
+      const btn = e.target.closest('[data-lib-action="toggle"]');
+      if (!btn) return;
+      const filename = btn.dataset.filename;
+      if (filename) await handleLibraryToggle(filename);
+    };
+    libContent.addEventListener('click', libToggleHandler);
+    listeners.push(() => libContent.removeEventListener('click', libToggleHandler));
+
+    // Library: Duplicate action
+    const libDupHandler = async (e) => {
+      const btn = e.target.closest('[data-lib-action="duplicate"]');
+      if (!btn) return;
+      const filename = btn.dataset.filename;
+      if (filename) await handleLibraryDuplicate(filename);
+    };
+    libContent.addEventListener('click', libDupHandler);
+    listeners.push(() => libContent.removeEventListener('click', libDupHandler));
+
+    // Library: Delete action
+    const libDelHandler = async (e) => {
+      const btn = e.target.closest('[data-lib-action="delete"]');
+      if (!btn) return;
+      const filename = btn.dataset.filename;
+      if (filename) await handleLibraryDelete(filename);
+    };
+    libContent.addEventListener('click', libDelHandler);
+    listeners.push(() => libContent.removeEventListener('click', libDelHandler));
+
+    // Library: Create new action button
+    const libCreateHandler = () => {
+      openEditorForNew();
+    };
+    libContent.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-lib-action="create"]');
+      if (btn) libCreateHandler();
+    });
+    // We keep a persistent reference for cleanup
+    const createRef = (e) => {
+      const btn = e.target.closest('[data-lib-action="create"]');
+      if (btn) libCreateHandler();
+    };
+    libContent.addEventListener('click', createRef);
+    listeners.push(() => libContent.removeEventListener('click', createRef));
+  }
+}
+
+/* ── Library Tab ──────────────────────────────────────────────────────────── */
+
+/**
+ * Render the Library tab content — list of file-based actions or editor view.
+ */
+function renderLibraryView() {
+  const fileActions = _state.actions.filter((a) => a.source === 'file');
+
+  if (fileActions.length === 0) {
+    return renderLibraryEmptyState();
+  }
+
+  return html`
+    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-4);">
+      <button class="c-btn c-btn--primary c-btn--sm" data-lib-action="create">
+        <span class="c-btn__icon">${ICONS.plus}</span>
+        Create New Action
+      </button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+      ${html.raw(fileActions.map((action) => renderLibraryCard(action)).join(''))}
+    </div>
+  `;
+}
+
+/**
+ * Render the empty state for the Library tab.
+ */
+function renderLibraryEmptyState() {
+  return html`
+    <div style="text-align: center; padding: var(--space-12); color: var(--text-muted);">
+      <div style="font-size: 36px; margin-bottom: var(--space-4); opacity: 0.3;">
+        ${ICONS.folder}
+      </div>
+      <div style="font-size: var(--font-size-md); font-weight: var(--font-weight-medium); margin-bottom: var(--space-2);">
+        No file-based actions found
+      </div>
+      <div style="font-size: var(--font-size-sm); color: var(--text-muted); margin-bottom: var(--space-6);">
+        Create your first reusable action in the actions library.
+      </div>
+      <button class="c-btn c-btn--primary" data-lib-action="create">
+        <span class="c-btn__icon">${ICONS.plus}</span>
+        Create your first action
+      </button>
+    </div>
+  `;
+}
+
+/**
+ * Render a single library action card.
+ * @param {Object} action
+ */
+function renderLibraryCard(action) {
+  const name = action.name || action.filename || 'unnamed';
+  const filename = action.filename || '';
+  const description = action.description || '';
+  const tags = Array.isArray(action.tags) ? action.tags : [];
+  const enabled = action.enabled !== false;
+  const isRunning = _state.actionResults[name] && _state.actionResults[name].loading;
+
+  return html`
+    <div class="c-card" style="margin-bottom: 0;">
+      <div class="c-card__body" style="padding: var(--space-4);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
+          <!-- Left: Info -->
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: 2px;">
+              <span style="font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary);">
+                ${esc(name)}
+              </span>
+              <span class="c-badge ${enabled ? 'c-badge--success' : 'c-badge--default'}" style="font-size: 9px; padding: 0 6px; text-transform: none; letter-spacing: 0;">
+                ${enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            ${description ? html`
+              <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-1);">
+                ${esc(description)}
+              </div>
+            ` : ''}
+            <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
+              ${esc(filename)}
+            </div>
+            ${tags.length > 0 ? html`
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-2);">
+                ${html.raw(tags.map((tag) => html`
+                  <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px; text-transform: none; letter-spacing: 0; background: var(--bg-secondary);">
+                    ${esc(tag)}
+                  </span>
+                `).join(''))}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Right: Action Buttons -->
+          <div style="display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0;">
+            <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost" data-lib-action="run" data-action-name="${esc(name)}" title="Run ${esc(name)}" ?disabled="${isRunning}">
+              ${isRunning ? html`<span class="c-spinner c-spinner--sm" style="display: flex;">${ICONS.bolt}</span>` : ICONS.play}
+            </button>
+            <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost" data-lib-action="edit" data-filename="${esc(filename)}" title="Edit ${esc(filename)}">
+              ${ICONS.edit}
+            </button>
+            <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost" data-lib-action="toggle" data-filename="${esc(filename)}" title="${enabled ? 'Disable' : 'Enable'} ${esc(filename)}">
+              ${enabled ? ICONS.checkCircle : ICONS.close}
+            </button>
+            <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost" data-lib-action="duplicate" data-filename="${esc(filename)}" title="Duplicate ${esc(filename)}">
+              ${ICONS.copy}
+            </button>
+            <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost" data-lib-action="delete" data-filename="${esc(filename)}" title="Delete ${esc(filename)}" style="color: var(--danger);">
+              ${ICONS.trash}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ── Editor Modal ──────────────────────────────────────────────────────────── */
+
+/**
+ * Open the editor modal for creating a new action.
+ */
+async function openEditorForNew() {
+  _state.editorIsNew = true;
+  _state.editorAction = null;
+  _state.editorCode = '';
+  _state.editorDescription = '';
+  _state.editorTags = '';
+  _state.editorFilename = '';
+
+  await _showEditorModal();
+}
+
+/**
+ * Open the editor modal for editing an existing action.
+ * @param {Object} action
+ */
+async function openEditorForExisting(action) {
+  _state.editorIsNew = false;
+  _state.editorAction = action;
+  _state.editorFilename = action.filename || '';
+
+  // Load the file content
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const result = await api.get('/api/v1/actions/file/get', {
+      filename: _state.editorFilename,
+    });
+    const data = result?.data || result;
+    _state.editorCode = data.code || '';
+    _state.editorDescription = data.description || '';
+    _state.editorTags = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '');
+  } catch (err) {
+    toast.showToast('error', 'Load Failed', `Failed to load action file: ${err.message || 'Unknown error'}`);
+    _state.editorCode = '';
+    _state.editorDescription = action.description || '';
+    _state.editorTags = Array.isArray(action.tags) ? action.tags.join(', ') : '';
+  }
+
+  await _showEditorModal();
+}
+
+/**
+ * Build and show the editor modal.
+ */
+async function _showEditorModal() {
+  const isNew = _state.editorIsNew;
+  const fileActions = _state.actions.filter((a) => a.source === 'file');
+  const content = buildEditorHTML(isNew, fileActions);
+
+  // Show the modal
+  await modal.showModal({
+    title: isNew ? 'Create New Action' : `Edit: ${_state.editorFilename || 'Action'}`,
+    content,
+    size: 'xl',
+    closeable: true,
+    closeOnBackdrop: false,
+  });
+
+  // Bind events inside the modal after it's rendered
+  bindEditorEvents(isNew);
+}
+
+/**
+ * Build the editor modal HTML content.
+ * @param {boolean} isNew
+ * @param {Array} fileActions
+ * @returns {string}
+ */
+function buildEditorHTML(isNew, fileActions) {
+  const filename = _state.editorFilename || '';
+  const code = _state.editorCode || '';
+  const description = _state.editorDescription || '';
+  const tags = _state.editorTags || '';
+  const name = filename ? filename.replace(/\.py$/, '') : '';
+
+  const fileOptions = fileActions.map((a) => html`
+    <option value="${esc(a.filename)}" ${a.filename === filename ? 'selected' : ''}>
+      ${esc(a.filename)}
+    </option>
+  `).join('');
+
+  return html`
+    <div class="action-editor" style="display: flex; flex-direction: column; gap: var(--space-4);">
+      <!-- File Selector -->
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Action File
+        </label>
+        <select id="editor-file-select" class="c-input" style="width: 100%;">
+          <option value="">-- New File --</option>
+          ${html.raw(fileOptions)}
+        </select>
+      </div>
+
+      <!-- Filename Input (visible only when creating new) -->
+      <div id="editor-filename-group" style="${isNew ? '' : 'display: none;'}">
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Filename <span style="color: var(--danger);">*</span>
+        </label>
+        <input type="text" id="editor-filename-input" class="c-input" style="width: 100%; font-family: var(--font-mono);"
+               placeholder="my_action.py" value="${esc(isNew ? '' : filename)}" />
+      </div>
+
+      <!-- Name (auto-derived, read-only) -->
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Name <span style="color: var(--text-muted); font-weight: var(--font-weight-normal);">(auto-derived from filename)</span>
+        </label>
+        <input type="text" id="editor-name" class="c-input" style="width: 100%;" readonly value="${esc(name)}" />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Description
+        </label>
+        <input type="text" id="editor-description" class="c-input" style="width: 100%;"
+               placeholder="Brief description of what this action does"
+               value="${esc(description)}" />
+      </div>
+
+      <!-- Tags -->
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Tags <span style="color: var(--text-muted); font-weight: var(--font-weight-normal);">(comma-separated)</span>
+        </label>
+        <input type="text" id="editor-tags" class="c-input" style="width: 100%;"
+               placeholder="tag1, tag2, tag3"
+               value="${esc(tags)}" />
+      </div>
+
+      <!-- Code Editor -->
+      <div>
+        <label style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Python Code <span style="color: var(--danger);">*</span>
+        </label>
+        <textarea id="editor-code" class="c-input"
+                  style="width: 100%; min-height: 320px; font-family: var(--font-mono); font-size: var(--font-size-sm);
+                         line-height: 1.5; padding: var(--space-3); resize: vertical; white-space: pre;
+                         overflow-wrap: normal; overflow-x: auto; tab-size: 2;"
+                  placeholder="# Write your Python action code here...">${code}</textarea>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display: flex; gap: var(--space-2); justify-content: flex-end; border-top: 1px solid var(--border-subtle); padding-top: var(--space-4);">
+        <button id="editor-cancel-btn" class="c-btn c-btn--ghost">Cancel</button>
+        ${!isNew ? html`
+          <button id="editor-delete-btn" class="c-btn c-btn--danger" style="margin-right: auto;">
+            <span class="c-btn__icon">${ICONS.trash}</span>
+            Delete
+          </button>
+        ` : ''}
+        <button id="editor-save-btn" class="c-btn c-btn--primary">
+          <span class="c-btn__icon">${ICONS.check}</span>
+          Save
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Bind events for the editor modal.
+ * @param {boolean} isNew
+ */
+function bindEditorEvents(isNew) {
+  const fileSelect = document.getElementById('editor-file-select');
+  const filenameInput = document.getElementById('editor-filename-input');
+  const nameInput = document.getElementById('editor-name');
+  const codeTextarea = document.getElementById('editor-code');
+  const descriptionInput = document.getElementById('editor-description');
+  const tagsInput = document.getElementById('editor-tags');
+  const saveBtn = document.getElementById('editor-save-btn');
+  const deleteBtn = document.getElementById('editor-delete-btn');
+  const cancelBtn = document.getElementById('editor-cancel-btn');
+
+  // File selector change: load selected file or clear for new
+  if (fileSelect) {
+    fileSelect.addEventListener('change', async () => {
+      const selected = fileSelect.value;
+      const filenameGroup = document.getElementById('editor-filename-group');
+      if (!selected) {
+        // New File
+        if (filenameGroup) filenameGroup.style.display = '';
+        if (filenameInput) filenameInput.value = '';
+        if (nameInput) nameInput.value = '';
+        if (codeTextarea) codeTextarea.value = '';
+        if (descriptionInput) descriptionInput.value = '';
+        if (tagsInput) tagsInput.value = '';
+        _state.editorIsNew = true;
+        _state.editorAction = null;
+        _state.editorFilename = '';
+        _state.editorCode = '';
+        _state.editorDescription = '';
+        _state.editorTags = '';
+        // Update modal title
+        const titleEl = document.querySelector('.c-modal__title');
+        if (titleEl) titleEl.textContent = 'Create New Action';
+      } else {
+        // Existing file — load its data
+        if (filenameGroup) filenameGroup.style.display = 'none';
+        const api = getApi();
+        if (!api) return;
+        try {
+          const result = await api.get('/api/v1/actions/file/get', {
+            filename: selected,
+          });
+          const data = result?.data || result;
+          _state.editorIsNew = false;
+          _state.editorAction = data;
+          _state.editorFilename = selected;
+          _state.editorCode = data.code || '';
+          _state.editorDescription = data.description || '';
+          _state.editorTags = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '');
+
+          if (nameInput) nameInput.value = selected.replace(/\.py$/, '');
+          if (codeTextarea) codeTextarea.value = _state.editorCode;
+          if (descriptionInput) descriptionInput.value = _state.editorDescription;
+          if (tagsInput) tagsInput.value = _state.editorTags;
+
+          // Update modal title
+          const titleEl = document.querySelector('.c-modal__title');
+          if (titleEl) titleEl.textContent = `Edit: ${selected}`;
+
+          // Show/hide delete button
+          const delBtn = document.getElementById('editor-delete-btn');
+          if (delBtn) delBtn.style.display = '';
+        } catch (err) {
+          toast.showToast('error', 'Load Failed', `Failed to load action: ${err.message || 'Unknown error'}`);
+        }
+      }
+    });
+  }
+
+  // Filename input change: auto-update name
+  if (filenameInput) {
+    const updateName = () => {
+      const val = filenameInput.value.trim();
+      if (nameInput) nameInput.value = val.replace(/\.py$/i, '');
+    };
+    filenameInput.addEventListener('input', updateName);
+  }
+
+  // Save button
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      // Determine filename
+      const fileSelectVal = fileSelect ? fileSelect.value : '';
+      let saveFilename;
+      if (!fileSelectVal) {
+        // New file — use filename input
+        saveFilename = filenameInput ? filenameInput.value.trim() : '';
+      } else {
+        saveFilename = fileSelectVal;
+      }
+
+      if (!saveFilename) {
+        toast.showToast('warning', 'Validation Error', 'Please provide a filename.');
+        if (filenameInput) filenameInput.focus();
+        return;
+      }
+      if (!saveFilename.endsWith('.py')) {
+        saveFilename += '.py';
+      }
+
+      const saveCode = codeTextarea ? codeTextarea.value : '';
+      if (!saveCode.trim()) {
+        toast.showToast('warning', 'Validation Error', 'Please provide Python code for the action.');
+        if (codeTextarea) codeTextarea.focus();
+        return;
+      }
+
+      const saveDescription = descriptionInput ? descriptionInput.value.trim() : '';
+      const saveTags = tagsInput ? tagsInput.value.trim() : '';
+
+      const api = getApi();
+      if (!api) {
+        toast.showToast('error', 'Error', 'API client not available.');
+        return;
+      }
+
+      try {
+        const result = await api.post('/api/v1/actions/file/save', {
+          filename: saveFilename,
+          code: saveCode,
+          description: saveDescription,
+          tags: saveTags,
+        });
+        toast.showToast('success', 'Saved', `Action "${saveFilename}" saved successfully.`);
+        modal.closeModal('saved');
+        // Refresh data after save
+        await refreshActions();
+      } catch (err) {
+        toast.showToast('error', 'Save Failed', `Failed to save action: ${err.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Delete button
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const delFilename = _state.editorFilename;
+      if (!delFilename) return;
+
+      const confirmed = await modal.showModal({
+        title: 'Delete Action',
+        content: `<p>Are you sure you want to delete <strong>${esc(delFilename)}</strong>? This cannot be undone.</p>`,
+        size: 'sm',
+        buttons: [
+          { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+          { label: 'Delete', value: 'delete', variant: 'danger' },
+        ],
+      });
+
+      if (confirmed !== 'delete') return;
+
+      const api = getApi();
+      if (!api) {
+        toast.showToast('error', 'Error', 'API client not available.');
+        return;
+      }
+
+      try {
+        await api.post('/api/v1/actions/file/delete', {
+          filename: delFilename,
+        });
+        toast.showToast('success', 'Deleted', `Action "${delFilename}" deleted.`);
+        modal.closeModal('deleted');
+        await refreshActions();
+      } catch (err) {
+        toast.showToast('error', 'Delete Failed', `Failed to delete action: ${err.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Cancel button
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      modal.closeModal('cancel');
+    });
+  }
+}
+
+/* ── Library CRUD Operations ──────────────────────────────────────────────── */
+
+/**
+ * Toggle the enabled status of a file-based action.
+ * @param {string} filename
+ */
+async function handleLibraryToggle(filename) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const result = await api.post('/api/v1/actions/file/toggle', { filename });
+    const action = result?.data || result;
+    const status = action.enabled ? 'enabled' : 'disabled';
+    toast.showToast('success', 'Toggled', `Action "${filename}" ${status}.`);
+    await refreshActions();
+  } catch (err) {
+    toast.showToast('error', 'Toggle Failed', err.message || 'Failed to toggle action.');
+  }
+}
+
+/**
+ * Duplicate a file-based action with an auto-generated name.
+ * @param {string} filename
+ */
+async function handleLibraryDuplicate(filename) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  // Generate a unique copy name
+  const stem = filename.replace(/\.py$/, '');
+  let newName = `${stem}_copy`;
+  let counter = 1;
+  while (_state.actions.some((a) => a.source === 'file' && a.filename === `${newName}.py`)) {
+    counter++;
+    newName = `${stem}_copy_${counter}`;
+  }
+
+  try {
+    const result = await api.post('/api/v1/actions/file/duplicate', {
+      filename,
+      new_name: newName,
+    });
+    const newAction = result?.data || result;
+    toast.showToast('success', 'Duplicated', `Action duplicated as "${newAction.filename}".`);
+    await refreshActions();
+  } catch (err) {
+    toast.showToast('error', 'Duplicate Failed', err.message || 'Failed to duplicate action.');
+  }
+}
+
+/**
+ * Delete a file-based action after confirmation.
+ * @param {string} filename
+ */
+async function handleLibraryDelete(filename) {
+  const confirmed = await modal.showModal({
+    title: 'Delete Action',
+    content: `<p>Are you sure you want to delete <strong>${esc(filename)}</strong>? This cannot be undone.</p>`,
+    size: 'sm',
+    buttons: [
+      { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+      { label: 'Delete', value: 'delete', variant: 'danger' },
+    ],
+  });
+
+  if (confirmed !== 'delete') return;
+
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    await api.post('/api/v1/actions/file/delete', { filename });
+    toast.showToast('success', 'Deleted', `Action "${filename}" deleted.`);
+    await refreshActions();
+  } catch (err) {
+    toast.showToast('error', 'Delete Failed', err.message || 'Failed to delete action.');
+  }
+}
+
+/**
+ * Refresh the actions list from the backend and re-render.
+ */
+async function refreshActions() {
+  const api = getApi();
+  if (!api) return;
+
+  try {
+    const result = await api.get('/api/v1/actions');
+    const actions = Array.isArray(result?.data)
+      ? result.data
+      : Array.isArray(result)
+        ? result
+        : [];
+    _state.actions = actions;
+
+    if (!_state.destroyed && _state.container) {
+      await renderPage(_state.container);
+    }
+  } catch (err) {
+    console.error('[actions] Failed to refresh actions:', err);
+  }
 }
 
 /* ── Data Loading ─────────────────────────────────────────────────────────── */
@@ -842,6 +1520,15 @@ export function destroy() {
   _state.expandedResults = new Set();
   _state.expandedHistory = new Set();
   _state.confirmingAction = null;
+
+  // Reset library / editor state
+  _state.activeLibraryView = 'list';
+  _state.editorAction = null;
+  _state.editorCode = '';
+  _state.editorDescription = '';
+  _state.editorTags = '';
+  _state.editorFilename = '';
+  _state.editorIsNew = false;
 }
 
 /* ── Router-compatible default export ────────────────────────────────────── */

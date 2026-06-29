@@ -16,6 +16,64 @@ class OllamaError(RuntimeError):
     """Raised when Fiona cannot talk to the Ollama local server."""
 
 
+# ---------------------------------------------------------------------------
+# Tool-call model types
+#
+# ``ToolCall`` is imported from the canonical ``fiona.tools.models`` module.
+# ``ChatResponse`` is specific to the Ollama API and lives here.
+# ---------------------------------------------------------------------------
+
+from fiona.tools.models import ToolCall
+
+
+@dataclass(frozen=True)
+class ChatResponse:
+    """Structured response from a model invocation that may include tool calls."""
+
+    content: str | None
+    tool_calls: list[ToolCall] | None
+    finish_reason: str  # "stop" | "tool_calls" | "length"
+    usage: dict[str, Any] | None = None
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> ChatResponse:
+        """Parse an Ollama ``/api/chat`` JSON response into a ``ChatResponse``."""
+        message: dict = data.get("message") or {}
+        content: str | None = message.get("content")
+
+        raw_tool_calls: list[dict] | None = message.get("tool_calls")
+        tool_calls: list[ToolCall] | None = None
+        if raw_tool_calls:
+            tool_calls = []
+            for tc in raw_tool_calls:
+                func: dict = tc.get("function") or {}
+                raw_args = func.get("arguments", "{}")
+                if isinstance(raw_args, str):
+                    try:
+                        parsed_args: dict[str, Any] = json.loads(raw_args)
+                    except json.JSONDecodeError:
+                        parsed_args = {}
+                else:
+                    parsed_args = raw_args  # already a dict
+                tool_calls.append(
+                    ToolCall(
+                        id=tc.get("id", ""),
+                        function_name=func.get("name", ""),
+                        arguments=parsed_args,
+                    )
+                )
+
+        finish_reason: str = data.get("finish_reason", "stop")
+        usage: dict[str, Any] | None = data.get("usage")
+
+        return cls(
+            content=content,
+            tool_calls=tool_calls,
+            finish_reason=finish_reason,
+            usage=usage,
+        )
+
+
 # Sentinel used to detect when *system_prompt* is not explicitly passed
 # to ``ask()`` so we can fall back to the personality's default.
 _ASK_SENTINEL = object()
@@ -91,6 +149,54 @@ class OllamaClient:
         try:
             return str(response["message"]["content"])
         except (KeyError, IndexError, TypeError) as exc:
+            raise OllamaError(f"unexpected Ollama response: {response}") from exc
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 2048,
+    ) -> ChatResponse:
+        """Send a multi-message conversation to Ollama, optionally with tool definitions.
+
+        Parameters
+        ----------
+        messages:
+            A list of message dicts, each with ``role`` and ``content`` keys
+            (and optionally ``images`` for vision models).
+        tools:
+            An optional list of tool definitions in the JSON Schema format
+            that Ollama's ``/api/chat`` endpoint expects.
+            When ``None`` or empty the request is identical to ``ask()``
+            (no tool definitions are sent).
+        temperature:
+            Sampling temperature (default 0.3).
+        max_tokens:
+            Maximum number of tokens to generate (default 2048).
+
+        Returns
+        -------
+        ChatResponse
+            A structured response containing the model's text reply, any tool
+            calls, the finish reason, and optional usage metadata.
+        """
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        if tools:
+            payload["tools"] = tools
+
+        response = self._request("POST", "/chat", payload)
+        try:
+            return ChatResponse.from_api_response(response)
+        except (KeyError, TypeError, ValueError) as exc:
             raise OllamaError(f"unexpected Ollama response: {response}") from exc
 
     def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:

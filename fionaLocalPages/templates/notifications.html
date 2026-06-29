@@ -16,6 +16,18 @@
         System event center
       </p>
     </div>
+
+    <!-- Browser Notification Permission -->
+    {{#if showBrowserNotifBtn}}
+    <div id="notif-browser-permission-area">
+      <button class="c-btn c-btn--sm c-btn--ghost" id="notif-browser-permission-btn"
+              title="Enable browser notifications"
+              style="color: var(--text-secondary);">
+        <span class="c-btn__icon">{{{bellIcon}}}</span>
+        Allow Notifications
+      </button>
+    </div>
+    {{/if}}
   </div>
 </div>
 
@@ -32,11 +44,30 @@
     </button>
   </div>
 
+  <!-- Severity / Urgency Filter -->
+  <select class="c-select c-select--sm" id="notif-severity-filter"
+          style="width: auto; font-size: var(--font-size-xs); padding: 4px 8px;">
+    <option value="">All Urgency</option>
+    <option value="critical">Critical</option>
+    <option value="normal">Normal</option>
+    <option value="low">Low</option>
+  </select>
+
+  <!-- Mark All Read -->
+  <button class="c-btn c-btn--sm c-btn--ghost" id="notif-mark-all-read-btn"
+          title="Mark all notifications as read"
+          style="color: var(--text-secondary);"
+          {{#unless hasUnread}}disabled{{/unless}}>
+    <span class="c-btn__icon">{{{checkIcon}}}</span>
+    Mark All Read
+  </button>
+
+  <!-- Clear All (same as Dismiss All) -->
   <button class="c-btn c-btn--sm c-btn--ghost" id="notif-dismiss-all-btn"
-          title="Dismiss all notifications"
+          title="Clear all notifications"
           style="color: var(--text-secondary);">
     <span class="c-btn__icon">{{{trashIcon}}}</span>
-    Dismiss All
+    Clear All
   </button>
 
   <button class="c-btn c-btn--sm c-btn--ghost" id="notif-refresh-btn"
@@ -48,7 +79,10 @@
 
   <div style="flex: 1;"></div>
 
-  <label class="c-toggle" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: var(--space-2);" title="Auto-refresh every 5 seconds">
+  <!-- Connection Status -->
+  <span id="notif-connection-status" style="font-size: var(--font-size-xs); color: var(--text-muted);"></span>
+
+  <label class="c-toggle" style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: var(--space-2);" title="Auto-refresh every 5 seconds (fallback when WebSocket is disconnected)">
     <input type="checkbox" class="c-toggle__input" id="notif-auto-refresh-toggle"
            {{#if autoRefresh}}checked{{/if}} />
     <span class="c-toggle__track">
@@ -65,14 +99,14 @@
     <div style="display: flex; align-items: center; gap: var(--space-3);">
       <span style="color: var(--danger); display: flex;">{{{warningIcon}}}</span>
       <span style="font-size: var(--font-size-sm); color: var(--text-primary);">
-        Dismiss all {{itemsCount}} notification{{#unless singularItems}}s{{/unless}}?
+        Clear all {{itemsCount}} notification{{#unless singularItems}}s{{/unless}}?
       </span>
     </div>
     <div style="display: flex; gap: var(--space-2);">
       <button class="c-btn c-btn--sm c-btn--ghost" id="notif-dismiss-all-cancel">Cancel</button>
       <button class="c-btn c-btn--sm c-btn--danger" id="notif-dismiss-all-confirm">
         <span class="c-btn__icon">{{{trashIcon}}}</span>
-        Dismiss All
+        Clear All
       </button>
     </div>
   </div>
@@ -134,3 +168,6 @@
 <div id="notif-list">
   {{{notificationListContent}}}
 </div>
+
+<!-- Category filter chips (hidden by default, shown by JS) -->
+<div id="notif-category-chips" style="display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap;"></div>

@@ -2,11 +2,22 @@
    macros.js — Macro Runner Page
    ==========================================================================
    Displays defined macros with expandable step lists, run/dry-run execution,
-   and inline result display.  Supports search/filter by macro name.
+   inline result display, and search/filter by macro name.
+
+   NEW FEATURES (June 2026):
+   • Recording UI — start/stop, pulsing indicator, step capture via UI
+   • Macro editing — reorder steps, remove/insert steps, inline command editing
+   • Macro chaining — step type selector including "run_macro" with macro picker
+   • Import / Export — JSON download and file upload
+   • Keyboard shortcut assignment — listen for key combos
 
    Backend APIs:
-     GET  /api/v1/macros      → { ok, data: { macroName: [steps] } }
-     POST /api/v1/macros/run  → { ok, data: [{ step, command, returncode, stdout, stderr }] }
+     GET    /api/v1/macros        → { ok, data: { name: [steps] }, shortcuts: {...} }
+     POST   /api/v1/macros/run    → { ok, data: [{ step, command, returncode, stdout, stderr }] }
+     POST   /api/v1/macros/save   → { ok, data: { name, step_count } }
+     DELETE /api/v1/macros/delete → { ok, data: { name, deleted } }
+     GET    /api/v1/macros/export → downloadable JSON file
+     POST   /api/v1/macros/import → { ok, data: { count, imported } }
 
    Exports: { render(container?), mount(container), destroy() }
    ========================================================================== */
@@ -49,6 +60,19 @@ const _state = {
   // Per-macro dry-run toggle: { name: true/false }
   dryRunEnabled: {},
 
+  // ── Recording state ──────────────────────────────────────────────────
+  isRecording: false,
+  recordingName: '',
+  recordingSteps: [], // [{ action, description }]
+
+  // ── Editing state ────────────────────────────────────────────────────
+  editing: new Set(),          // macro names currently in edit mode
+  editData: {},                // { macroName: { steps: [{ type, action, description }] } }
+
+  // ── Shortcuts ────────────────────────────────────────────────────────
+  shortcuts: {},               // { macroName: 'Ctrl+Shift+K' }
+  capturingShortcut: null,     // macro name whose shortcut is being captured
+
   _boundListeners: [],
 };
 
@@ -89,6 +113,35 @@ function loadPersistedState() {
   } catch (e) {
     // Silently fail
   }
+}
+
+/** Convert a step dict from the backend to the edit format. */
+function stepToEditFormat(step) {
+  const action = step.action || step.command || '';
+  let type = 'command';
+  let commandVal = action;
+  if (action.startsWith('GOTO:')) {
+    type = 'run_macro';
+    commandVal = action.slice(5);
+  }
+  return {
+    type,
+    action: commandVal,
+    description: step.description || step.desc || '',
+  };
+}
+
+/** Convert edit-format steps to backend-compatible dicts. */
+function stepsToBackendFormat(editSteps) {
+  return editSteps.map((s) => ({
+    action: s.type === 'run_macro' ? `GOTO:${s.action}` : s.action,
+    description: s.description || '',
+  }));
+}
+
+/** Get a unique list of macro names (for the macro-chain picker). */
+function getMacroNames() {
+  return _state.macrosArray.map((e) => e.name);
 }
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
@@ -134,12 +187,38 @@ async function renderPage(container) {
     macrosListContent = filtered.map((entry) => renderMacroCard(entry)).join('');
   }
 
+  // Recording steps HTML
+  const recordingStepsHtml = _state.recordingSteps.length === 0
+    ? html`<div style="color: var(--text-muted); font-style: italic;">No steps recorded yet. Add a step below.</div>`
+    : _state.recordingSteps.map((s, i) => html`
+        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--border-subtle);">
+          <span class="c-badge" style="flex-shrink: 0; min-width: 20px; text-align: center; font-size: var(--font-size-xxs);">${i + 1}</span>
+          <span style="flex: 1; font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--text-primary);">${esc(s.action)}</span>
+          <button class="c-btn c-btn--icon c-btn--xs c-btn--ghost" data-action="remove-recording-step" data-step-idx="${i}" title="Remove step" style="color: var(--danger);">${ICONS.close}</button>
+        </div>
+      `).join('');
+
   const data = {
+    // Toolbar
+    plusIcon: ICONS.plus.html,
+    isRecording: _state.isRecording,
+    recordingName: esc(_state.recordingName),
+    stopIcon: ICONS.pause.html,
+    recordIcon: ICONS.playCircle.html,
+    importIcon: ICONS.upload.html,
+    exportIcon: ICONS.download.html,
+    addIcon: ICONS.plus.html,
+    recordingStepCount: _state.recordingSteps.length,
+    recordingStepsHtml,
+
+    // Search
     searchIcon: ICONS.search.html,
     searchQuery: esc(_state.searchQuery),
     hasTotalCount: totalCount > 0,
     totalCount,
     singular: totalCount === 1,
+
+    // Macros list
     macrosListContent,
   };
 
@@ -166,9 +245,12 @@ function renderMacroCard(entry) {
   const isLoading = result && result.loading;
   const isDryRun = _state.dryRunEnabled[name] || false;
   const hasError = result && result.error && !result.loading;
+  const isEditing = _state.editing.has(name);
+  const shortcut = _state.shortcuts[name] || '';
+  const isCapturing = _state.capturingShortcut === name;
 
   return html`
-    <div class="c-card macro-card" data-macro-name="${esc(name)}" style="margin-bottom: var(--space-3);">
+    <div class="c-card macro-card" data-macro-name="${esc(name)}" style="margin-bottom: var(--space-3); ${isEditing ? 'border-color: var(--accent);' : ''}">
       <!-- Card Header — always visible, clickable to expand -->
       <div class="c-card__header macro-card-header"
            style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4);"
@@ -178,11 +260,15 @@ function renderMacroCard(entry) {
             ${ICONS.play}
           </div>
           <div style="min-width: 0;">
-            <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">
-              ${esc(name)}
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-primary);">
+                ${esc(name)}
+              </span>
+              ${shortcut ? html`<span style="font-size: var(--font-size-xxs); padding: 1px 6px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-muted); font-family: var(--font-mono);">${esc(shortcut)}</span>` : ''}
             </div>
             <div style="font-size: var(--font-size-xxs); color: var(--text-muted);">
               ${stepCount} step${stepCount !== 1 ? 's' : ''}
+              ${isEditing ? html`<span style="color: var(--accent); margin-left: var(--space-2);">(editing…)</span>` : ''}
             </div>
           </div>
         </div>
@@ -203,10 +289,15 @@ function renderMacroCard(entry) {
           <!-- Steps List -->
           <div class="c-card__body" style="padding-top: 0; padding-bottom: var(--space-3);">
             ${stepCount > 0 ? html`
-              <div style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-muted); margin-bottom: var(--space-2);">
-                Steps
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2);">
+                <span style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-muted);">
+                  ${isEditing ? 'Edit Steps' : 'Steps'}
+                </span>
               </div>
-              ${html.raw(steps.map((step, idx) => renderStepItem(step, idx)).join(''))}
+              ${isEditing
+                ? html.raw(renderEditSteps(name, _state.editData[name]?.steps || []))
+                : html.raw(steps.map((step, idx) => renderStepItem(step, idx)).join(''))
+              }
             ` : html`
               <div style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-2) 0;">
                 No steps defined.
@@ -216,36 +307,92 @@ function renderMacroCard(entry) {
 
           <!-- Action Buttons -->
           <div class="c-card__footer" style="border-top: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-4);">
-            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
-              <button class="c-btn c-btn--primary c-btn--sm macro-run-btn"
-                      data-action="run-macro" data-macro-name="${esc(name)}"
-                      ${isLoading ? 'disabled' : ''}>
-                <span class="c-btn__icon">${isLoading ? html`<span class="c-spinner c-spinner--sm"></span>` : ICONS.play}</span>
-                ${isDryRun ? 'Preview' : 'Run'}
-              </button>
+            ${isEditing ? html`
+              <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+                <button class="c-btn c-btn--primary c-btn--sm" data-action="save-macro-edits" data-macro-name="${esc(name)}">
+                  <span class="c-btn__icon">${ICONS.check}</span>
+                  Save
+                </button>
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="cancel-macro-edits" data-macro-name="${esc(name)}">
+                  <span class="c-btn__icon">${ICONS.close}</span>
+                  Cancel
+                </button>
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="add-step" data-macro-name="${esc(name)}">
+                  <span class="c-btn__icon">${ICONS.plus}</span>
+                  Add Step
+                </button>
+                <span style="flex: 1;"></span>
+                <span style="font-size: var(--font-size-xxs); color: var(--text-muted);">Drag handle or use arrows to reorder</span>
+              </div>
+            ` : html`
+              <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+                <button class="c-btn c-btn--primary c-btn--sm macro-run-btn"
+                        data-action="run-macro" data-macro-name="${esc(name)}"
+                        ${isLoading ? 'disabled' : ''}>
+                  <span class="c-btn__icon">${isLoading ? html`<span class="c-spinner c-spinner--sm"></span>` : ICONS.play}</span>
+                  ${isDryRun ? 'Preview' : 'Run'}
+                </button>
 
-              <label style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--text-muted); cursor: pointer; user-select: none;">
-                <input type="checkbox" class="macro-dryrun-toggle" data-macro-name="${esc(name)}"
-                       ${isDryRun ? 'checked' : ''}
-                       style="accent-color: var(--accent);" />
-                Dry Run
-              </label>
+                <label style="display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--text-muted); cursor: pointer; user-select: none;">
+                  <input type="checkbox" class="macro-dryrun-toggle" data-macro-name="${esc(name)}"
+                         ${isDryRun ? 'checked' : ''}
+                         style="accent-color: var(--accent);" />
+                  Dry Run
+                </label>
 
-              <button class="c-btn c-btn--sm c-btn--ghost macro-dryrun-btn"
-                      data-action="dryrun-macro" data-macro-name="${esc(name)}"
-                      ${isLoading ? 'disabled' : ''}>
-                <span class="c-btn__icon">${ICONS.eye}</span>
-                Dry Run
-              </button>
+                <button class="c-btn c-btn--sm c-btn--ghost macro-dryrun-btn"
+                        data-action="dryrun-macro" data-macro-name="${esc(name)}"
+                        ${isLoading ? 'disabled' : ''}>
+                  <span class="c-btn__icon">${ICONS.eye}</span>
+                  Dry Run
+                </button>
 
-              ${isLoading ? html`
-                <span style="font-size: var(--font-size-xs); color: var(--text-muted); display: flex; align-items: center; gap: var(--space-1);">
-                  <span class="c-spinner c-spinner--sm"></span>
-                  Running…
-                </span>
-              ` : ''}
-            </div>
+                <!-- Edit button -->
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="edit-macro" data-macro-name="${esc(name)}">
+                  <span class="c-btn__icon">${ICONS.edit}</span>
+                  Edit
+                </button>
+
+                <!-- Shortcut button -->
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="assign-shortcut" data-macro-name="${esc(name)}">
+                  <span class="c-btn__icon">${ICONS.keyboard}</span>
+                  ${shortcut ? esc(shortcut) : 'Shortcut'}
+                </button>
+
+                <!-- Delete button -->
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="delete-macro" data-macro-name="${esc(name)}" style="color: var(--danger);" title="Delete macro">
+                  <span class="c-btn__icon">${ICONS.trash}</span>
+                </button>
+
+                ${isLoading ? html`
+                  <span style="font-size: var(--font-size-xs); color: var(--text-muted); display: flex; align-items: center; gap: var(--space-1);">
+                    <span class="c-spinner c-spinner--sm"></span>
+                    Running…
+                  </span>
+                ` : ''}
+              </div>
+            `}
           </div>
+
+          <!-- Shortcut capture overlay -->
+          ${isCapturing ? html`
+            <div style="border-top: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-4); background: var(--surface-alt);">
+              <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: var(--space-2);">Press a key combination for this macro…</div>
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <input type="text" class="c-input shortcut-capture-input"
+                       data-macro-name="${esc(name)}"
+                       placeholder="Press keys…"
+                       readonly
+                       style="width: 200px; height: 34px; font-family: var(--font-mono); cursor: pointer;" />
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="clear-shortcut" data-macro-name="${esc(name)}">
+                  Clear
+                </button>
+                <button class="c-btn c-btn--sm c-btn--ghost" data-action="cancel-shortcut" data-macro-name="${esc(name)}">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ` : ''}
 
           <!-- Results Section -->
           ${hasResult ? html`
@@ -270,7 +417,7 @@ function renderMacroCard(entry) {
 
 function renderStepItem(step, idx) {
   const stepNum = step.step || step.step_number || (idx + 1);
-  const command = step.command || '';
+  const command = step.command || step.action || '';
   const description = step.description || step.desc || '';
 
   return html`
@@ -288,6 +435,62 @@ function renderStepItem(step, idx) {
       </div>
     </div>
   `;
+}
+
+/** Render editable steps for a macro in edit mode. */
+function renderEditSteps(macroName, steps) {
+  if (!steps || steps.length === 0) {
+    return html`<div style="font-size: var(--font-size-xs); color: var(--text-muted); font-style: italic;">No steps. Click "Add Step" to start.</div>`;
+  }
+
+  const macroNames = getMacroNames().filter((n) => n !== macroName);
+
+  return steps.map((step, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === steps.length - 1;
+    return html`
+      <div class="macro-edit-step" data-step-idx="${idx}" style="display: flex; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border-subtle); align-items: center;">
+        <!-- Grip / Move buttons -->
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;">
+          <button class="c-btn c-btn--icon c-btn--xs c-btn--ghost" data-action="step-move-up" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" title="Move up" ${isFirst ? 'disabled' : ''} style="padding: 0; line-height: 1;">
+            ${ICONS.chevronUp}
+          </button>
+          <button class="c-btn c-btn--icon c-btn--xs c-btn--ghost" data-action="step-move-down" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" title="Move down" ${isLast ? 'disabled' : ''} style="padding: 0; line-height: 1;">
+            ${ICONS.chevronDown}
+          </button>
+        </div>
+
+        <!-- Step number -->
+        <span class="c-badge" style="flex-shrink: 0; min-width: 22px; text-align: center; font-size: var(--font-size-xxs);">${idx + 1}</span>
+
+        <!-- Type selector -->
+        <select class="c-input macro-edit-type-select" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" style="width: 130px; height: 30px; font-size: var(--font-size-xs); padding: 0 var(--space-2); flex-shrink: 0;">
+          <option value="command" ${step.type === 'command' ? 'selected' : ''}>Command</option>
+          <option value="run_macro" ${step.type === 'run_macro' ? 'selected' : ''}>Run Macro</option>
+        </select>
+
+        <!-- Value: text input for command, select for run_macro -->
+        ${step.type === 'command' ? html`
+          <input type="text" class="c-input macro-edit-input" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" data-field="action"
+                 value="${esc(step.action)}" placeholder="shell command…"
+                 style="flex: 1; height: 30px; font-family: var(--font-mono); font-size: var(--font-size-xs);" autocomplete="off" />
+        ` : html`
+          <select class="c-input macro-edit-macro-select" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" style="flex: 1; height: 30px; font-size: var(--font-size-xs); padding: 0 var(--space-2);">
+            ${macroNames.length === 0 ? html`<option value="" disabled>No other macros</option>` : ''}
+            <option value="" ${!step.action ? 'selected' : ''} disabled>Select macro…</option>
+            ${macroNames.map((m) => html`
+              <option value="${esc(m)}" ${step.action === m ? 'selected' : ''}>${esc(m)}</option>
+            `).join('')}
+          </select>
+        `}
+
+        <!-- Remove button -->
+        <button class="c-btn c-btn--icon c-btn--xs c-btn--ghost" data-action="remove-step" data-macro-name="${esc(macroName)}" data-step-idx="${idx}" title="Remove step" style="color: var(--danger); flex-shrink: 0;">
+          ${ICONS.trash}
+        </button>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderResults(data, macroName) {
@@ -406,7 +609,7 @@ function renderError(container) {
 function mountComponents(container) {
   const listeners = [];
 
-  // Search input
+  // ── Search input ────────────────────────────────────────────────────
   const searchEl = container.querySelector('#macros-search-input');
   if (searchEl) {
     const handler = async (e) => {
@@ -418,7 +621,7 @@ function mountComponents(container) {
     listeners.push(() => searchEl.removeEventListener('input', handler));
   }
 
-  // Toggle expand (header click or chevron button)
+  // ── Toggle expand ───────────────────────────────────────────────────
   const toggleEls = container.querySelectorAll('[data-action="toggle-expand"]');
   toggleEls.forEach((el) => {
     const handler = async () => {
@@ -435,20 +638,19 @@ function mountComponents(container) {
     listeners.push(() => el.removeEventListener('click', handler));
   });
 
-  // Dry-run toggle checkboxes
+  // ── Dry-run toggle checkboxes ───────────────────────────────────────
   container.querySelectorAll('.macro-dryrun-toggle').forEach((cb) => {
     const handler = async () => {
       const name = cb.dataset.macroName;
       if (!name) return;
       _state.dryRunEnabled[name] = cb.checked;
-      // Re-render so the Run button label updates
       await renderPage(container);
     };
     cb.addEventListener('change', handler);
     listeners.push(() => cb.removeEventListener('change', handler));
   });
 
-  // Run buttons
+  // ── Run buttons ─────────────────────────────────────────────────────
   container.querySelectorAll('.macro-run-btn').forEach((btn) => {
     const handler = () => {
       const name = btn.dataset.macroName;
@@ -460,7 +662,7 @@ function mountComponents(container) {
     listeners.push(() => btn.removeEventListener('click', handler));
   });
 
-  // Dry Run buttons (always dry_run = true regardless of toggle)
+  // ── Dry Run buttons ─────────────────────────────────────────────────
   container.querySelectorAll('.macro-dryrun-btn').forEach((btn) => {
     const handler = () => {
       const name = btn.dataset.macroName;
@@ -471,7 +673,534 @@ function mountComponents(container) {
     listeners.push(() => btn.removeEventListener('click', handler));
   });
 
+  // ── Recording: Start Recording ──────────────────────────────────────
+  const startRecBtn = container.querySelector('[data-action="start-recording"]');
+  if (startRecBtn) {
+    const handler = () => {
+      _state.isRecording = true;
+      _state.recordingName = '';
+      _state.recordingSteps = [];
+      renderPage(container);
+    };
+    startRecBtn.addEventListener('click', handler);
+    listeners.push(() => startRecBtn.removeEventListener('click', handler));
+  }
+
+  // ── Recording: Stop Recording ───────────────────────────────────────
+  const stopRecBtn = container.querySelector('[data-action="stop-recording"]');
+  if (stopRecBtn) {
+    const handler = () => {
+      const name = _state.recordingName.trim();
+      if (!name) {
+        toast.showToast('warning', 'Name Required', 'Enter a name for the macro before saving.');
+        return;
+      }
+      if (_state.recordingSteps.length === 0) {
+        toast.showToast('warning', 'No Steps', 'Add at least one step before saving.');
+        return;
+      }
+      // Save the recorded macro
+      saveNewMacro(name, _state.recordingSteps);
+    };
+    stopRecBtn.addEventListener('click', handler);
+    listeners.push(() => stopRecBtn.removeEventListener('click', handler));
+  }
+
+  // ── Recording: Capture Step ─────────────────────────────────────────
+  const captureBtn = container.querySelector('[data-action="capture-step"]');
+  const captureInput = container.querySelector('#macro-recording-command');
+  if (captureBtn && captureInput) {
+    const capture = () => {
+      const cmd = captureInput.value.trim();
+      if (!cmd) {
+        toast.showToast('warning', 'Empty Command', 'Enter a command for the step.');
+        return;
+      }
+      _state.recordingSteps.push({ action: cmd, description: '' });
+      captureInput.value = '';
+      captureInput.focus();
+      renderPage(container);
+    };
+    captureBtn.addEventListener('click', capture);
+    listeners.push(() => captureBtn.removeEventListener('click', capture));
+    // Also capture on Enter key
+    captureInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') capture();
+    });
+    listeners.push(() => captureInput.removeEventListener('keydown', capture));
+  }
+
+  // ── Recording: Name input sync ──────────────────────────────────────
+  const recNameInput = container.querySelector('#macro-recording-name');
+  if (recNameInput) {
+    const handler = (e) => {
+      _state.recordingName = e.target.value;
+    };
+    recNameInput.addEventListener('input', handler);
+    listeners.push(() => recNameInput.removeEventListener('input', handler));
+  }
+
+  // ── Recording: Remove step from recording list ──────────────────────
+  container.querySelectorAll('[data-action="remove-recording-step"]').forEach((btn) => {
+    const handler = () => {
+      const idx = parseInt(btn.dataset.stepIdx, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < _state.recordingSteps.length) {
+        _state.recordingSteps.splice(idx, 1);
+        renderPage(container);
+      }
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Enter edit mode ────────────────────────────────────────
+  container.querySelectorAll('[data-action="edit-macro"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      enterEditMode(name);
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Cancel edits ───────────────────────────────────────────
+  container.querySelectorAll('[data-action="cancel-macro-edits"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      cancelEditMode(name);
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Save edits ─────────────────────────────────────────────
+  container.querySelectorAll('[data-action="save-macro-edits"]').forEach((btn) => {
+    const handler = async () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      await saveMacroEdits(name);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Add step ───────────────────────────────────────────────
+  container.querySelectorAll('[data-action="add-step"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      if (!name || !_state.editData[name]) return;
+      _state.editData[name].steps.push({ type: 'command', action: '', description: '' });
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Remove step ────────────────────────────────────────────
+  container.querySelectorAll('[data-action="remove-step"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      const idx = parseInt(btn.dataset.stepIdx, 10);
+      if (!name || !_state.editData[name]) return;
+      _state.editData[name].steps.splice(idx, 1);
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Move step up ───────────────────────────────────────────
+  container.querySelectorAll('[data-action="step-move-up"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      const idx = parseInt(btn.dataset.stepIdx, 10);
+      if (!name || !_state.editData[name] || idx <= 0) return;
+      const steps = _state.editData[name].steps;
+      [steps[idx - 1], steps[idx]] = [steps[idx], steps[idx - 1]];
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Move step down ─────────────────────────────────────────
+  container.querySelectorAll('[data-action="step-move-down"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      const idx = parseInt(btn.dataset.stepIdx, 10);
+      if (!name || !_state.editData[name]) return;
+      const steps = _state.editData[name].steps;
+      if (idx >= steps.length - 1) return;
+      [steps[idx], steps[idx + 1]] = [steps[idx + 1], steps[idx]];
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Editing: Inline command input (update state without re-render) ──
+  container.querySelectorAll('.macro-edit-input').forEach((input) => {
+    const handler = () => {
+      const name = input.dataset.macroName;
+      const idx = parseInt(input.dataset.stepIdx, 10);
+      const field = input.dataset.field || 'action';
+      if (_state.editData[name] && _state.editData[name].steps[idx]) {
+        _state.editData[name].steps[idx][field] = input.value;
+      }
+    };
+    input.addEventListener('input', handler);
+    listeners.push(() => input.removeEventListener('input', handler));
+  });
+
+  // ── Editing: Type selector ──────────────────────────────────────────
+  container.querySelectorAll('.macro-edit-type-select').forEach((select) => {
+    const handler = () => {
+      const name = select.dataset.macroName;
+      const idx = parseInt(select.dataset.stepIdx, 10);
+      if (_state.editData[name] && _state.editData[name].steps[idx]) {
+        _state.editData[name].steps[idx].type = select.value;
+        // If switching to run_macro, pre-fill with first available macro
+        if (select.value === 'run_macro') {
+          const names = getMacroNames().filter((n) => n !== name);
+          if (names.length > 0 && !_state.editData[name].steps[idx].action) {
+            _state.editData[name].steps[idx].action = names[0];
+          }
+        }
+        renderPage(container);
+      }
+    };
+    select.addEventListener('change', handler);
+    listeners.push(() => select.removeEventListener('change', handler));
+  });
+
+  // ── Editing: Macro select for chaining ──────────────────────────────
+  container.querySelectorAll('.macro-edit-macro-select').forEach((select) => {
+    const handler = () => {
+      const name = select.dataset.macroName;
+      const idx = parseInt(select.dataset.stepIdx, 10);
+      if (_state.editData[name] && _state.editData[name].steps[idx]) {
+        _state.editData[name].steps[idx].action = select.value;
+      }
+    };
+    select.addEventListener('change', handler);
+    listeners.push(() => select.removeEventListener('change', handler));
+  });
+
+  // ── Shortcut: Assign shortcut button ────────────────────────────────
+  container.querySelectorAll('[data-action="assign-shortcut"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      _state.capturingShortcut = name;
+      _state.expanded.add(name);
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Shortcut: Cancel shortcut capture ───────────────────────────────
+  container.querySelectorAll('[data-action="cancel-shortcut"]').forEach((btn) => {
+    const handler = () => {
+      _state.capturingShortcut = null;
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Shortcut: Clear shortcut ────────────────────────────────────────
+  container.querySelectorAll('[data-action="clear-shortcut"]').forEach((btn) => {
+    const handler = () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      _state.shortcuts[name] = '';
+      _state.capturingShortcut = null;
+      renderPage(container);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── Shortcut: Capture keydown on shortcut input ─────────────────────
+  container.querySelectorAll('.shortcut-capture-input').forEach((input) => {
+    const handler = (e) => {
+      e.preventDefault();
+      const name = input.dataset.macroName;
+      if (!name) return;
+
+      const parts = [];
+      if (e.ctrlKey || e.metaKey) parts.push(e.metaKey ? 'Meta' : 'Ctrl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+
+      // Ignore modifier-only presses
+      const key = e.key;
+      if (key === 'Control' || key === 'Alt' || key === 'Shift' || key === 'Meta') return;
+
+      // Map common keys
+      let displayKey = key;
+      if (key === ' ') displayKey = 'Space';
+      else if (key.length === 1) displayKey = key.toUpperCase();
+      else displayKey = key;
+
+      parts.push(displayKey);
+      const combo = parts.join('+');
+
+      _state.shortcuts[name] = combo;
+      _state.capturingShortcut = null;
+      renderPage(container);
+    };
+    input.addEventListener('keydown', handler);
+    // Focus the input on mount so user can immediately press keys
+    setTimeout(() => input.focus(), 50);
+    listeners.push(() => input.removeEventListener('keydown', handler));
+  });
+
+  // ── Delete macro ────────────────────────────────────────────────────
+  container.querySelectorAll('[data-action="delete-macro"]').forEach((btn) => {
+    const handler = async () => {
+      const name = btn.dataset.macroName;
+      if (!name) return;
+      if (!confirm(`Delete macro "${name}"? This cannot be undone.`)) return;
+      await deleteMacro(name);
+    };
+    btn.addEventListener('click', handler);
+    listeners.push(() => btn.removeEventListener('click', handler));
+  });
+
+  // ── New Macro ───────────────────────────────────────────────────────
+  const newMacroBtn = container.querySelector('[data-action="new-macro"]');
+  if (newMacroBtn) {
+    const handler = () => {
+      _state.isRecording = true;
+      _state.recordingName = '';
+      _state.recordingSteps = [];
+      renderPage(container);
+    };
+    newMacroBtn.addEventListener('click', handler);
+    listeners.push(() => newMacroBtn.removeEventListener('click', handler));
+  }
+
+  // ── Import Macros ───────────────────────────────────────────────────
+  const importBtn = container.querySelector('[data-action="import-macros"]');
+  const importFileInput = container.querySelector('#macro-import-file-input');
+  if (importBtn && importFileInput) {
+    importBtn.addEventListener('click', () => importFileInput.click());
+    listeners.push(() => {}); // file input lives in DOM
+    importFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await importMacrosFromFile(file);
+      importFileInput.value = ''; // reset
+    });
+    listeners.push(() => importFileInput.removeEventListener('change', importFileInput));
+  }
+
+  // ── Export Macros ───────────────────────────────────────────────────
+  const exportBtn = container.querySelector('[data-action="export-macros"]');
+  if (exportBtn) {
+    const handler = () => exportMacros();
+    exportBtn.addEventListener('click', handler);
+    listeners.push(() => exportBtn.removeEventListener('click', handler));
+  }
+
   _state._boundListeners = listeners;
+}
+
+/* ── Recording Actions ──────────────────────────────────────────────────── */
+
+async function saveNewMacro(name, steps) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const result = await api.post('/api/v1/macros/save', {
+      name,
+      steps: steps.map((s) => ({ action: s.action, description: s.description || '' })),
+    });
+
+    if (result && result.ok) {
+      toast.showToast('success', 'Macro Created', `Macro "${name}" saved with ${steps.length} step(s).`);
+      _state.isRecording = false;
+      _state.recordingName = '';
+      _state.recordingSteps = [];
+      _state.expanded.add(name);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || 'Failed to save macro.';
+      toast.showToast('error', 'Save Failed', msg);
+    }
+  } catch (err) {
+    console.error('[macros] Save error:', err);
+    toast.showToast('error', 'Save Failed', err.message || 'Could not save macro.');
+  }
+}
+
+/* ── Editing Actions ────────────────────────────────────────────────────── */
+
+function enterEditMode(name) {
+  const entry = _state.macrosArray.find((e) => e.name === name);
+  if (!entry) return;
+  _state.editing.add(name);
+  _state.editData[name] = {
+    steps: (entry.steps || []).map((s) => stepToEditFormat(s)),
+  };
+}
+
+function cancelEditMode(name) {
+  _state.editing.delete(name);
+  delete _state.editData[name];
+}
+
+async function saveMacroEdits(name) {
+  const editEntry = _state.editData[name];
+  if (!editEntry) return;
+
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  // Validate steps
+  const validSteps = editEntry.steps.filter((s) => {
+    if (s.type === 'command') return s.action.trim().length > 0;
+    if (s.type === 'run_macro') return s.action.trim().length > 0;
+    return false;
+  });
+
+  if (validSteps.length === 0) {
+    toast.showToast('warning', 'No Valid Steps', 'Add at least one step with a command or macro target.');
+    return;
+  }
+
+  const backendSteps = stepsToBackendFormat(validSteps);
+  const shortcut = _state.shortcuts[name] || '';
+
+  try {
+    const result = await api.post('/api/v1/macros/save', {
+      name,
+      steps: backendSteps,
+      shortcut,
+    });
+
+    if (result && result.ok) {
+      toast.showToast('success', 'Macro Saved', `Macro "${name}" updated.`);
+      _state.editing.delete(name);
+      delete _state.editData[name];
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || 'Failed to save macro.';
+      toast.showToast('error', 'Save Failed', msg);
+    }
+  } catch (err) {
+    console.error('[macros] Save edits error:', err);
+    toast.showToast('error', 'Save Failed', err.message || 'Could not save macro.');
+  }
+}
+
+/* ── Delete Action ──────────────────────────────────────────────────────── */
+
+async function deleteMacro(name) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const result = await api.del('/api/v1/macros/delete', { body: { name } });
+
+    if (result && result.ok) {
+      toast.showToast('success', 'Macro Deleted', `Macro "${name}" deleted.`);
+      _state.expanded.delete(name);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || 'Failed to delete macro.';
+      toast.showToast('error', 'Delete Failed', msg);
+    }
+  } catch (err) {
+    console.error('[macros] Delete error:', err);
+    toast.showToast('error', 'Delete Failed', err.message || 'Could not delete macro.');
+  }
+}
+
+/* ── Import / Export ────────────────────────────────────────────────────── */
+
+async function exportMacros() {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    // Fetch the export data as raw text
+    const resp = await fetch('/api/v1/macros/export');
+    if (!resp.ok) {
+      toast.showToast('error', 'Export Failed', `Server returned ${resp.status}`);
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fiona-macros.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.showToast('success', 'Exported', 'Macros exported successfully.');
+  } catch (err) {
+    console.error('[macros] Export error:', err);
+    toast.showToast('error', 'Export Failed', err.message || 'Could not export macros.');
+  }
+}
+
+async function importMacrosFromFile(file) {
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      toast.showToast('error', 'Import Failed', 'File is not valid JSON.');
+      return;
+    }
+
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      toast.showToast('error', 'Import Failed', 'File must contain a JSON object with macro definitions.');
+      return;
+    }
+
+    const result = await api.post('/api/v1/macros/import', data);
+
+    if (result && result.ok) {
+      const count = result.data?.count || 0;
+      toast.showToast('success', 'Imported', `${count} macro(s) imported.`);
+      await loadData();
+    } else {
+      const msg = (result && result.data && result.data.error) || 'Failed to import macros.';
+      toast.showToast('error', 'Import Failed', msg);
+    }
+  } catch (err) {
+    console.error('[macros] Import error:', err);
+    toast.showToast('error', 'Import Failed', err.message || 'Could not import macros.');
+  }
 }
 
 /* ── Actions ────────────────────────────────────────────────────────────── */
@@ -553,9 +1282,14 @@ async function loadData() {
   try {
     const result = await api.get('/api/v1/macros');
 
-    // Expected: { ok: true, data: { macroName: [{ step, command, ... }, ...] } }
+    // Expected: { ok: true, data: { macroName: [steps] }, shortcuts: { ... } }
     const rawMacros =
       result && result.ok && result.data ? result.data : {};
+    const shortcuts =
+      result && result.shortcuts ? result.shortcuts : {};
+
+    // Store shortcuts
+    _state.shortcuts = shortcuts;
 
     // Convert to sorted array
     const entries = Object.keys(rawMacros)
@@ -625,6 +1359,15 @@ export function destroy() {
   _state.results = {};
   _state.expanded = new Set();
   _state.dryRunEnabled = {};
+
+  // Clean up new state
+  _state.isRecording = false;
+  _state.recordingName = '';
+  _state.recordingSteps = [];
+  _state.editing = new Set();
+  _state.editData = {};
+  _state.shortcuts = {};
+  _state.capturingShortcut = null;
 }
 
 /* ── Router-compatible default export ────────────────────────────────────── */

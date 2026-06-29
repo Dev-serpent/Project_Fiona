@@ -5,6 +5,9 @@
    actions, recent activity, and project health for the current Fiona
    workspace.
    
+   Now also provides full Workspace Manager: create, switch, delete
+   workspaces, persist to localStorage, sync with store.
+   
    Exports: { render(container), mount(container), destroy() }
    Default export: factory for the SPA router.
    ========================================================================== */
@@ -12,6 +15,7 @@
 import { html } from '../js/components/BaseComponent.js';
 import { ICONS } from '../js/components/_icons.js';
 import { loadTemplate } from '../js/template-loader.js';
+import { modal } from '../js/components/Modal.js';
 import {
   skeletonCard,
   skeletonText,
@@ -23,6 +27,10 @@ import {
 
 const MAX_RECENT_FILES = 10;
 const MAX_ACTIVITY_ITEMS = 10;
+const MAX_RECENT_PROJECTS = 8;
+
+const WS_STORAGE_KEY = 'fiona_workspaces';
+const WS_ACTIVE_KEY = 'fiona_active_workspace_id';
 
 /* ── Module-level State ─────────────────────────────────────────────────── */
 
@@ -32,6 +40,10 @@ const _state = {
   loading: true,
   error: false,
   errorMessage: '',
+
+  // Workspace management
+  workspaces: [],
+  activeWorkspaceId: null,
 
   // Project info
   projectName: '',
@@ -67,6 +79,10 @@ function getApi() {
   return window.fiona?.api;
 }
 
+function getStore() {
+  return window.fiona?.store;
+}
+
 function esc(str) {
   if (!str) return '';
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -98,7 +114,387 @@ function formatNumber(n) {
   return String(n);
 }
 
+function generateId() {
+  return 'ws_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+/* ── Workspace Persistence ──────────────────────────────────────────────── */
+
+function loadWorkspaces() {
+  try {
+    const stored = localStorage.getItem(WS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveWorkspaces(workspaces) {
+  try {
+    localStorage.setItem(WS_STORAGE_KEY, JSON.stringify(workspaces));
+  } catch (e) {
+    console.warn('[workspace] Failed to save workspaces:', e);
+  }
+}
+
+function loadActiveWorkspaceId() {
+  try {
+    return localStorage.getItem(WS_ACTIVE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveWorkspaceId(id) {
+  try {
+    if (id) {
+      localStorage.setItem(WS_ACTIVE_KEY, id);
+    } else {
+      localStorage.removeItem(WS_ACTIVE_KEY);
+    }
+  } catch (e) {
+    console.warn('[workspace] Failed to save active workspace ID:', e);
+  }
+}
+
+function getActiveWorkspace() {
+  if (!_state.activeWorkspaceId) return null;
+  return _state.workspaces.find((ws) => ws.id === _state.activeWorkspaceId) || null;
+}
+
+/* ── Workspace CRUD ─────────────────────────────────────────────────────── */
+
+function findWorkspaceIndex(id) {
+  return _state.workspaces.findIndex((ws) => ws.id === id);
+}
+
+function addWorkspace(ws) {
+  _state.workspaces.push(ws);
+  saveWorkspaces(_state.workspaces);
+}
+
+function removeWorkspace(id) {
+  _state.workspaces = _state.workspaces.filter((ws) => ws.id !== id);
+  saveWorkspaces(_state.workspaces);
+}
+
+function updateWorkspace(id, updates) {
+  const idx = findWorkspaceIndex(id);
+  if (idx === -1) return;
+  _state.workspaces[idx] = { ..._state.workspaces[idx], ...updates };
+  saveWorkspaces(_state.workspaces);
+}
+
+/**
+ * Switch to a workspace: update store, set active workspace, reload.
+ */
+function switchToWorkspace(id) {
+  const ws = _state.workspaces.find((w) => w.id === id);
+  if (!ws) {
+    showToast('error', 'Workspace not found.');
+    return;
+  }
+
+  // Update active workspace ID
+  _state.activeWorkspaceId = ws.id;
+  saveActiveWorkspaceId(ws.id);
+
+  // Update last opened timestamp
+  updateWorkspace(ws.id, { lastOpened: Date.now() });
+
+  // Sync the store
+  const store = getStore();
+  if (store) {
+    store.set('workspace.currentPath', ws.path);
+    store.set('workspace.recentFiles', ws.recentFiles || []);
+    store.set('workspace.openFiles', ws.openFiles || []);
+  }
+
+  // Reload the page data
+  _state.error = false;
+  _state.loading = true;
+  if (_state.container) {
+    renderSkeletons(_state.container);
+  }
+  loadData();
+}
+
+/**
+ * Delete a workspace after confirmation.
+ */
+async function confirmDeleteWorkspace(ws) {
+  if (!ws) return;
+
+  const result = await modal.showModal({
+    title: 'Delete Workspace',
+    content: html`
+      <p style="color: var(--text-secondary); margin: 0 0 var(--space-3) 0;">
+        Are you sure you want to delete the workspace <strong>${esc(ws.name)}</strong>?
+      </p>
+      <p style="color: var(--text-muted); font-size: var(--font-size-sm); margin: 0;">
+        Path: <span style="font-family: var(--font-mono);">${esc(ws.path)}</span>
+      </p>
+      <p style="color: var(--text-muted); font-size: var(--font-size-sm); margin: var(--space-2) 0 0 0;">
+        This does <strong>not</strong> delete any files on disk.
+      </p>
+    `.html,
+    size: 'sm',
+    buttons: [
+      { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+      { label: 'Delete', value: 'delete', variant: 'danger' },
+    ],
+  });
+
+  if (result !== 'delete') return;
+
+  // If this was the active workspace, clear the store reference
+  if (_state.activeWorkspaceId === ws.id) {
+    _state.activeWorkspaceId = null;
+    saveActiveWorkspaceId(null);
+    const store = getStore();
+    if (store) {
+      store.set('workspace.currentPath', null);
+    }
+  }
+
+  removeWorkspace(ws.id);
+  showToast('success', `Workspace "${ws.name}" deleted.`);
+
+  // Re-render
+  if (!_state.destroyed && _state.container) {
+    renderPage(_state.container);
+  }
+}
+
+/**
+ * Show the create workspace modal and handle submission.
+ */
+async function openCreateWorkspaceModal() {
+  const contentHtml = html`
+    <div id="ws-create-form" style="display: flex; flex-direction: column; gap: var(--space-4);">
+      <div>
+        <label for="ws-create-name" style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Workspace Name <span style="color: var(--danger);">*</span>
+        </label>
+        <input type="text" id="ws-create-name" class="c-input" style="width: 100%;"
+               placeholder="My Project" value="" />
+      </div>
+      <div>
+        <label for="ws-create-path" style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Workspace Path <span style="color: var(--danger);">*</span>
+        </label>
+        <div style="display: flex; gap: var(--space-2);">
+          <input type="text" id="ws-create-path" class="c-input" style="flex: 1; font-family: var(--font-mono);"
+                 placeholder="/home/user/projects/my-project" value="" />
+        </div>
+        <div id="ws-create-path-feedback" style="font-size: var(--font-size-xs); margin-top: var(--space-1); color: var(--text-muted);"></div>
+      </div>
+      <div>
+        <label for="ws-create-desc" style="display: block; font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--text-secondary); margin-bottom: var(--space-1);">
+          Description
+        </label>
+        <textarea id="ws-create-desc" class="c-input" style="width: 100%; min-height: 60px; resize: vertical;"
+                  placeholder="Optional description of this workspace"></textarea>
+      </div>
+      <div id="ws-create-error" style="color: var(--danger); font-size: var(--font-size-sm); display: none;"></div>
+    </div>
+  `.html;
+
+  const result = await modal.showModal({
+    title: 'Create New Workspace',
+    content: contentHtml,
+    size: 'md',
+    closeable: true,
+    closeOnBackdrop: false,
+    buttons: [
+      { label: 'Cancel', value: 'cancel', variant: 'ghost' },
+      { label: 'Create', value: 'create', variant: 'primary' },
+    ],
+  });
+
+  if (result !== 'create') return;
+
+  // Gather values
+  const nameEl = document.getElementById('ws-create-name');
+  const pathEl = document.getElementById('ws-create-path');
+  const descEl = document.getElementById('ws-create-desc');
+  const errorEl = document.getElementById('ws-create-error');
+  const feedbackEl = document.getElementById('ws-create-path-feedback');
+
+  if (!nameEl || !pathEl) return;
+
+  const name = nameEl.value.trim();
+  const path = pathEl.value.trim();
+  const description = descEl ? descEl.value.trim() : '';
+
+  // Validate
+  if (!name) {
+    if (errorEl) {
+      errorEl.textContent = 'Workspace name is required.';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+  if (!path) {
+    if (errorEl) {
+      errorEl.textContent = 'Workspace path is required.';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+
+  // Validate path via API if available
+  if (feedbackEl) {
+    feedbackEl.textContent = 'Validating path…';
+    feedbackEl.style.color = 'var(--text-muted)';
+  }
+
+  const api = getApi();
+  if (api) {
+    try {
+      const res = await api.get('/api/v1/files/info', { path });
+      const info = res?.data || res || {};
+      // If we got a response, the path exists
+      if (feedbackEl) {
+        feedbackEl.textContent = 'Path exists.';
+        feedbackEl.style.color = 'var(--success)';
+      }
+    } catch {
+      // Path may not exist or API may be unavailable — warn but still allow
+      if (feedbackEl) {
+        feedbackEl.textContent = 'Could not verify path (API unavailable). Workspace will still be created.';
+        feedbackEl.style.color = 'var(--warning)';
+      }
+    }
+  }
+
+  // Check for duplicate name
+  const existing = _state.workspaces.find((w) => w.name === name);
+  if (existing) {
+    if (errorEl) {
+      errorEl.textContent = `A workspace named "${name}" already exists.`;
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+
+  // Create workspace
+  const now = Date.now();
+  const newWs = {
+    id: generateId(),
+    name,
+    path,
+    description,
+    createdAt: now,
+    lastOpened: now,
+    recentFiles: [],
+    openFiles: [],
+  };
+
+  addWorkspace(newWs);
+  showToast('success', `Workspace "${name}" created.`);
+
+  // Switch to it
+  switchToWorkspace(newWs.id);
+}
+
 /* ── Helpers for dynamic sections ────────────────────────────────────────── */
+
+function buildWorkspaceListHtml() {
+  if (_state.workspaces.length === 0) {
+    return html`<div style="text-align: center; padding: var(--space-4); color: var(--text-muted); font-size: var(--font-size-sm);">
+      No workspaces yet. Click "New Workspace" to create one.
+    </div>`.html;
+  }
+
+  return html.raw(_state.workspaces.map((ws) => {
+    const isActive = ws.id === _state.activeWorkspaceId;
+    const activeStyle = isActive
+      ? 'background: var(--accent-muted, rgba(56,189,248,0.12)); border-left: 3px solid var(--accent);'
+      : 'border-left: 3px solid transparent;';
+
+    return html`
+      <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3);
+                  border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);
+                  ${activeStyle}"
+           data-action="switch-workspace" data-workspace-id="${esc(ws.id)}">
+        <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--accent);">
+          ${ICONS.folder}
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: var(--font-size-sm); color: var(--text-primary); font-weight: ${isActive ? 'var(--font-weight-bold)' : 'var(--font-weight-normal)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${esc(ws.name)}
+          </div>
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${esc(ws.path)}
+            ${ws.lastOpened ? html.raw(` · ${esc(timeAgo(ws.lastOpened))}`) : ''}
+          </div>
+        </div>
+        <button class="c-btn c-btn--sm c-btn--ghost" data-action="delete-workspace" data-workspace-id="${esc(ws.id)}"
+                title="Delete workspace" style="flex-shrink: 0; color: var(--text-muted); padding: 2px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+    `;
+  }).join('')).html;
+}
+
+function buildRecentProjectsHtml() {
+  // Recent projects = workspaces sorted by lastOpened, excluding active
+  const recent = [..._state.workspaces]
+    .filter((ws) => ws.id !== _state.activeWorkspaceId)
+    .sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0))
+    .slice(0, MAX_RECENT_PROJECTS);
+
+  if (recent.length === 0) {
+    return '';
+  }
+
+  return html.raw(recent.map((ws) => html`
+    <div style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3);
+                border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);"
+         data-action="switch-workspace" data-workspace-id="${esc(ws.id)}">
+      <div style="width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+        ${ICONS.folder}
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${esc(ws.name)}
+        </div>
+        <div style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
+          ${esc(ws.path)}
+          ${ws.lastOpened ? html.raw(` · ${esc(timeAgo(ws.lastOpened))}`) : ''}
+        </div>
+      </div>
+    </div>
+  `).join('')).html;
+}
+
+function buildOpenFilesHtml() {
+  const ws = getActiveWorkspace();
+  if (!ws || !ws.openFiles || ws.openFiles.length === 0) {
+    return '';
+  }
+
+  return html.raw(ws.openFiles.map((file) => {
+    const fileName = typeof file === 'string' ? file.split('/').pop() : (file.name || file.path?.split('/').pop() || 'unknown');
+    const filePath = typeof file === 'string' ? file : (file.path || '');
+    return html`
+      <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2);
+                  border-radius: var(--radius-sm); cursor: pointer; transition: background var(--transition-fast);"
+           data-action="open-file" data-path="${esc(filePath)}">
+        <div style="width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+          ${ICONS.fileText}
+        </div>
+        <span style="font-size: var(--font-size-xs); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${esc(fileName)}
+        </span>
+      </div>
+    `;
+  }).join('')).html;
+}
 
 function buildRecentFilesHtml() {
   if (_state.recentFiles.length === 0) {
@@ -249,11 +645,16 @@ async function renderPage(container) {
     return;
   }
 
-  // Build raw HTML sections
+  // Build dynamic HTML sections
+  const workspaceListHtml = buildWorkspaceListHtml();
+  const recentProjectsHtml = buildRecentProjectsHtml();
+  const openFilesHtml = buildOpenFilesHtml();
   const recentFilesHtml = buildRecentFilesHtml();
   const bookmarksHtml = buildBookmarksHtml();
   const activityHtml = buildActivityHtml();
   const healthHtml = buildHealthHtml();
+
+  const activeWs = getActiveWorkspace();
 
   const gitBoxStyle = _state.gitBranch
     ? 'background: var(--success-muted, rgba(34,197,94,0.15));'
@@ -263,16 +664,38 @@ async function renderPage(container) {
     : 'color: var(--text-muted);';
 
   const data = {
-    projectPath: esc(_state.projectPath || 'No project open'),
+    // Workspace management
+    workspaceListHtml,
+    recentProjectsHtml,
+    openFilesHtml,
+    hasActiveWorkspace: !!activeWs,
+    activeWorkspaceName: activeWs ? esc(activeWs.name) : '',
+    activeWorkspacePath: activeWs ? esc(activeWs.path) : '',
+    activeWorkspaceDescription: activeWs ? esc(activeWs.description || '') : '',
+    hasOpenFiles: activeWs && activeWs.openFiles && activeWs.openFiles.length > 0,
+    openFileCount: activeWs ? (activeWs.openFiles?.length || 0) : 0,
+    hasRecentProjects: recentProjectsHtml && recentProjectsHtml.length > 0,
+
+    // Icons
+    plusIcon: ICONS.plus?.html || ICONS['add-circle']?.html || ICONS.folder.html,
+    trashIcon: ICONS.trash?.html || '',
     folderIcon: ICONS.folder.html,
     refreshIcon: ICONS.refresh.html,
+    terminalIcon: ICONS.terminal.html,
     projectIcon: ICONS.folder.html,
-    projectName: esc(_state.projectName || 'Untitled'),
-    projectDescription: esc(_state.projectDescription || ''),
     filesIcon: ICONS.fileText.html,
+    activityIcon: ICONS.activity.html,
+    fileTextIcon: ICONS.fileText.html,
+
+    // Project info
+    projectPath: esc(_state.projectPath || (activeWs ? activeWs.path : 'No project open')),
+    projectName: esc(_state.projectName || (activeWs ? activeWs.name : 'Untitled')),
+    projectDescription: esc(_state.projectDescription || (activeWs ? activeWs.description || '' : '')),
     fileCount: formatNumber(_state.fileCount),
     dirCount: formatNumber(_state.dirCount),
     linesOfCode: formatNumber(_state.linesOfCode),
+
+    // Git info
     gitIcon: ICONS.activity.html,
     gitIconBoxStyle: gitBoxStyle,
     gitIconColor: gitColorStyle,
@@ -280,9 +703,8 @@ async function renderPage(container) {
     gitLastCommit: esc(_state.gitLastCommit || 'No commits'),
     gitLastAuthor: esc(_state.gitLastAuthor || ''),
     gitTimestamp: _state.gitLastTimestamp ? timeAgo(_state.gitLastTimestamp) : '',
-    terminalIcon: ICONS.terminal.html,
-    activityIcon: ICONS.activity.html,
-    fileTextIcon: ICONS.fileText.html,
+
+    // Dynamic HTML sections
     recentFilesHtml,
     bookmarksHtml,
     activityHtml,
@@ -339,11 +761,71 @@ function renderError(container) {
 /* ── Event Handlers ─────────────────────────────────────────────────────── */
 
 function mountHandlers(container) {
+  // ── Create workspace ──
+  container.querySelector('#ws-create-btn')?.addEventListener('click', () => {
+    openCreateWorkspaceModal();
+  });
+
+  // ── Switch workspace ──
+  container.querySelectorAll('[data-action="switch-workspace"]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const wsId = el.dataset.workspaceId;
+      if (wsId) {
+        switchToWorkspace(wsId);
+      }
+    });
+  });
+
+  // ── Delete workspace (from list item) ──
+  container.querySelectorAll('[data-action="delete-workspace"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wsId = el.dataset.workspaceId;
+      const ws = _state.workspaces.find((w) => w.id === wsId);
+      if (ws) {
+        confirmDeleteWorkspace(ws);
+      }
+    });
+  });
+
+  // ── Delete active workspace ──
+  container.querySelector('#ws-delete-active')?.addEventListener('click', () => {
+    const ws = getActiveWorkspace();
+    if (ws) {
+      confirmDeleteWorkspace(ws);
+    }
+  });
+
+  // ── Open in Files ──
+  container.querySelector('#ws-open-in-files')?.addEventListener('click', () => {
+    const ws = getActiveWorkspace();
+    if (ws && ws.path) {
+      window.fiona?.router?.navigate(`/files?path=${encodeURIComponent(ws.path)}`);
+    } else {
+      showToast('info', 'No workspace path configured.');
+    }
+  });
+
+  // ── Terminal Here ──
+  container.querySelector('#ws-open-terminal-here')?.addEventListener('click', () => {
+    const ws = getActiveWorkspace();
+    if (ws && ws.path) {
+      const store = getStore();
+      if (store) {
+        store.set('terminal.cwd', ws.path);
+      }
+      window.fiona?.router?.navigate('/terminal');
+    } else {
+      showToast('info', 'No workspace path configured.');
+    }
+  });
+
   // Open in file explorer (system)
   container.querySelector('#ws-open-explorer')?.addEventListener('click', () => {
     const api = getApi();
-    if (api && _state.projectPath) {
-      api.post('/api/v1/files/open', { path: _state.projectPath }).catch((err) => {
+    const path = _state.projectPath || (getActiveWorkspace()?.path);
+    if (api && path) {
+      api.post('/api/v1/files/open', { path }).catch((err) => {
         console.warn('[workspace] Failed to open explorer:', err);
         showToast('error', 'Failed to open file explorer.');
       });
@@ -405,26 +887,59 @@ async function loadData() {
   if (_state.container) renderSkeletons(_state.container);
 
   try {
-    // Try to get project path from store or API
-    const store = window.fiona?.store;
-    _state.projectPath = store?.get?.('workspace.path') || '';
+    // ── 1. Load workspaces from localStorage ──
+    _state.workspaces = loadWorkspaces();
+    _state.activeWorkspaceId = loadActiveWorkspaceId();
 
-    // Load file info
-    let fileInfo = {};
-    if (api && _state.projectPath) {
-      try {
-        const res = await api.get('/api/v1/files/info', { path: _state.projectPath });
-        fileInfo = res?.data || res || {};
-      } catch { /* fallback to defaults */ }
+    // Validate active workspace still exists
+    if (_state.activeWorkspaceId) {
+      const exists = _state.workspaces.find((ws) => ws.id === _state.activeWorkspaceId);
+      if (!exists) {
+        _state.activeWorkspaceId = null;
+        saveActiveWorkspaceId(null);
+      }
     }
 
-    _state.projectName = fileInfo.project_name || fileInfo.name || _state.projectPath?.split('/').pop() || 'Fiona Project';
-    _state.projectDescription = fileInfo.description || '';
-    _state.fileCount = fileInfo.file_count ?? 0;
-    _state.dirCount = fileInfo.dir_count ?? 0;
-    _state.linesOfCode = fileInfo.lines_of_code ?? fileInfo.loc ?? 0;
+    // Get the active workspace
+    const activeWs = getActiveWorkspace();
 
-    // Load git info
+    // ── 2. Sync active workspace to store ──
+    const store = getStore();
+    if (store && activeWs) {
+      store.set('workspace.currentPath', activeWs.path);
+      store.set('workspace.recentFiles', activeWs.recentFiles || []);
+      store.set('workspace.openFiles', activeWs.openFiles || []);
+    } else if (store) {
+      store.set('workspace.currentPath', null);
+    }
+
+    // ── 3. Set project info from active workspace ──
+    if (activeWs) {
+      _state.projectPath = activeWs.path;
+      _state.projectName = activeWs.name;
+      _state.projectDescription = activeWs.description || '';
+    }
+
+    // ── 4. Try to load file info from API ──
+    let fileInfo = {};
+    if (api && activeWs && activeWs.path) {
+      try {
+        const res = await api.get('/api/v1/files/info', { path: activeWs.path });
+        fileInfo = res?.data || res || {};
+      } catch { /* fallback to workspace data */ }
+    }
+
+    if (fileInfo.project_name || fileInfo.name) {
+      _state.projectName = fileInfo.project_name || fileInfo.name || _state.projectName;
+    }
+    if (fileInfo.description) {
+      _state.projectDescription = fileInfo.description || _state.projectDescription;
+    }
+    _state.fileCount = fileInfo.file_count ?? _state.fileCount;
+    _state.dirCount = fileInfo.dir_count ?? _state.dirCount;
+    _state.linesOfCode = fileInfo.lines_of_code ?? fileInfo.loc ?? _state.linesOfCode;
+
+    // ── 5. Load git info ──
     if (api) {
       try {
         const gitRes = await api.get('/api/v1/system/git-info');
@@ -434,7 +949,6 @@ async function loadData() {
         _state.gitLastAuthor = git.last_author || git.commit?.author || '';
         _state.gitLastTimestamp = git.last_timestamp || git.commit?.timestamp || null;
       } catch {
-        // Git info may not be available
         _state.gitBranch = '';
         _state.gitLastCommit = '';
         _state.gitLastAuthor = '';
@@ -442,7 +956,7 @@ async function loadData() {
       }
     }
 
-    // Load recent files
+    // ── 6. Load recent files ──
     _state.recentFiles = [];
     if (api) {
       try {
@@ -452,7 +966,12 @@ async function loadData() {
       } catch { /* fallback empty */ }
     }
 
-    // Load bookmarks from localStorage
+    // If no API recent files but workspace has recent files, use those
+    if (_state.recentFiles.length === 0 && activeWs && activeWs.recentFiles) {
+      _state.recentFiles = activeWs.recentFiles.slice(0, MAX_RECENT_FILES);
+    }
+
+    // ── 7. Load bookmarks from localStorage ──
     try {
       const stored = localStorage.getItem('fiona_workspace_bookmarks');
       _state.bookmarks = stored ? JSON.parse(stored) : [];
@@ -460,7 +979,7 @@ async function loadData() {
       _state.bookmarks = [];
     }
 
-    // Load recent activity
+    // ── 8. Load recent activity ──
     _state.recentActivity = [];
     if (api) {
       try {
@@ -470,7 +989,7 @@ async function loadData() {
       } catch { /* fallback empty */ }
     }
 
-    // Load dep/lint status (future — may not exist yet)
+    // ── 9. Load dep/lint status ──
     if (api) {
       try {
         const healthRes = await api.get('/api/v1/project/health');
@@ -549,6 +1068,8 @@ export async function mount(container) {
 export function destroy() {
   _state.destroyed = true;
   _state.container = null;
+  _state.workspaces = [];
+  _state.activeWorkspaceId = null;
   _state.recentFiles = [];
   _state.recentActivity = [];
   _state.bookmarks = [];

@@ -178,6 +178,8 @@ def normalize_binding(binding: dict, default_name: str) -> dict:
         "instruction": binding.get("instruction", "").strip(),
         "fiona_cmds": fiona_cmds,
         "cooldown_seconds": float(binding.get("cooldown_seconds", 0.8)),
+        "enabled": binding.get("enabled", True),
+        "category": binding.get("category", ""),
     }
 
 

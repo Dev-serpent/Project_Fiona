@@ -202,6 +202,10 @@ def main() -> None:
         sire_main(args.sire_args)
         return
 
+    if args.layer == "tools":
+        _run_tools(args)
+        return
+
     parser.print_help()
 
 
@@ -503,6 +507,21 @@ Use "fiona <group> --help" for a group-specific command grid.""",
         help="SciRetrieval — scientific knowledge retrieval from NCBI, PubChem, NIST.",
     )
     sire_parser.add_argument("sire_args", nargs=argparse.REMAINDER)
+
+    tools_parser = subparsers.add_parser(
+        "tools",
+        help="Scientific function tools (unit convert, chem resolve, etc.)",
+    )
+    tools_sub = tools_parser.add_subparsers(dest="tools_command", required=True)
+    tools_list = tools_sub.add_parser("list", help="List all registered tools with their schemas.")
+    tools_list.add_argument(
+        "--category", default=None,
+        help="Filter tools by category (e.g. physics, chemistry).",
+    )
+    tools_run = tools_sub.add_parser("run", help="Run a tool directly with JSON arguments.")
+    tools_run.add_argument("tool_name", help="Name of the tool to run (e.g. unit_convert).")
+    tools_run.add_argument("tool_args", help="JSON-encoded arguments for the tool.")
+    tools_sub.add_parser("count", help="Show total tool count.")
 
     subparsers.add_parser("phiconnect", help="Open the standalone PhiConnect encrypted chat window.")
 
@@ -1463,6 +1482,54 @@ def _run_seeondesk(args: argparse.Namespace) -> None:
         print(analyze_screen(args.prompt, image_path=args.image))
         return
     raise SystemExit(f"unknown SeeOnDesk command: {args.seeondesk_command}")
+
+
+def _run_tools(args: argparse.Namespace) -> None:
+    """List, run, or count registered scientific function tools."""
+    import asyncio
+    import json as _json
+
+    from Agent.tool_runtime import ToolRuntime
+    from fiona.tools.models import ToolCall, ToolContext
+
+    runtime = ToolRuntime()
+
+    cmd = args.tools_command
+
+    if cmd == "list":
+        tools = runtime.get_ollama_tools()
+        category_filter = getattr(args, "category", None)
+        shown = 0
+        for t in tools:
+            name = t["function"]["name"]
+            desc = t["function"]["description"]
+            if category_filter and category_filter.lower() not in desc.lower():
+                continue
+            print(f"  {name}: {desc}")
+            shown += 1
+        print(f"\nTotal: {len(tools)} tools (showing {shown})")
+
+    elif cmd == "run":
+        name = args.tool_name
+        raw_args = args.tool_args
+        try:
+            parsed = _json.loads(raw_args)
+        except _json.JSONDecodeError:
+            print(f"Error: arguments must be valid JSON. Got: {raw_args}")
+            return
+        import logging
+
+        call = ToolCall(id="cli", function_name=name, arguments=parsed)
+        context = ToolContext(logger=logging.getLogger("cli"))
+        result = asyncio.run(runtime.execute_tool(call, context))
+        if result.success:
+            print(result.content)
+        else:
+            print(f"Error: {result.error}")
+
+    elif cmd == "count":
+        tools = runtime.get_ollama_tools()
+        print(f"Total tools: {len(tools)}")
 
 
 def _read_json(path: Path) -> dict[str, Any]:

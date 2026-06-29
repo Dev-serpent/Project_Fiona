@@ -94,7 +94,6 @@ const DEFAULT_SECTIONS = [
       { id: 'desktop', label: 'SeeOnDesk', icon: 'maximize', path: '/desktop' },
       { id: 'voice', label: 'Voice', icon: 'message', path: '/voice' },
       { id: 'phiconnect', label: 'PhiConnect', icon: 'lock', path: '/phiconnect' },
-      { id: 'vsee', label: 'Vsee', icon: 'eye', path: '/vsee' },
     ],
   },
   {

@@ -193,13 +193,6 @@ const routes = [
     icon: 'terminal',
   },
   {
-    path: '/vsee',
-    name: 'vsee',
-    component: () => import('../pages/vsee.js'),
-    title: 'Vsee',
-    icon: 'eye',
-  },
-  {
     path: '/notifications',
     name: 'notifications',
     component: () => import('../pages/notifications.js'),
@@ -803,6 +796,49 @@ function _removeToast(id) {
 }
 
 /**
+ * Add a notification item to the store's notification list.
+ * Deduplicates by id (replaces existing if same id).
+ * @param {Object} params - Notification data
+ * @private
+ */
+function _addNotificationToStore(params) {
+  if (!params || !params.title) return;
+
+  const items = app.store.get('notifications.items');
+  const existingIdx = params.id ? items.findIndex((n) => n.id === params.id) : -1;
+
+  let newItems;
+  if (existingIdx >= 0) {
+    // Replace existing
+    newItems = [...items];
+    newItems[existingIdx] = { ...newItems[existingIdx], ...params };
+  } else {
+    // Prepend new notification
+    newItems = [params, ...items];
+  }
+
+  app.store.set('notifications.items', newItems);
+  app.store.set('notifications.unreadCount', app.store.get('notifications.unreadCount') + 1);
+}
+
+/**
+ * Update an existing notification in the store (e.g. mark as read).
+ * @param {Object} params - Partial update with id
+ * @private
+ */
+function _updateNotificationInStore(params) {
+  if (!params || !params.id) return;
+
+  const items = app.store.get('notifications.items');
+  const idx = items.findIndex((n) => n.id === params.id);
+  if (idx === -1) return;
+
+  const updated = [...items];
+  updated[idx] = { ...updated[idx], ...params };
+  app.store.set('notifications.items', updated);
+}
+
+/**
  * Get an SVG icon for a toast type.
  * @param {string} type
  * @returns {string}
@@ -1065,17 +1101,36 @@ function _connectWebSocket() {
     });
 
     app.api.on('system.notification', (params) => {
-      // Add to notification center
-      const items = app.store.get('notifications.items');
-      app.store.set('notifications.items', [params, ...items]);
-      app.store.set('notifications.unreadCount', app.store.get('notifications.unreadCount') + 1);
+      // Add to notification center (JSON-RPC method format)
+      _addNotificationToStore(params);
+    });
 
-      // Also show as toast for high-priority messages
-      if (params.level === 'error' || params.level === 'warning') {
-        _addToast({
-          type: params.level,
-          message: params.message,
-        });
+    // Listen for event-format messages from the server's WebSocketManager.notify()
+    conn.on('message', (msg) => {
+      if (!msg || !msg.event || !msg.params) return;
+
+      switch (msg.event) {
+        case 'notification':
+          // New notification from ws_manager.notify("notification", ...)
+          _addNotificationToStore(msg.params);
+          break;
+
+        case 'notification.update':
+          // Update an existing notification in the store
+          _updateNotificationInStore(msg.params);
+          break;
+
+        case 'agent.notification':
+          // Agent-related notification with agent identity
+          _addNotificationToStore({
+            ...msg.params,
+            category: msg.params.category || 'Agent',
+            agent_id: msg.params.agent_id || msg.params.agentId || null,
+          });
+          break;
+
+        default:
+          break;
       }
     });
 

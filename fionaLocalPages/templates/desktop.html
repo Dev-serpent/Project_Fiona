@@ -1,5 +1,5 @@
 <!-- desktop.html — SeeOnDesk Desktop Awareness Template -->
-<div style="margin-bottom: var(--space-6);">
+<div style="margin-bottom: var(--space-4);">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
     <div>
       <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
@@ -12,14 +12,51 @@
   </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
-  <!-- Left Column: Active Window -->
-  <div id="desktop-active-column">
-    {{{activeColumnContent}}}
+<!-- Tabs -->
+<div class="c-tabs" role="tablist" id="desktop-tabs">
+  <div class="c-tab c-tab--active" role="tab" data-desktop-tab="active-window" aria-selected="true">Active Window</div>
+  <div class="c-tab" role="tab" data-desktop-tab="snapshot" aria-selected="false">Snapshot</div>
+  <div class="c-tab" role="tab" data-desktop-tab="processes" aria-selected="false">Processes</div>
+  <div class="c-tab" role="tab" data-desktop-tab="applications" aria-selected="false">Applications</div>
+  <div class="c-tab" role="tab" data-desktop-tab="workspaces" aria-selected="false">Workspaces</div>
+  <div class="c-tab" role="tab" data-desktop-tab="resources" aria-selected="false">Resources</div>
+</div>
+
+<!-- Tab Content Panels -->
+<div style="margin-top: var(--space-4);">
+
+  <!-- Active Window Panel -->
+  <div class="desktop-panel" data-desktop-panel="active-window" style="display: block;">
+    <div id="desktop-active-column">
+      {{{activeColumnContent}}}
+    </div>
   </div>
 
-  <!-- Right Column: Desktop Snapshot -->
-  <div id="desktop-snapshot-column">
-    {{{snapshotColumnContent}}}
+  <!-- Snapshot Panel -->
+  <div class="desktop-panel" data-desktop-panel="snapshot" style="display: none;">
+    <div id="desktop-snapshot-column">
+      {{{snapshotColumnContent}}}
+    </div>
   </div>
+
+  <!-- Processes Panel -->
+  <div class="desktop-panel" data-desktop-panel="processes" style="display: none;">
+    <div id="desktop-processes-tab"></div>
+  </div>
+
+  <!-- Applications Panel -->
+  <div class="desktop-panel" data-desktop-panel="applications" style="display: none;">
+    <div id="desktop-applications-tab"></div>
+  </div>
+
+  <!-- Workspaces Panel -->
+  <div class="desktop-panel" data-desktop-panel="workspaces" style="display: none;">
+    <div id="desktop-workspaces-tab"></div>
+  </div>
+
+  <!-- System Resources Panel -->
+  <div class="desktop-panel" data-desktop-panel="resources" style="display: none;">
+    <div id="desktop-resources-tab"></div>
+  </div>
+
 </div>

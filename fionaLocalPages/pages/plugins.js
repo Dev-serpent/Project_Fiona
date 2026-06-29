@@ -2,9 +2,9 @@
    plugins.js — Plugin Manager Page
    ==========================================================================
    Manages Fiona plugins: list, enable/disable, configure, uninstall, and
-   install new plugins.  Supports category filtering, search, and update
-   checks.  Falls back to mock/sample data when the backend API is
-   unavailable.
+   install new plugins.  Supports category filtering, search, update
+   checks, dependency display, and graceful empty-state fallback when
+   the backend API is unavailable.
    
    Exports: { render(container), mount(container), destroy() }
    Default export: factory for the SPA router.
@@ -17,7 +17,6 @@ import {
   skeletonText,
   skeletonHeading,
   skeletonButton,
-  skeletonTableRow,
 } from '../js/components/LoadingSkeleton.js';
 import { loadTemplate } from '../js/template-loader.js';
 
@@ -31,88 +30,7 @@ const CATEGORIES = [
   { id: 'community', label: 'Community' },
 ];
 
-/* ── Mock Sample Data ───────────────────────────────────────────────────── */
-
-const MOCK_PLUGINS = [
-  {
-    id: 'voice-input',
-    name: 'Voice Input',
-    version: '1.2.0',
-    author: 'Fiona Team',
-    description: 'Speech-to-text input via Whisper or local ASR engine.',
-    status: 'enabled',
-    category: 'core',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0'],
-    config: { engine: 'whisper', language: 'en', hotwords: [] },
-    fullDescription: 'Provides voice input capabilities using local or cloud-based speech recognition engines. Supports multiple languages and custom hotwords.',
-  },
-  {
-    id: 'browser-automation',
-    name: 'Browser Automation',
-    version: '0.9.0',
-    author: 'Fiona Team',
-    description: 'Selenium-based web browsing and automation.',
-    status: 'enabled',
-    category: 'core',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0', 'selenium >= 4.20'],
-    config: { browser: 'chrome', headless: true, timeout: 30000 },
-    fullDescription: 'Full browser automation using Selenium WebDriver. Navigate pages, fill forms, take screenshots, and extract data from the web.',
-  },
-  {
-    id: 'code-assist',
-    name: 'Code Assistant',
-    version: '0.5.0',
-    author: 'Community',
-    description: 'Inline code completions and analysis.',
-    status: 'disabled',
-    category: 'community',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0'],
-    config: { model: 'gpt-4', maxTokens: 512, temperature: 0.2 },
-    fullDescription: 'Provides AI-powered code completions, explanations, and refactoring suggestions directly in the terminal and editor views.',
-  },
-  {
-    id: 'macro-recorder',
-    name: 'Macro Recorder',
-    version: '1.0.0',
-    author: 'Fiona Team',
-    description: 'Record and replay desktop macros.',
-    status: 'enabled',
-    category: 'core',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0'],
-    config: { maxActions: 500, captureMouse: true, captureKeyboard: true },
-    fullDescription: 'Record sequences of desktop interactions (mouse clicks, keyboard input) and replay them on demand. Supports conditional logic and looping.',
-  },
-  {
-    id: 'git-integration',
-    name: 'Git Integration',
-    version: '0.4.0',
-    author: 'Community',
-    description: 'Git status, commit, and branch management.',
-    status: 'disabled',
-    category: 'community',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0', 'git >= 2.0'],
-    config: { autoFetch: true, diffContext: 3 },
-    fullDescription: 'Seamless Git integration within Fiona. View status, stage changes, commit, switch branches, and view diffs without leaving the terminal.',
-  },
-  {
-    id: 'ollama-bridge',
-    name: 'Ollama Bridge',
-    version: '0.8.0',
-    author: 'Fiona Team',
-    description: 'Local LLM inference via Ollama.',
-    status: 'enabled',
-    category: 'core',
-    homepage: '',
-    dependencies: ['fiona-core >= 0.1.0'],
-    config: { url: 'http://localhost:11434', model: 'llama3', timeout: 60000 },
-    fullDescription: 'Connects Fiona to locally-running Ollama models for private, offline AI assistance. Supports any model available in your Ollama installation.',
-  },
-];
+/* ── (No mock data — live API only) ────────────────────────────────────── */
 
 /* ── Module-level State ─────────────────────────────────────────────────── */
 
@@ -127,7 +45,6 @@ const _state = {
   filteredPlugins: [],
   category: 'all',
   searchQuery: '',
-  useMockData: false,
 
   // Install modal
   showInstallModal: false,
@@ -139,6 +56,9 @@ const _state = {
 
   // Uninstall confirm
   uninstallTarget: null,
+
+  // Update cache: map of plugin id → latest version string (null = up-to-date)
+  updateCache: null,
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -195,10 +115,8 @@ async function renderPage(container) {
     pluginCount: total,
     pluginPlural: total !== 1 ? 's' : '',
     enabledCount: enabled,
-    showMockAlert: _state.useMockData,
     plusIcon: ICONS.plus.html,
     refreshIcon: ICONS.refresh.html,
-    infoIcon: ICONS.info.html,
     searchIcon: ICONS.search.html,
     categoryTabs,
     searchQuery: esc(_state.searchQuery),
@@ -214,6 +132,13 @@ async function renderPage(container) {
 function renderPluginRow(plugin) {
   const isExpanded = _state.expandedId === plugin.id;
   const isEnabled = plugin.status === 'enabled';
+
+  // Check for available update
+  const hasUpdate = _state.updateCache && _state.updateCache[plugin.id];
+  const updateVersion = hasUpdate && typeof _state.updateCache[plugin.id] === 'string'
+    ? _state.updateCache[plugin.id] : null;
+
+  const depCount = Array.isArray(plugin.dependencies) ? plugin.dependencies.length : 0;
 
   return html`
     <div class="c-card" style="overflow: visible;">
@@ -238,6 +163,12 @@ function renderPluginRow(plugin) {
               <span style="font-size: var(--font-size-xxs); color: var(--text-muted); font-family: var(--font-mono);">
                 v${esc(plugin.version)}
               </span>
+              ${hasUpdate ? html`
+                <span class="c-badge c-badge--warning" style="font-size: 9px; padding: 0 6px; cursor: help;"
+                      title="${updateVersion ? `Update available: v${esc(updateVersion)}` : 'Update available'}">
+                  ${updateVersion ? esc(updateVersion) : 'Update'}
+                </span>
+              ` : ''}
               <span class="c-badge c-badge--${isEnabled ? 'success' : 'default'}" style="font-size: 9px; padding: 0 6px;">
                 ${isEnabled ? 'Enabled' : 'Disabled'}
               </span>
@@ -246,6 +177,12 @@ function renderPluginRow(plugin) {
               ` : html`
                 <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px;">Community</span>
               `}
+              ${depCount > 0 ? html`
+                <span class="c-badge c-badge--info" style="font-size: 9px; padding: 0 6px; cursor: help;"
+                      title="${depCount} dependenc${depCount !== 1 ? 'ies' : 'y'}">
+                  ${depCount} dep${depCount !== 1 ? 's' : ''}
+                </span>
+              ` : ''}
             </div>
             <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; max-width: 500px;">
               ${esc(plugin.description)}
@@ -284,16 +221,25 @@ function renderPluginRow(plugin) {
             <div style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-2);">
               ${esc(plugin.fullDescription || plugin.description)}
             </div>
-            ${plugin.dependencies?.length > 0 ? html`
+            ${depCount > 0 ? html`
               <div style="margin-bottom: var(--space-2);">
                 <span style="font-size: var(--font-size-xxs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Dependencies</span>
                 <div style="display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: 4px;">
                   ${html.raw(plugin.dependencies.map((dep) => html`
                     <span style="font-size: var(--font-size-xxs); padding: 2px 8px; background: var(--bg-tertiary); border-radius: var(--radius-sm); color: var(--text-muted); font-family: var(--font-mono);">
-                      ${esc(dep)}
+                      ${esc(typeof dep === 'string' ? dep : dep.name || dep.id || String(dep))}
                     </span>
                   `).join(''))}
                 </div>
+              </div>
+            ` : ''}
+            ${hasUpdate ? html`
+              <div style="margin-bottom: var(--space-2);">
+                <span style="font-size: var(--font-size-xxs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Update</span>
+                <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: 4px 0 0;">
+                  A newer version${updateVersion ? ` (v${esc(updateVersion)})` : ''} is available.
+                  Run <strong>Check Updates</strong> for details.
+                </p>
               </div>
             ` : ''}
             ${plugin.config ? html`
@@ -541,17 +487,23 @@ async function togglePlugin(pluginId, enabled) {
   plugin.status = enabled ? 'enabled' : 'disabled';
   if (_state.container) await renderPage(_state.container);
 
-  if (api && !_state.useMockData) {
+  if (api) {
     try {
-      await api.put(`/api/v1/plugins/${pluginId}/toggle`, { enabled });
+      const endpoint = enabled
+        ? `/api/v1/plugins/${encodeURIComponent(pluginId)}/enable`
+        : `/api/v1/plugins/${encodeURIComponent(pluginId)}/disable`;
+      await api.post(endpoint);
     } catch (err) {
       // Revert on failure
       plugin.status = enabled ? 'disabled' : 'enabled';
       if (_state.container) await renderPage(_state.container);
-      showToast('error', `Failed to toggle plugin: ${err.message}`);
+      showToast('error', `Failed to ${enabled ? 'enable' : 'disable'} plugin: ${err.message}`);
     }
   } else {
-    showToast('success', `${plugin.name} ${enabled ? 'enabled' : 'disabled'}.`);
+    // No API — revert the optimistic update
+    plugin.status = enabled ? 'disabled' : 'enabled';
+    if (_state.container) await renderPage(_state.container);
+    showToast('error', 'Backend API is not available.');
   }
 }
 
@@ -623,9 +575,9 @@ async function doUninstall(pluginId) {
   _state.plugins.splice(idx, 1);
   if (_state.container) await renderPage(_state.container);
 
-  if (api && !_state.useMockData) {
+  if (api) {
     try {
-      await api.del(`/api/v1/plugins/${pluginId}`);
+      await api.del(`/api/v1/plugins/${encodeURIComponent(pluginId)}`);
       showToast('success', `${plugin.name} uninstalled.`);
     } catch (err) {
       // Revert
@@ -634,7 +586,10 @@ async function doUninstall(pluginId) {
       showToast('error', `Failed to uninstall: ${err.message}`);
     }
   } else {
-    showToast('success', `${plugin.name} uninstalled (mock).`);
+    // No API — revert
+    _state.plugins.splice(idx, 0, plugin);
+    if (_state.container) await renderPage(_state.container);
+    showToast('error', 'Backend API is not available.');
   }
 }
 
@@ -643,9 +598,9 @@ async function openConfig(pluginId) {
   if (!plugin) return;
 
   const api = getApi();
-  if (api && !_state.useMockData) {
+  if (api) {
     try {
-      await api.get(`/api/v1/plugins/${pluginId}/config`);
+      await api.get(`/api/v1/plugins/${encodeURIComponent(pluginId)}/config`, {}, { responseType: 'json' }).catch(() => {});
     } catch { /* fall through to showing local config */ }
   }
 
@@ -667,7 +622,7 @@ function closeInstallModal() {
 async function browseForPlugin() {
   // Try using the backend file dialog, fallback to manual entry
   const api = getApi();
-  if (api && !_state.useMockData) {
+  if (api) {
     try {
       const res = await api.post('/api/v1/files/dialog', { type: 'open', filters: [{ name: 'Plugins', extensions: ['zip', 'tgz', 'gz'] }] });
       const path = res?.data?.path || res?.path;
@@ -698,70 +653,78 @@ async function doInstall() {
   if (_state.container) renderPage(_state.container);
 
   const api = getApi();
-  if (api && !_state.useMockData) {
-    try {
-      const result = await api.post('/api/v1/plugins/install', { path: source });
-      const plugin = result?.data || result;
-      if (plugin && plugin.id) {
-        _state.plugins.push({
-          id: plugin.id,
-          name: plugin.name || plugin.id,
-          version: plugin.version || '0.0.0',
-          author: plugin.author || 'Unknown',
-          description: plugin.description || '',
-          status: 'enabled',
-          category: plugin.category || 'community',
-          dependencies: plugin.dependencies || [],
-          config: plugin.config || {},
-          fullDescription: plugin.fullDescription || plugin.description || '',
-        });
-      }
-      closeInstallModal();
-      showToast('success', `Plugin installed: ${plugin.name || source}`);
-      if (_state.container) renderPage(_state.container);
-    } catch (err) {
-      _state.installLoading = false;
-      if (_state.container) renderPage(_state.container);
-      showToast('error', `Installation failed: ${err.message}`);
-    }
-  } else {
-    // Mock installation: add a dummy plugin
-    const id = `plugin-${Date.now()}`;
-    _state.plugins.push({
-      id,
-      name: `Plugin from ${source.split('/').pop() || source}`,
-      version: '0.1.0',
-      author: 'User Installed',
-      description: `Installed from ${source}`,
-      status: 'enabled',
-      category: 'community',
-      dependencies: [],
-      config: {},
-      fullDescription: 'This is a mock plugin installed via the frontend.',
-    });
-    closeInstallModal();
-    showToast('success', 'Plugin installed (mock).');
+  if (!api) {
+    _state.installLoading = false;
     if (_state.container) renderPage(_state.container);
+    showToast('error', 'Backend API is not available for installation.');
+    return;
+  }
+
+  try {
+    const result = await api.post('/api/v1/plugins/install', { path: source });
+    const plugin = result?.data || result;
+    if (plugin && plugin.id) {
+      _state.plugins.push({
+        id: plugin.id,
+        name: plugin.name || plugin.id,
+        version: plugin.version || '0.0.0',
+        author: plugin.author || 'Unknown',
+        description: plugin.description || '',
+        status: 'enabled',
+        category: plugin.category || 'community',
+        dependencies: plugin.dependencies || [],
+        config: plugin.config || {},
+        fullDescription: plugin.fullDescription || plugin.description || '',
+      });
+    }
+    closeInstallModal();
+    showToast('success', `Plugin installed: ${plugin?.name || source}`);
+    if (_state.container) renderPage(_state.container);
+  } catch (err) {
+    _state.installLoading = false;
+    if (_state.container) renderPage(_state.container);
+    showToast('error', `Installation failed: ${err.message}`);
   }
 }
 
 /* ── Check Updates ──────────────────────────────────────────────────────── */
 
-async function checkUpdates() {
+async function fetchUpdates() {
   const api = getApi();
-  if (api && !_state.useMockData) {
-    try {
-      const result = await api.get('/api/v1/plugins/updates');
-      const updates = result?.data || result;
-      if (Array.isArray(updates) && updates.length > 0) {
-        showToast('info', `${updates.length} update(s) available.`);
-      } else {
-        showToast('success', 'All plugins are up to date.');
+  if (!api) return null;
+
+  try {
+    const result = await api.get('/api/v1/plugins/updates');
+    const updates = result?.data || result;
+    if (Array.isArray(updates)) {
+      // Convert to a map: plugin id → latest version string
+      const updateMap = {};
+      for (const u of updates) {
+        if (u && u.id) {
+          updateMap[u.id] = u.latestVersion || u.version || true;
+        }
       }
-      return;
-    } catch { /* fallback */ }
+      return updateMap;
+    }
+  } catch { /* fallback */ }
+  return null;
+}
+
+async function checkUpdates() {
+  try {
+    _state.updateCache = await fetchUpdates();
+  } catch {
+    _state.updateCache = null;
   }
-  showToast('info', 'Update check is not available without the backend API.');
+
+  if (_state.updateCache && Object.keys(_state.updateCache).length > 0) {
+    const count = Object.keys(_state.updateCache).length;
+    showToast('info', `${count} update(s) available.`);
+  } else {
+    showToast('success', 'All plugins are up to date.');
+  }
+
+  if (_state.container) renderPage(_state.container);
 }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */
@@ -794,7 +757,9 @@ async function loadData() {
   if (_state.destroyed) return;
 
   const api = getApi();
-  let loadedFromBackend = false;
+  _state.plugins = [];
+  _state.error = false;
+  _state.errorMessage = '';
 
   if (api) {
     try {
@@ -802,17 +767,32 @@ async function loadData() {
       let plugins = result?.data || result;
       if (Array.isArray(plugins)) {
         _state.plugins = plugins;
-        _state.useMockData = false;
-        loadedFromBackend = true;
       }
     } catch (err) {
-      console.log('[plugins] Backend unavailable, using mock data:', err.message);
+      console.log('[plugins] Backend unavailable:', err.message);
+      // Graceful fallback — empty state instead of mock data
+      _state.plugins = [];
+      _state.loading = false;
+      if (!_state.destroyed && _state.container) {
+        renderPage(_state.container);
+      }
+      return;
     }
+  } else {
+    // No API available — graceful empty fallback
+    _state.plugins = [];
+    _state.loading = false;
+    if (!_state.destroyed && _state.container) {
+      renderPage(_state.container);
+    }
+    return;
   }
 
-  if (!loadedFromBackend) {
-    _state.plugins = MOCK_PLUGINS.map((p) => ({ ...p }));
-    _state.useMockData = true;
+  // After loading plugins, check for updates
+  try {
+    _state.updateCache = await fetchUpdates();
+  } catch {
+    _state.updateCache = null;
   }
 
   _state.loading = false;
@@ -855,6 +835,7 @@ export function destroy() {
   _state.expandedId = null;
   _state.showInstallModal = false;
   _state.uninstallTarget = null;
+  _state.updateCache = null;
 }
 
 /* ── Router-compatible default export ───────────────────────────────────── */

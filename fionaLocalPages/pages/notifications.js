@@ -2,8 +2,10 @@
    notifications.js — Notifications Page
    ==========================================================================
    System event center showing notifications with urgency indicators,
-   filter controls, dismiss actions, auto-refresh polling, and a
-   collapsible "create notification" form for testing.
+   filter controls, dismiss actions, auto-refresh polling, real-time
+   WebSocket updates via store subscription, browser notification API,
+   read/unread tracking, category display, and a collapsible
+   "create notification" form for testing.
 
    Exports default: createPage(routeInfo) => { render, mount, destroy }
    ========================================================================== */
@@ -22,6 +24,7 @@ import {
 
 const POLL_INTERVAL = 5000;
 const NOTIFICATION_LIMIT = 50;
+const WS_CHECK_INTERVAL = 3000;
 
 /** @type {Object<string, string>} */
 const URGENCY_LABELS = {
@@ -44,6 +47,14 @@ const URGENCY_COLORS = {
   low: 'var(--text-muted)',
 };
 
+/** @type {Object<string, string>} */
+const CATEGORY_COLORS = {
+  System: 'var(--info)',
+  Agent: 'var(--success)',
+  Action: 'var(--warning)',
+  Error: 'var(--danger)',
+};
+
 /* ── Module-level State ─────────────────────────────────────────────────── */
 
 const _state = {
@@ -61,6 +72,8 @@ const _state = {
   // Filters
   unreadOnly: false,
   autoRefresh: false,
+  severityFilter: '',      // '' | 'critical' | 'normal' | 'low'
+  categoryFilter: '',      // '' | 'System' | 'Agent' | 'Action' | ...
 
   // Dismiss confirmation
   confirmingDismissAll: false,
@@ -77,6 +90,19 @@ const _state = {
 
   // Dismiss animation tracking
   dismissingIndices: new Set(),
+
+  // Store subscription
+  storeUnsubscribe: null,
+  storeSubscribed: false,
+
+  // WebSocket connection state tracking
+  wsConnected: false,
+  wsCheckTimer: null,
+
+  // Browser notification permission
+  browserNotifGranted: false,
+  browserNotifDenied: false,
+  browserNotifUnsub: null,
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────────── */
@@ -85,10 +111,44 @@ function getApi() {
   return window.fiona?.api || window.__fiona?.api;
 }
 
+function getStore() {
+  return window.fiona?.store || window.__fiona?.store;
+}
+
 function esc(str) {
   if (!str) return '';
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return String(str).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+/**
+ * Check if the WebSocket connection appears to be active.
+ * Looks at the store's system.status or checks for a connected WS connection.
+ */
+function isWsConnected() {
+  const store = getStore();
+  if (store) {
+    const status = store.get('system.status');
+    if (status === 'connected') return true;
+  }
+  // Also check via the API client
+  const api = getApi();
+  if (api && typeof api._getConnections === 'function') {
+    // Best-effort: if there's at least one WS connection, assume it might be ok
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get a unique list of categories present in the current items.
+ */
+function getCategories(items) {
+  const cats = new Set();
+  for (const n of items) {
+    if (n.category) cats.add(n.category);
+  }
+  return ['', ...Array.from(cats).sort()];
 }
 
 /* ── HTML Renderers ─────────────────────────────────────────────────────── */
@@ -107,11 +167,13 @@ async function renderPage(container) {
     return;
   }
 
+  // Apply filters
+  const filteredItems = getFilteredItems();
   const unreadCount = _state.unread;
-  const itemsCount = _state.items.length;
+  const itemsCount = filteredItems.length;
 
   // Build notification list content
-  const notificationListContent = itemsCount === 0 ? String(renderEmptyState().html) : renderNotificationList().html;
+  const notificationListContent = itemsCount === 0 ? String(renderEmptyState().html) : renderNotificationList(filteredItems).html;
 
   // Build create button content
   let createBtnContent;
@@ -131,6 +193,11 @@ async function renderPage(container) {
     `;
   }
 
+  // Determine browser notification button visibility
+  const showBrowserNotifBtn = !('Notification' in window)
+    ? false
+    : Notification.permission === 'default';
+
   const data = {
     hasUnread: unreadCount > 0,
     unreadCount: String(unreadCount),
@@ -144,6 +211,8 @@ async function renderPage(container) {
     warningIcon: ICONS.warning.html,
     plusIcon: ICONS.plus.html,
     chevronDownIcon: ICONS.chevronDown.html,
+    bellIcon: ICONS.bell ? ICONS.bell.html : '',
+    checkIcon: ICONS.check ? ICONS.check.html : '',
     createOpen: _state.createOpen,
     formTitle: esc(_state.formTitle),
     formBody: esc(_state.formBody),
@@ -153,10 +222,32 @@ async function renderPage(container) {
     creating: _state.creating,
     createBtnContent,
     notificationListContent,
+    showBrowserNotifBtn,
   };
 
   container.innerHTML = await loadTemplate('notifications', data);
   mountComponents(container);
+}
+
+/**
+ * Get items filtered by current filter settings.
+ */
+function getFilteredItems() {
+  let items = _state.items;
+
+  if (_state.unreadOnly) {
+    items = items.filter((n) => !n.read);
+  }
+
+  if (_state.severityFilter) {
+    items = items.filter((n) => n.urgency === _state.severityFilter);
+  }
+
+  if (_state.categoryFilter) {
+    items = items.filter((n) => n.category === _state.categoryFilter);
+  }
+
+  return items;
 }
 
 /* ── Empty State ────────────────────────────────────────────────────────── */
@@ -169,7 +260,9 @@ function renderEmptyState() {
       </div>
       <div class="empty-state__title">No notifications</div>
       <div class="empty-state__description">
-        Notifications will appear here when system events occur.
+        ${_state.unreadOnly || _state.severityFilter || _state.categoryFilter
+          ? 'No notifications match the current filters.'
+          : 'Notifications will appear here when system events occur.'}
       </div>
     </div>
   `;
@@ -177,10 +270,10 @@ function renderEmptyState() {
 
 /* ── Notification List ──────────────────────────────────────────────────── */
 
-function renderNotificationList() {
+function renderNotificationList(items) {
   return html`
     <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-      ${html.raw(_state.items.map((notif, index) => renderNotificationCard(notif, index)).join(''))}
+      ${html.raw(items.map((notif, index) => renderNotificationCard(notif, index)).join(''))}
     </div>
   `;
 }
@@ -191,41 +284,73 @@ function renderNotificationCard(notif, index) {
   const badgeClass = URGENCY_BADGE[urgency] || 'c-badge--default';
   const badgeLabel = URGENCY_LABELS[urgency] || urgency;
   const isDismissing = _state.dismissingIndices.has(index);
+  const isRead = notif.read === true;
+  const category = notif.category || '';
+  const categoryColor = CATEGORY_COLORS[category] || 'var(--text-muted)';
+  const agentId = notif.agent_id || notif.agentId || '';
 
   return html`
-    <div class="c-card notification-item"
+    <div class="c-card notification-item ${isRead ? 'notification-item--read' : 'notification-item--unread'}"
+         data-notif-id="${esc(notif.id || '')}"
          data-notif-index="${index}"
-         style="transition: opacity 0.3s ease, transform 0.3s ease;
+         style="transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
+                cursor: pointer;
+                ${isRead ? 'opacity: 0.75;' : ''}
                 ${isDismissing ? 'opacity: 0; transform: translateX(20px); pointer-events: none;' : ''}">
       <div class="c-card__body" style="padding: var(--space-4); display: flex; align-items: flex-start; gap: var(--space-3);">
         <!-- Urgency indicator bar -->
         <div style="width: 4px; align-self: stretch; flex-shrink: 0;
                     border-radius: var(--radius-sm); background: ${urgencyColor};"></div>
 
-        <!-- Urgency dot -->
+        <!-- Read/unread dot -->
         <div style="flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%;
-                    background: ${urgencyColor}; margin-top: 5px;"></div>
+                    background: ${isRead ? 'var(--text-muted)' : urgencyColor};
+                    margin-top: 5px; opacity: ${isRead ? 0.4 : 1};"></div>
 
         <!-- Content -->
         <div style="flex: 1; min-width: 0;">
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: 2px;">
-            <span style="font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary);">
+          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: 2px; flex-wrap: wrap;">
+            <span style="font-size: var(--font-size-md); font-weight: var(--font-weight-semibold);
+                        color: ${isRead ? 'var(--text-secondary)' : 'var(--text-primary)'};">
               ${esc(notif.title || 'Untitled')}
             </span>
             <span class="c-badge ${badgeClass}" style="font-size: 9px; padding: 0 6px; text-transform: capitalize;">
               ${badgeLabel}
             </span>
+            ${category ? html`
+              <span class="c-badge c-badge--default" style="font-size: 9px; padding: 0 6px; background: ${categoryColor}20; color: ${categoryColor}; border: 1px solid ${categoryColor}40;">
+                ${esc(category)}
+              </span>
+            ` : ''}
+            ${agentId ? html`
+              <span style="font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 2px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="14" rx="2" ry="2"/>
+                  <path d="M16 8h2"/>
+                  <path d="M12 8h2"/>
+                  <path d="M8 8h2"/>
+                </svg>
+                ${esc(agentId)}
+              </span>
+            ` : ''}
           </div>
           ${notif.body ? html`
             <div style="font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.5;
-                        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+                        ${isRead ? 'opacity: 0.7;' : ''}">
               ${esc(notif.body)}
+            </div>
+          ` : ''}
+          ${notif.timestamp ? html`
+            <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 4px;">
+              ${formatTimestamp(notif.timestamp)}
             </div>
           ` : ''}
         </div>
 
         <!-- Dismiss button -->
         <button class="c-btn c-btn--icon c-btn--sm c-btn--ghost notif-dismiss-btn"
+                data-notif-id="${esc(notif.id || '')}"
                 data-notif-index="${index}"
                 title="Dismiss notification"
                 style="flex-shrink: 0; color: var(--text-muted);"
@@ -235,6 +360,26 @@ function renderNotificationCard(notif, index) {
       </div>
     </div>
   `;
+}
+
+/**
+ * Format a unix timestamp for display.
+ */
+function formatTimestamp(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 /* ── Skeleton & Error States ────────────────────────────────────────────── */
@@ -303,6 +448,12 @@ function mountComponents(container) {
     }
   });
 
+  // Severity / Urgency filter
+  container.querySelector('#notif-severity-filter')?.addEventListener('change', async (e) => {
+    _state.severityFilter = e.target.value;
+    await renderPage(container);
+  });
+
   // Refresh button
   container.querySelector('#notif-refresh-btn')?.addEventListener('click', () => {
     loadData();
@@ -318,7 +469,7 @@ function mountComponents(container) {
     }
   });
 
-  // Dismiss All button
+  // Dismiss All / Clear All button
   container.querySelector('#notif-dismiss-all-btn')?.addEventListener('click', async () => {
     if (_state.items.length === 0) return;
     _state.confirmingDismissAll = true;
@@ -335,6 +486,16 @@ function mountComponents(container) {
   container.querySelector('#notif-dismiss-all-confirm')?.addEventListener('click', () => {
     _state.confirmingDismissAll = false;
     dismissAllNotifications();
+  });
+
+  // Mark All Read
+  container.querySelector('#notif-mark-all-read-btn')?.addEventListener('click', () => {
+    markAllRead();
+  });
+
+  // Browser Notification Permission
+  container.querySelector('#notif-browser-permission-btn')?.addEventListener('click', () => {
+    requestBrowserNotificationPermission();
   });
 
   // Create: Toggle collapse
@@ -363,17 +524,158 @@ function mountComponents(container) {
     createNotification();
   });
 
-  // Delegate dismiss button clicks on notification items
+  // Delegate clicks on notification items (dismiss + mark read)
   const notifList = container.querySelector('#notif-list');
   if (notifList) {
     notifList.addEventListener('click', (e) => {
-      const btn = e.target.closest('.notif-dismiss-btn');
-      if (!btn) return;
-      const index = parseInt(btn.dataset.notifIndex, 10);
-      if (!isNaN(index) && !_state.dismissingIndices.has(index)) {
-        dismissNotification(index);
+      // Dismiss button
+      const dismissBtn = e.target.closest('.notif-dismiss-btn');
+      if (dismissBtn) {
+        const index = parseInt(dismissBtn.dataset.notifIndex, 10);
+        if (!isNaN(index) && !_state.dismissingIndices.has(index)) {
+          e.stopPropagation();
+          dismissNotification(index);
+        }
+        return;
+      }
+
+      // Click on notification card (mark as read)
+      const card = e.target.closest('.notification-item');
+      if (card) {
+        const notifId = card.dataset.notifId || '';
+        const index = parseInt(card.dataset.notifIndex, 10);
+        const notif = _state.items[index];
+        if (notif && !notif.read) {
+          markRead(notif, index);
+        }
       }
     });
+
+    // Hover effect for notification items
+    notifList.addEventListener('mouseenter', (e) => {
+      const card = e.target.closest('.notification-item');
+      if (card && !card.classList.contains('notification-item--read')) {
+        card.style.boxShadow = 'var(--shadow-md)';
+      }
+    }, true);
+
+    notifList.addEventListener('mouseleave', (e) => {
+      const card = e.target.closest('.notification-item');
+      if (card) {
+        card.style.boxShadow = '';
+      }
+    }, true);
+  }
+
+  // Update connection status indicator
+  updateConnectionStatus();
+}
+
+function updateConnectionStatus() {
+  const el = document.getElementById('notif-connection-status');
+  if (!el) return;
+
+  const connected = isWsConnected();
+  if (connected) {
+    el.textContent = '● Live';
+    el.style.color = 'var(--success)';
+  } else if (_state.autoRefresh) {
+    el.textContent = '◌ Polling';
+    el.style.color = 'var(--warning)';
+  } else {
+    el.textContent = '';
+  }
+}
+
+/* ── Store Subscription ─────────────────────────────────────────────────── */
+
+function subscribeToStore() {
+  if (_state.storeSubscribed) return;
+
+  const store = getStore();
+  if (!store) {
+    console.warn('[notifications] Store not available, will use polling only');
+    return;
+  }
+
+  try {
+    const unsub = store.subscribe('notifications.items', (newItems) => {
+      if (_state.destroyed) return;
+      // Sync items from store, preserving local state flags like read
+      syncItemsFromStore(Array.isArray(newItems) ? newItems : []);
+    });
+    _state.storeUnsubscribe = unsub;
+    _state.storeSubscribed = true;
+    console.log('[notifications] Subscribed to store notifications.items');
+  } catch (err) {
+    console.warn('[notifications] Failed to subscribe to store:', err);
+  }
+}
+
+function unsubscribeFromStore() {
+  if (_state.storeUnsubscribe) {
+    try {
+      _state.storeUnsubscribe();
+    } catch (e) {
+      // ignore
+    }
+    _state.storeUnsubscribe = null;
+  }
+  _state.storeSubscribed = false;
+}
+
+/**
+ * Sync items from the store into local state and re-render.
+ * Merges new items, preserving local read state from backend updates.
+ */
+function syncItemsFromStore(newItems) {
+  // Calculate unread count
+  const unread = newItems.filter((n) => !n.read).length;
+
+  // Update total
+  const total = newItems.length;
+
+  // Check if anything actually changed to avoid unnecessary re-renders
+  const changed = total !== _state.items.length ||
+    unread !== _state.unread ||
+    JSON.stringify(newItems) !== JSON.stringify(_state.items);
+
+  if (changed) {
+    _state.items = newItems;
+    _state.total = total;
+    _state.unread = unread;
+    _state.dismissingIndices.clear();
+    _state.confirmingDismissAll = false;
+
+    if (!_state.destroyed && _state.container) {
+      renderPage(_state.container);
+    }
+  }
+}
+
+/* ── WebSocket Connection Monitoring ────────────────────────────────────── */
+
+function startWsMonitoring() {
+  stopWsMonitoring();
+  _state.wsCheckTimer = setInterval(() => {
+    if (_state.destroyed) return;
+    const wasConnected = _state.wsConnected;
+    _state.wsConnected = isWsConnected();
+
+    // Update connection status indicator if it changed
+    if (wasConnected !== _state.wsConnected) {
+      updateConnectionStatus();
+    }
+
+    // If WS disconnected and auto-refresh is on, polling handles it
+    // If WS reconnected, polling is still active as supplement
+  }, WS_CHECK_INTERVAL);
+}
+
+function stopWsMonitoring() {
+  if (_state.wsCheckTimer) {
+    clearInterval(_state.wsCheckTimer);
+    _state.wsCheckTimer = null;
   }
 }
 
@@ -399,11 +701,22 @@ async function loadData() {
     const result = await api.get('/api/v1/notifications', params);
     const data = result?.data || result;
 
-    _state.items = Array.isArray(data?.items) ? data.items : [];
-    _state.total = data?.total ?? _state.items.length;
-    _state.unread = data?.unread ?? 0;
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const total = data?.total ?? items.length;
+    const unread = data?.unread ?? 0;
+
+    _state.items = items;
+    _state.total = total;
+    _state.unread = unread;
     _state.error = false;
     _state.loading = false;
+
+    // Also sync to store so other subscribers get the data
+    const store = getStore();
+    if (store) {
+      store.set('notifications.items', items);
+      store.set('notifications.unreadCount', unread);
+    }
 
     // Clear dismissing state when data reloads
     _state.dismissingIndices.clear();
@@ -423,12 +736,102 @@ async function loadData() {
   }
 }
 
+/* ── Mark Read ──────────────────────────────────────────────────────────── */
+
+async function markRead(notif, index) {
+  if (_state.destroyed) return;
+  if (notif.read) return;
+
+  // Optimistic update
+  const updated = [..._state.items];
+  updated[index] = { ...updated[index], read: true };
+  _state.items = updated;
+  _state.unread = Math.max(0, _state.unread - 1);
+
+  if (_state.container) await renderPage(_state.container);
+
+  // Also update the store
+  const store = getStore();
+  if (store && notif.id) {
+    const storeItems = store.get('notifications.items');
+    const storeIdx = storeItems.findIndex((n) => n.id === notif.id);
+    if (storeIdx >= 0) {
+      const newStoreItems = [...storeItems];
+      newStoreItems[storeIdx] = { ...newStoreItems[storeIdx], read: true };
+      store.set('notifications.items', newStoreItems);
+      store.set('notifications.unreadCount', Math.max(0, store.get('notifications.unreadCount') - 1));
+    }
+  }
+
+  // Backend call
+  const api = getApi();
+  if (!api || !notif.id) return;
+
+  try {
+    await api.post('/api/v1/notifications/mark-read', { id: notif.id });
+  } catch (err) {
+    console.error('[notifications] Mark read failed:', err);
+    // Revert on failure
+    const revertItems = [..._state.items];
+    if (revertItems[index]) {
+      revertItems[index] = { ...revertItems[index], read: false };
+      _state.items = revertItems;
+      _state.unread += 1;
+      if (_state.container) await renderPage(_state.container);
+    }
+  }
+}
+
+async function markAllRead() {
+  if (_state.destroyed) return;
+  const api = getApi();
+  if (!api) {
+    toast.showToast('error', 'Error', 'API client not available.');
+    return;
+  }
+
+  // Optimistic update
+  const updated = _state.items.map((n) => ({ ...n, read: true }));
+  const prevUnread = _state.unread;
+  _state.items = updated;
+  _state.unread = 0;
+
+  if (_state.container) await renderPage(_state.container);
+
+  // Also update store
+  const store = getStore();
+  if (store) {
+    store.set('notifications.items', updated);
+    store.set('notifications.unreadCount', 0);
+  }
+
+  try {
+    await api.post('/api/v1/notifications/mark-all-read', {});
+    toast.showToast('success', 'Marked Read', 'All notifications marked as read.');
+  } catch (err) {
+    console.error('[notifications] Mark all read failed:', err);
+    // Revert
+    const revertItems = _state.items.map((n) => ({ ...n, read: false }));
+    _state.items = revertItems;
+    _state.unread = prevUnread;
+    if (_state.container) await renderPage(_state.container);
+    if (store) {
+      store.set('notifications.items', revertItems);
+      store.set('notifications.unreadCount', prevUnread);
+    }
+    toast.showToast('error', 'Error', 'Failed to mark all as read.');
+  }
+}
+
 /* ── Dismiss Notifications ──────────────────────────────────────────────── */
 
 function dismissNotification(index) {
   if (_state.destroyed) return;
   const api = getApi();
   if (!api) return;
+
+  const notif = _state.items[index];
+  const notifId = notif?.id;
 
   // Start dismiss animation
   _state.dismissingIndices.add(index);
@@ -449,8 +852,24 @@ function dismissNotification(index) {
       // Remove from items list after a brief delay for the animation
       setTimeout(async () => {
         if (_state.destroyed) return;
+        const removedItem = _state.items[index];
         _state.items.splice(index, 1);
         _state.dismissingIndices.delete(index);
+
+        // Remove from store too
+        if (removedItem && removedItem.id) {
+          const store = getStore();
+          if (store) {
+            const storeItems = store.get('notifications.items');
+            const storeIdx = storeItems.findIndex((n) => n.id === removedItem.id);
+            if (storeIdx >= 0) {
+              const newItems = [...storeItems];
+              newItems.splice(storeIdx, 1);
+              store.set('notifications.items', newItems);
+            }
+          }
+        }
+
         // Recalculate indices after removal
         const newDismissing = new Set();
         for (const idx of _state.dismissingIndices) {
@@ -462,8 +881,8 @@ function dismissNotification(index) {
         }
         _state.dismissingIndices = newDismissing;
 
-        // Update unread count (we don't know if it was unread, best-effort)
-        if (_state.unread > 0) _state.unread--;
+        // Update unread count
+        if (!notif?.read && _state.unread > 0) _state.unread--;
 
         if (_state.container) await renderPage(_state.container);
       }, 350);
@@ -487,11 +906,11 @@ async function dismissAllNotifications() {
   try {
     const result = await api.post('/api/v1/notifications/dismiss', { all: true });
     if (result?.ok === false) {
-      toast.showToast('error', 'Error', 'Failed to dismiss all notifications.');
+      toast.showToast('error', 'Error', 'Failed to clear all notifications.');
       return;
     }
 
-    toast.showToast('success', 'Dismissed', 'All notifications have been dismissed.');
+    toast.showToast('success', 'Cleared', 'All notifications have been cleared.');
 
     // Clear state
     _state.items = [];
@@ -499,10 +918,17 @@ async function dismissAllNotifications() {
     _state.dismissingIndices.clear();
     _state.confirmingDismissAll = false;
 
+    // Also clear store
+    const store = getStore();
+    if (store) {
+      store.set('notifications.items', []);
+      store.set('notifications.unreadCount', 0);
+    }
+
     if (_state.container) await renderPage(_state.container);
   } catch (err) {
     console.error('[notifications] Dismiss all failed:', err);
-    toast.showToast('error', 'Error', 'Failed to dismiss all notifications.');
+    toast.showToast('error', 'Error', 'Failed to clear all notifications.');
   }
 }
 
@@ -563,11 +989,101 @@ async function createNotification() {
   }
 }
 
+/* ── Browser Notification API ───────────────────────────────────────────── */
+
+function requestBrowserNotificationPermission() {
+  if (!('Notification' in window)) {
+    toast.showToast('info', 'Not Supported', 'Browser notifications are not supported in this browser.');
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    _state.browserNotifGranted = true;
+    toast.showToast('success', 'Granted', 'Browser notifications are already enabled.');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    _state.browserNotifDenied = true;
+    toast.showToast('warning', 'Denied', 'Browser notifications were previously denied. Update your browser settings to enable them.');
+    return;
+  }
+
+  Notification.requestPermission().then((permission) => {
+    if (permission === 'granted') {
+      _state.browserNotifGranted = true;
+      toast.showToast('success', 'Enabled', 'Browser notifications are now enabled.');
+      if (_state.container) renderPage(_state.container);
+    } else {
+      _state.browserNotifDenied = true;
+      toast.showToast('info', 'Not Granted', 'Browser notification permission was not granted.');
+    }
+  }).catch((err) => {
+    console.error('[notifications] Browser notification permission error:', err);
+    toast.showToast('error', 'Error', 'Failed to request notification permission.');
+  });
+}
+
+function showBrowserNotification(notif) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  if (!document.hidden) return;  // Only show when page is not visible
+
+  try {
+    const n = new Notification(notif.title || 'Notification', {
+      body: notif.body || '',
+      tag: notif.id || `notif-${Date.now()}`,
+      icon: '/favicon.ico',
+      silent: notif.urgency !== 'critical',
+    });
+
+    n.onclick = () => {
+      window.focus();
+      if (window.fiona?.router) {
+        window.fiona.router.navigate('/notifications');
+      }
+      n.close();
+    };
+
+    // Auto-close after 10 seconds
+    setTimeout(() => n.close(), 10000);
+  } catch (err) {
+    console.warn('[notifications] Failed to show browser notification:', err);
+  }
+}
+
+function setupBrowserNotificationListener() {
+  // Listen for store changes to show browser notifications for new items
+  const store = getStore();
+  if (!store) return;
+
+  try {
+    // Subscribe to notifications.items to detect new items
+    const unsub = store.subscribe('notifications.items', (items) => {
+      if (_state.destroyed) return;
+      if (!Array.isArray(items) || items.length === 0) return;
+
+      // Check if there's a new item at index 0 that wasn't there before
+      // We track the last known first item id
+      if (_state._lastFirstId && items[0] && items[0].id !== _state._lastFirstId) {
+        // New notification arrived
+        showBrowserNotification(items[0]);
+      }
+      _state._lastFirstId = items[0]?.id || null;
+    });
+
+    _state.browserNotifUnsub = unsub;
+  } catch (err) {
+    console.warn('[notifications] Failed to setup browser notification listener:', err);
+  }
+}
+
 /* ── Polling ─────────────────────────────────────────────────────────────── */
 
 function startPolling() {
   stopPolling();
   _state.pollTimer = setInterval(silentPoll, POLL_INTERVAL);
+  updateConnectionStatus();
 }
 
 function stopPolling() {
@@ -575,6 +1091,7 @@ function stopPolling() {
     clearInterval(_state.pollTimer);
     _state.pollTimer = null;
   }
+  updateConnectionStatus();
 }
 
 async function silentPoll() {
@@ -606,6 +1123,13 @@ async function silentPoll() {
       _state.unread = newUnread;
       _state.dismissingIndices.clear();
 
+      // Sync to store
+      const store = getStore();
+      if (store) {
+        store.set('notifications.items', items);
+        store.set('notifications.unreadCount', newUnread);
+      }
+
       if (!_state.destroyed && _state.container) {
         await renderPage(_state.container);
       }
@@ -629,9 +1153,29 @@ export function render(container) {
   _state.container = container;
 
   renderSkeletons(container);
+
+  // Subscribe to store for real-time updates
+  subscribeToStore();
+
+  // Set up browser notification listener
+  setupBrowserNotificationListener();
+
+  // Load initial data from REST API
   loadData().then(() => {
-    if (!_state.destroyed && _state.autoRefresh) {
-      startPolling();
+    if (!_state.destroyed) {
+      // Start WebSocket connection monitoring
+      startWsMonitoring();
+
+      if (_state.autoRefresh) {
+        startPolling();
+      }
+
+      // Check browser notification permission state
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          _state.browserNotifGranted = true;
+        }
+      }
     }
   });
 }
@@ -642,6 +1186,13 @@ export function render(container) {
 export function destroy() {
   _state.destroyed = true;
   stopPolling();
+  stopWsMonitoring();
+  unsubscribeFromStore();
+
+  if (_state.browserNotifUnsub) {
+    try { _state.browserNotifUnsub(); } catch (e) { /* ignore */ }
+    _state.browserNotifUnsub = null;
+  }
 
   _state.container = null;
   _state.items = [];

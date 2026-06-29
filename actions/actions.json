@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "actions": [
+    {
+      "name": "example_action",
+      "filename": "example_action.py",
+      "description": "Example action demonstrating the action format",
+      "tags": ["example", "demo"],
+      "enabled": true,
+      "created": "2026-06-28T00:00:00Z",
+      "modified": "2026-06-28T00:00:00Z"
+    }
+  ]
+}
