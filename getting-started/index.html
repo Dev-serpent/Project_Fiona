@@ -226,6 +226,18 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#web-dashboard" class="nav-link">Web Dashboard</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#starting-the-dashboard" class="nav-link">Starting the Dashboard</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#opening-the-dashboard" class="nav-link">Opening the Dashboard</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#what-you-can-do" class="nav-link">What You Can Do</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#standalone-apps" class="nav-link">Standalone Apps</a>
@@ -275,26 +287,39 @@ python3 -m fiona.cli dataclient
 <li><code>Host</code>: inspect host config, trusted devices, key paths, and audit logs.</li>
 </ul>
 <h2 id="web-dashboard">Web Dashboard</h2>
-<p>The <code>fionaLocalPages/</code> directory provides a modern single-page application (SPA) web frontend for Fiona. It is built with vanilla JavaScript and uses the aiohttp Python library for the backend server.</p>
-<p>Start the web dashboard:</p>
-<pre><code class="language-bash">python3 fionaLocalPages/server/app.py
-</code></pre>
-<p>The dashboard is then available at:</p>
-<pre><code>http://localhost:8765
-</code></pre>
-<p>What the web dashboard provides:</p>
+<p>The <code>fionaLocalPages/</code> directory provides a web-based control dashboard for Fiona — accessible from any browser on your machine. It runs two servers:</p>
 <ul>
-<li><strong>Agent Chat</strong>: conversational interface with streaming responses, personality selection, and multi-session management.</li>
-<li><strong>Action Runner</strong>: list, search, filter, and execute Fiona actions with permission profiles and dry-run support.</li>
-<li><strong>Settings</strong>: configure ACL rules, shell safety, voice engine, macros, and general preferences.</li>
-<li><strong>Browser Automation</strong>: start/stop the Selenium engine, navigate, click, type, and capture screenshots.</li>
-<li><strong>File Explorer</strong>: browse, read, write, and inspect files on the local filesystem.</li>
-<li><strong>Terminal</strong>: execute shell commands and view the fAT system dashboard status.</li>
-<li><strong>Performance Monitoring</strong>: real-time CPU, memory, disk, network, and system metrics with live gauge widgets.</li>
-<li><strong>Real-Time Updates</strong>: WebSocket and SSE (Server-Sent Events) for live streaming of agent responses, system metrics, and event notifications.</li>
-<li><strong>RecallVault</strong>: search, store, and manage categorized remembrance entries.</li>
-<li><strong>Desktop Awareness</strong>: view active window and screen snapshot information.</li>
-<li><strong>CamComs</strong>: view encryption status and identity information.</li>
+<li><strong>Flask frontend</strong> (port <code>5000</code>) — serves the pages you see in your browser</li>
+<li><strong>aiohttp API server</strong> (port <code>8765</code>) — handles all the behind-the-scenes data, WebSocket, and REST API calls</li>
+</ul>
+<h3 id="starting-the-dashboard">Starting the Dashboard</h3>
+<p>Use the convenience script (recommended):</p>
+<pre><code class="language-bash">./scripts/fiona-pages-start
+</code></pre>
+<p>Or start the servers individually:</p>
+<pre><code class="language-bash">python3 fionaLocalPages/server/app.py          # API server (port 8765)
+python3 fionaLocalPages/server/flask_app.py    # Frontend server (port 5000)
+</code></pre>
+<h3 id="opening-the-dashboard">Opening the Dashboard</h3>
+<p>Once running, open your browser to:</p>
+<pre><code>http://fiona.agent:5000
+</code></pre>
+<blockquote>
+<p><strong>Tip:</strong> If the hostname <code>fiona.agent</code> doesn't work on your system, use <code>http://127.0.0.1:5000</code> instead.</p>
+</blockquote>
+<h3 id="what-you-can-do">What You Can Do</h3>
+<ul>
+<li><strong>AI Chat</strong>: chat with Fiona's AI assistant, pick different personalities</li>
+<li><strong>Actions</strong>: browse and run Fiona commands, see what's safe to execute</li>
+<li><strong>Settings</strong>: configure ACL rules, shell safety, voice, macros, and more</li>
+<li><strong>Browser Automation</strong>: start a Selenium-powered browser, navigate, click, type, screenshot</li>
+<li><strong>File Explorer</strong>: browse, read, and edit files on your computer</li>
+<li><strong>Terminal</strong>: run shell commands with proper <code>cd</code> tracking (current folder follows you)</li>
+<li><strong>Performance</strong>: live CPU, memory, disk charts</li>
+<li><strong>RecallVault</strong>: search stored information</li>
+<li><strong>Desktop Awareness</strong>: see which window is currently active</li>
+<li><strong>CamComs</strong>: check encryption status and identity</li>
+<li><strong>And more</strong>: notifications, macros, key bindings, plugins, logs, tasks, workspace…</li>
 </ul>
 <h2 id="standalone-apps">Standalone Apps</h2>
 <pre><code class="language-bash">python3 -m fiona.cli vsee

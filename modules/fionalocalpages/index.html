@@ -222,7 +222,7 @@
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#architecture" class="nav-link">Architecture</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="3"><a href="#backend-serverapppy" class="nav-link">Backend — server/app.py</a>
+            <li class="nav-item" data-bs-level="3"><a href="#api-backend-serverapppy" class="nav-link">API Backend — server/app.py</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -264,11 +264,34 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="fionalocalpages-web-dashboard">fionaLocalPages — Web Dashboard</h1>
-<p>fionaLocalPages (<code>fionaLocalPages/</code>) is a browser-based operational dashboard for Fiona. It serves as a modern SPA control surface alongside the existing CLI and Tkinter GUI.</p>
+<p>fionaLocalPages (<code>fionaLocalPages/</code>) is a browser-based operational dashboard for Fiona, accessible from any browser on the machine. It runs alongside the existing CLI and Tkinter GUI.</p>
 <h2 id="architecture">Architecture</h2>
-<pre><code>Python backend (aiohttp) → HTML templates → JS modules (thin SPA layer)
+<p>Two servers work together:</p>
+<table>
+<thead>
+<tr>
+<th>Server</th>
+<th>Port</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flask frontend</strong> (<code>server/flask_app.py</code>)</td>
+<td><code>5000</code></td>
+<td>Serves HTML pages (Jinja2 templates) — this is what you visit in the browser</td>
+</tr>
+<tr>
+<td><strong>aiohttp API server</strong> (<code>server/app.py</code>)</td>
+<td><code>8765</code></td>
+<td>REST API + WebSocket (<code>/ws</code>) + SSE (<code>/api/v1/stream</code>) — backend for the Flask frontend</td>
+</tr>
+</tbody>
+</table>
+<p>The aiohttp server also serves the original vanilla-JS SPA (single-page application with hash routing) at its root URL. Visiting <code>http://127.0.0.1:8765</code> redirects to the Flask frontend at <code>http://fiona.agent:5000</code>.</p>
+<pre><code>Browser ──► Flask (port 5000) ──► aiohttp API (port 8765) ──► Fiona services
 </code></pre>
-<h3 id="backend-serverapppy">Backend — <code>server/app.py</code></h3>
+<h3 id="api-backend-serverapppy">API Backend — <code>server/app.py</code></h3>
 <p>Python aiohttp HTTP server with <strong>24 handler modules</strong> and <strong>115+ REST API endpoints</strong> at <code>/api/v1/</code>. Also serves WebSocket at <code>/ws</code> for real-time push and SSE at <code>/api/v1/stream</code>.</p>
 <p><strong>Handler modules:</strong></p>
 <table>
@@ -686,11 +709,12 @@
 <h3 id="sidebar-implementation">Sidebar Implementation</h3>
 <p>The sidebar is <strong>static HTML</strong> (not a JS component) to avoid stale store subscriptions that caused the Sidebar.js component to accumulate duplicate listeners. Navigation uses <code>data-action</code> attributes dispatched through a global document event listener. The <code>[data-action="toggle-sidebar"]</code> handler is a single listener on the document, not on individual elements — this was the root cause fix for the sidebar toggle bug.</p>
 <h2 id="running">Running</h2>
-<pre><code class="language-bash">./scripts/fiona-pages-start              # default port 8765
-./scripts/fiona-pages-start --port 8080  # custom port
-./scripts/fiona-pages-start --debug      # verbose logging
+<pre><code class="language-bash">./scripts/fiona-pages-start                         # default: frontend 5000, API 8765
+./scripts/fiona-pages-start --pages-port 3000        # custom frontend port
+./scripts/fiona-pages-start --api-port 8080          # custom API port
+./scripts/fiona-pages-start --debug                  # verbose logging
 </code></pre>
-<p>Open <code>http://fiona.agent:8765</code> in a browser.</p>
+<p>Open <code>http://fiona.agent:5000</code> in a browser (the aiohttp API server on port 8765 also runs but is not intended for direct browser access — it redirects to the Flask frontend).</p>
 <h2 id="status">Status</h2>
 <p>All 27 pages fully implemented. Production concerns (authentication, HTTPS) still being addressed. This is a supplementary control surface — the CLI and Tkinter GUI remain the primary Fiona interfaces.</p></div>
             </div>
