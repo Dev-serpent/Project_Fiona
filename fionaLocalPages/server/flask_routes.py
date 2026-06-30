@@ -200,11 +200,18 @@ def register_routes(app: flask.Flask) -> None:
         try:
             from fionaLocalPages.server.handlers.recall import recall_search
             result = _call_handler(recall_search, {"q": ""})
+            items = []
             if isinstance(result, dict) and result.get("ok"):
-                return {"recall_items": result.get("data", [])}
+                items = result.get("data", [])
+            try:
+                from RecallVault import recall_stats
+                stats = recall_stats()
+            except Exception:
+                stats = {}
+            return {"recall_items": items, "recall_stats": stats}
         except Exception as e:
             logger.warning("Recall data unavailable: %s", e)
-        return {"recall_items": []}
+        return {"recall_items": [], "recall_stats": {}}
 
     def _logs_data() -> dict:
         try:

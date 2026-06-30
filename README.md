@@ -1,80 +1,135 @@
 # Fiona
 
-Fiona is a local host-control project inspired by JARVIS-style workstation control. It is not a full AI agent yet. The current project is the software base around that future agent: local actions, encrypted device communication, desktop awareness, voice control, macros, automations, optional eye-controlled pointer experiments, terminal assistance, a local Ollama bridge, and a simple 3D hologram viewer.
+Fiona is a local host-control platform inspired by JARVIS-style workstation automation. It combines a modern web dashboard, encrypted device communication, desktop awareness, voice control, macros, automations, a local Ollama AI bridge, and a growing ecosystem of subsystems — all running locally with zero cloud dependency.
 
-For more detail, Go to https://dev-serpent.github.io/Project_Fiona/
+For a broader overview, visit: https://dev-serpent.github.io/Project_Fiona/
 
-After installation, the command is:
+---
 
-```bash
-fiona
-```
+# Section 1 — FLoP: Fiona Local Pages (Web Frontend)
 
-When running from a source checkout before installing the console script, use the module form from the repository root:
+FLoP is the primary user interface for Fiona — a server-rendered web dashboard served by Flask (port 5000) alongside an aioHTTP API/WebSocket server (port 8765). It replaces the earlier single-page application with a faster, more reliable multi-page architecture.
+
+> **Open FLoP:** [http://fiona.agent:5000](http://fiona.agent:5000)
+>
+> **API server:** [http://fiona.agent:8765](http://fiona.agent:8765)
+
+## Quick Start
 
 ```bash
 cd Fiona
-python3 -m fiona.cli <command>
+./scripts/fiona-pages-start        # Start both servers
+./scripts/fiona-pages-stop         # Stop both servers
 ```
 
-Examples:
+Both servers start automatically. Open `http://fiona.agent:5000` in any browser.
 
-```bash
-python3 -m fiona.cli edit
-python3 -m fiona.cli list
-python3 -m fiona.cli camcoms smoke-test
-python3 -m fiona.cli cli
+## Page Overview
+
+FLoP ships with **24 server-rendered pages**, all backed by real backend data:
+
+| Page | Route | Features |
+|------|-------|----------|
+| **Dashboard** | `/` | Live CPU/memory/disk/uptime metrics with 10s auto-polling, quick-action cards, notification summary |
+| **AI Chat** | `/chat` | Session management, message send/receive, session sidebar |
+| **Agents** | `/agents` | Agent listing, status, model info |
+| **Actions** | `/actions` | Action library, run action, risk/permission display |
+| **Settings** | `/settings` | Full configuration tree with inline editing |
+| **Terminal** | `/terminal` | Terminal emulator (JS-powered) |
+| **SeeOnDesk** | `/desktop` | Active window, system resources, installed apps, running processes |
+| **Task Queue** | `/tasks` | Kanban board, create/edit/delete tasks, status transitions |
+| **Notifications** | `/notifications` | Notification center, dismiss, clear all |
+| **Macros** | `/macros` | Macro list with search, run, step count, shortcut display |
+| **Key Bindings** | `/bindings` | Binding table with search |
+| **Voice Commands** | `/voice` | Voice service status, setup guide, command reference |
+| **RecallVault** | `/recall` | Key-value store with search, copy, truncation |
+| **Logs** | `/logs` | Terminal-style log viewer with live metric updates |
+| **CamComs** | `/camcoms` | CamComs service status, pairing, camera/audio features |
+| **Workspace** | `/workspace` | Virtual desktops, system information |
+| **Plugins** | `/plugins` | Plugin list with enable/disable status |
+| **Configuration** | `/config` | Config file viewer with search, expand/collapse JSON |
+| **Diagnostics** | `/diagnostics` | System information, health checks, network interfaces, processes |
+| **Dev Tools** | `/devtools` | Developer tools overview |
+| **PhiConnect** | `/phiconnect` | PhiConnect status, trusted peers list |
+| **Browser** | `/browser` | Browser automation status and controls |
+| **File Explorer** | `/files` | File browser with breadcrumb, sizes, dates |
+| **Performance** | `/performance` | Live CPU/memory/disk resource cards with 10s polling |
+
+## Architecture
+
+FLoP runs **two co-operative servers**:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Browser (port 5000)                    │
+│  Jinja2-rendered HTML · CSS variables · Vanilla JS      │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP
+┌──────────────────────┴──────────────────────────────────┐
+│  Flask Server (flask_app.py, port 5000)                  │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ 24 page routes + 9 AJAX POST endpoints           │   │
+│  │ Templates: templates_jinja/ (26 files)           │   │
+│  │ Static: css/, js/, images/                       │   │
+│  └──────────────┬───────────────────────────────────┘   │
+│                 │ _call_handler() bridge                 │
+│  ┌──────────────┴───────────────────────────────────┐   │
+│  │ aioHTTP Handler Modules (server/handlers/)        │   │
+│  │ 24 handler files, 150+ async functions            │   │
+│  └──────────────┬───────────────────────────────────┘   │
+└─────────────────┼────────────────────────────────────────┘
+                  │
+┌─────────────────┴────────────────────────────────────────┐
+│  aioHTTP API Server (app.py, port 8765)                   │
+│  REST API at /api/v1/ · WebSocket at /ws · SSE at /stream │
+│  Static files · SPA redirect → Flask (port 5000)         │
+└──────────────────────────────────────────────────────────┘
 ```
 
-If `fiona` prints `command not found`, the package has not been installed into the active environment yet, or that environment's script directory is not on `PATH`. Use `python3 -m fiona.cli ...` from the repository root, or run `pip install -e .` inside the environment you want to use.
+**Key design decisions:**
 
-## Current Architecture
+- **Server-rendered pages** (Jinja2) instead of client-side Handlebars — eliminates `{{#if}}` template rendering bugs in the browser
+- **Direct Python imports** — page data functions import handler modules directly instead of making HTTP loopback calls
+- **`_call_handler()` bridge** — wraps aioHTTP async handlers with mock requests so Flask can reuse them without modification
+- **AJAX POST endpoints** for interactive actions (task CRUD, settings save, chat send, action run, notification dismiss) — no full-page postbacks
+- **Auto-polling JS** on dashboard, performance, and logs pages — updates metrics in-place every 10 seconds via `fetch()`
+- **Dual-server architecture** — Flask serves rendered pages, aioHTTP continues serving the REST API and WebSocket for any remaining SPA integration
 
-Fiona is the umbrella package. It exposes fourteen sibling subsystems:
+## Interactive Features
 
-- `QuikTieper`: local access layer for keyboard chords, app launching, shortcuts, pointer movement, clicks, and remote action execution.
-- `CamComs`: communication layer for encoded/encrypted messages, currently focused on ESP32 sender to Fiona host receiver, with pairing, key rotation, and trust expiry.
-- `FionaCore`: shared primitives for action routing, ACL permissions, shell safety, macro engine, verification prompts, notifications, and speech.
-- `Voice`: voice interface with wake-word detection, push-to-talk, and feedback engine.
-- `Vsee`: 3D coordinate hologram viewer for point/edge wireframe shapes.
-- `Agent`: local Ollama bridge with think-act-observe loop and command registry.
-- `PhiConnect`: standalone encrypted computer-to-computer chat using CamComs crypto.
-- `SeeOnDesk`: desktop-awareness layer for identifying the current session, focused app/window, process tracking, and workspace awareness.
-- `DataClient`: standalone research/data collection app for topic search, page scraping, summarization, deep research, and CSV export.
-- `EyeControl`: optional camera-based eye-controlled mouse tracker.
-- `TerminalAssist`: Fiona Terminal Assistance (`fAT`) btop-style terminal dashboard and Zellij workspace helper.
-- `RecallVault`: small persistent remembrance store for key-value snippets and categories.
-- `CmdTrace`: high-performance JSONL-based observability log for all routed actions.
-- `SciRetrieval`: scientific knowledge retrieval subsystem — domain-aware query routing to NCBI/PubChem/NIST with normalization, entity resolution, SciLab processing, and cache-managed memory.
+FLoP pages support live user interaction without page reloads:
 
-Project layout:
+| Feature | Page | Mechanism |
+|---------|------|-----------|
+| Task CRUD | Tasks | Modal form, status buttons, delete — all via `POST /tasks/*` |
+| Settings save | Settings | Inline editing, Save All — via `POST /settings/save` |
+| Chat send | Chat | Send button + Enter key — via `POST /chat/send` |
+| New chat | Chat | New Session button — via `POST /chat/new` |
+| Run action | Actions | Run button per row — via `POST /actions/run` |
+| Clear/dismiss | Notifications | Clear All + per-item dismiss — via `POST /notifications/*` |
+| Search/filter | Macros, Config, Recall | Client-side JS filtering |
+| Copy value | Config, Recall | Clipboard API with fallback |
+| Expand JSON | Config | Toggle expand/collapse for nested values |
+| Live metrics | Dashboard, Performance, Logs | 10s auto-poll via `GET /api/v1/system/metrics` |
 
-```text
-fiona/                 umbrella package and CLI entrypoint
-QuikTieper/            local access/action layer
-CamComs/               communication/encryption/host service/pairing layer
-CamComs/esp32payload/  ESP32 sender payload template
-FionaCore/             shared action, ACL, macro, voice, and security primitives
-Voice/                 wake word, push-to-talk, and feedback engine
-Vsee/                  3D point/edge hologram model
-Agent/                 local Ollama client with planning loop
-PhiConnect/            encrypted computer-to-computer chat app
-SeeOnDesk/             desktop awareness, process tracking, workspace watcher
-DataClient/            research/data collection app
-EyeControl/            optional eye-controlled mouse tracker integration
-TerminalAssist/        Fiona Terminal Assistance and Zellij layout generation
-RecallVault/           persistent remembrance storage
-SciRetrieval/          scientific knowledge retrieval subsystem
-CmdTrace/              action trace logging
-scripts/               local launch wrappers
-tests/                 Python tests (1018+)
-DEVELOPERNOTE.md       detailed project notes and latest verification log
-pyproject.toml         package metadata and Python dependencies
+## Data Flow
+
+```
+User clicks "Create Task"
+  → JS fetch(POST /tasks/create, {title, priority})
+  → Flask route: import tasks.create_task
+  → _call_handler_post(create_task, body)
+  → creates MagicMock request with JSON body
+  → runs create_task(mock_request) in new event loop
+  → returns JSON response
+  → JS: if ok, location.reload()
 ```
 
-## Install
+---
 
-Clone the repository, create or activate a Python environment, and install the project in editable mode:
+# Section 2 — CLI & Subsystems
+
+## Installation
 
 ```bash
 git clone <repo-url> Fiona
@@ -94,1050 +149,210 @@ cd Fiona
 pip install -e .
 ```
 
-Core Python dependencies are declared in `pyproject.toml`:
+Core dependencies: `cryptography`, `pynput`, `numpy`, `pandas`, `requests`.
 
-- `cryptography`
-- `pynput`
-- `numpy`
-- `pandas`
-- `requests`
-
-Ollama is optional. Fiona talks to it over its local OpenAI-compatible server API when the agent bridge is used.
-
-EyeControl is optional. Install its camera/vision dependencies only on machines that will run the tracker:
+After installation:
 
 ```bash
-pip install -e ".[eyecontrol]"
+fiona                  # Open the CLI help
+fiona edit             # Open the Tkinter GUI editor
 ```
 
-Optional voice dependencies:
-
-```bash
-pip install pvporcupine     # Best wake word detection
-pip install snowboy         # Alternative wake word detection
-```
-
-Optional system tray:
-
-```bash
-pip install pystray Pillow  # System tray icon
-```
-
-System/runtime tools used by local control:
-
-- `ydotool` for pointer/keyboard automation
-- `kdotool` for KDE/Wayland active-window checks
-- `xdotool` / `xprop` as fallback or legacy paths
-- `aplay` / `paplay` for audio feedback
-- `notify-send` for desktop notifications
-- `scrot` / `gnome-screenshot` for screen capture
-
-## GUI
-
-Open the shared GUI:
+When running from a source checkout before installing the console script:
 
 ```bash
 cd Fiona
-python3 -m fiona.cli edit
+python3 -m fiona.cli <command>
 ```
 
-If the project is installed and the console script is on `PATH`, this is equivalent:
+## Subsystem Overview
+
+Fiona exposes **fourteen sibling subsystems**, each in its own package:
+
+| Subsystem | Directory | Purpose |
+|-----------|-----------|---------|
+| **QuikTieper** | `QuikTieper/` | Local access layer — keyboard chords, app launching, shortcuts, pointer control, remote action execution |
+| **CamComs** | `CamComs/` | Encrypted communication — X25519 key agreement, AES-GCM payloads, Ed25519 signatures, ESP32 sender protocol, pairing, trust management |
+| **FionaCore** | `FionaCore/` | Shared primitives — action routing, ACL permissions, shell safety, macro engine, verification prompts, notifications, speech |
+| **Voice** | `Voice/` | Voice interface — wake-word detection, push-to-talk, feedback engine |
+| **Vsee** | `Vsee/` | 3D hologram viewer — point/edge wireframe rendering |
+| **Agent** | `Agent/` | Local Ollama bridge — think-act-observe loop, command registry, tool runtime |
+| **PhiConnect** | `PhiConnect/` | Encrypted computer-to-computer chat using CamComs crypto primitives |
+| **SeeOnDesk** | `SeeOnDesk/` | Desktop awareness — active window detection, process tracking, workspace monitoring |
+| **TerminalAssist** | `TerminalAssist/` | btop-inspired terminal dashboard (`fAT`), Zellij workspace helper |
+| **RecallVault** | `RecallVault/` | Persistent key-value store with categories, tags, TTL/expiry, import/export (JSON/CSV), timestamped backups, statistics, and optional TF-IDF semantic search |
+| **CmdTrace** | `CmdTrace/` | Action trace observability — JSONL audit log with statistics, advanced search, CSV/JSON export, auto-compaction by size/age, and live tail monitoring |
+| **SciRetrieval** | `SciRetrieval/` | Scientific knowledge retrieval — domain-aware query routing to NCBI/PubChem/NIST with normalization, entity resolution, and caching |
+| **DataClient** | `DataClient/` | Research and data collection — web mining, deep research, CSV/JSON/SQLite table editor |
+| **EyeControl** | `EyeControl/` | Optional camera-based eye-controlled mouse tracker |
+
+## CLI Commands
+
+Once installed (`pip install -e .`):
 
 ```bash
-fiona edit
+fiona                          # Show help
+fiona edit                     # Open the shared Tkinter GUI editor
+fiona init                     # Create default bindings config
+fiona list                     # List configured app launch chords
+fiona run                      # Start the global QuikTieper listener
+fiona seeondesk active         # Show currently focused window
+fiona seeondesk status         # Full desktop-awareness snapshot
+fiona recall remember <k> <v>  # Store a recall item (--category, --ttl-seconds, --tags)
+fiona recall search <q>        # Search recall items
+fiona recall forget <k>        # Remove a recall item
+fiona recall stats             # Show vault statistics (entries, categories, tags, storage)
+fiona recall export            # Export vault to JSON or CSV (--format, --output)
+fiona recall import <file>     # Import entries from JSON or CSV file
+fiona recall backup            # Create a timestamped backup of the vault
+fiona action history           # Show recent action trace log
+fiona action stats             # Show trace statistics (per-action counts, success/failure, durations)
+fiona action export            # Export trace to JSON or CSV
+fiona action compact           # Compact/rotate trace by size or age
+fiona action tail              # Live-follow new trace entries
+fiona agent status             # Check Ollama connection
+fiona agent ask --model <m> "prompt"   # Ask the local AI model
+fiona agent commands           # List available agent commands
+fiona camcoms smoke-test       # Test encryption/decryption
+fiona camcoms keygen --device-id host  # Generate identity keys
+fiona camcoms trust --public <file>    # Trust a sender public key
+fiona camcoms receive           # Start the CamComs receiver
+fiona host status               # Host service status
+fiona host run                  # Start the unified host service
+fiona fat status                # Terminal dashboard status
+fiona fat run                   # Launch Zellij workspace
+fiona vsee                      # Open standalone hologram viewer
+fiona phiconnect                # Open encrypted chat app
+fiona dataclient mine <topic>   # Quick web research
+fiona dataclient deep <topic>   # Deep research
+fiona sire query "question"     # Scientific knowledge retrieval
+fiona import-apps               # Import desktop .desktop launchers
+fiona assign-keys               # Assign launch keys to apps
+fiona --tray-only               # System tray icon only
+fiona --discover-actions        # Discover available actions
 ```
 
-Current panel order:
+### Module-form (before installation):
+
+```bash
+python3 -m fiona.cli <command>
+```
+
+## Project Layout
 
 ```text
-CamComs -> Vsee -> Bindings -> Raw Json -> Debug -> Host -> Pairing -> Voice
+fiona/                  Umbrella package and CLI entrypoint
+QuikTieper/             Local access/action layer (key chords, app launcher)
+CamComs/                Communication/encryption/host-service/pairing
+CamComs/esp32payload/   ESP32 sender payload template
+FionaCore/              Shared action, ACL, macro, voice, security primitives
+Voice/                  Wake word, push-to-talk, and feedback engine
+Vsee/                   3D point/edge hologram model
+Agent/                  Local Ollama client with planning loop, tool runtime
+PhiConnect/             Encrypted computer-to-computer chat app
+SeeOnDesk/              Desktop awareness, process tracking, workspace watcher
+TerminalAssist/         btop-inspired terminal dashboard (fAT), Zellij helper
+RecallVault/            Persistent remembrance store
+SciRetrieval/           Scientific knowledge retrieval subsystem
+DataClient/             Research/data collection app
+EyeControl/             Optional camera-based eye tracker
+CmdTrace/               Action trace logging
+fionaLocalPages/        Web frontend (FLoP) — Flask + Jinja2 templates
+fionaLocalPages/server/ API server (aioHTTP), REST handlers, Flask routes
+fionaLocalPages/templates_jinja/  Jinja2 page templates (26 files)
+scripts/                Local launch wrappers (fiona-pages-start, fiona-edit, etc.)
+tests/                  Python tests (1018+)
 ```
 
-Panel roles:
-
-- `CamComs`: generate identities, export public keys, encrypt/decrypt messages, send encoded envelopes, key management, and run a local smoke test.
-- `Vsee`: edit 3D `points` and `edges` tables and render them as a connected wireframe hologram.
-- `Bindings`: edit QuikTieper app launchers and shortcut bindings.
-- `Raw Json`: edit the QuikTieper config JSON directly.
-- `Debug`: restricted project file editor for `tests`, `scripts`, `QuikTieper`, and `CamComs`.
-- `Host`: inspect host service config, trusted devices, key paths, audit logs, live systemd state, and SeeOnDesk workspace/process info.
-- `Pairing`: manage device pairing, approve/deny pairing requests, view trusted devices.
-- `Voice`: control wake word detection, push-to-talk, and test feedback sounds.
-
-Open the separate holography-only window:
-
-```bash
-python3 -m fiona.cli vsee
-```
-
-Open the separate encrypted chat window:
-
-```bash
-python3 -m fiona.cli phiconnect
-```
-
-Open the separate DataClient research window:
+## Optional Dependencies
 
 ```bash
-python3 -m fiona.cli dataclient
+pip install -e ".[eyecontrol]"     # OpenCV, MediaPipe for eye tracker
+pip install pvporcupine             # Best wake word detection
+pip install snowboy                 # Alternative wake word
+pip install pystray Pillow          # System tray icon
+pip install -e ".[sciretrieval]"    # aioHTTP for SciRetrieval providers
 ```
 
-## SeeOnDesk
+System tools for local control: `ydotool`, `kdotool`, `xdotool`, `xprop`, `aplay`, `paplay`, `notify-send`, `scrot`.
 
-SeeOnDesk is Fiona's first desktop-awareness layer. The current version does not train a screen-recording model yet. It identifies what is open/focused using desktop session metadata, `kdotool` on KDE/Wayland, and `xdotool`/`xprop` fallback paths where available.
+## Key Subsystem Details
 
-Show the current focused app/window:
+### QuikTieper (Local Access Layer)
 
-```bash
-python3 -m fiona.cli seeondesk active
-```
+Listens for simultaneous global key chords and runs configured actions:
 
-Show a full desktop-awareness snapshot:
+- App launching from chord bindings (e.g., `alt + b + r + v` opens Brave)
+- Desktop application discovery from `.desktop` launchers
+- App-specific shortcuts gated by active-window matching
+- Shell command execution with safety checks
+- Pointer movement and click helpers
+- Allowlisted remote actions for CamComs instructions
+- Structured macro instructions with nested steps
 
-```bash
-python3 -m fiona.cli seeondesk status
-```
+Config path: `~/.config/fiona/bindings.json`
 
-Installed-command equivalents:
+### CamComs (Encrypted Communication)
 
-```bash
-fiona seeondesk active
-fiona seeondesk status
-```
+Current direction: `ESP32 sender → encoded encrypted HTTP POST → Fiona host receiver`
 
-Current output includes:
+Implemented: X25519 key agreement, HKDF-SHA256, AES-GCM, Ed25519 signatures, base64url JSON envelopes, trusted sender store with expiry, replay protection, host receiver, pairing protocol, key rotation.
 
-- whether detection succeeded
-- backend used, such as `kdotool` or `x11`
-- active window id
-- app class / inferred app name
-- window title
-- process id and process name when available
-- session type and current desktop in `status`
+### FionaCore (Shared Primitives)
 
-Additional SeeOnDesk capabilities (added in roadmap):
+- **Action Router** — Central dispatch with ACL and verification
+- **ACL System** — Sender-scoped permissions (`local`, `ssh`, `websocket`, `ble`)
+- **Shell Safety** — Blocks 30+ destructive shell patterns
+- **Macro Engine** — Waits, conditions, branching, GOTO, variable interpolation
+- **Verification Prompts** — Desktop or terminal prompts for high-risk actions
 
-- **Process tracking**: list all processes via `/proc`, find by name, register watchers
-- **Workspace awareness**: detect active workspace and workspace changes via `kdotool` or `wmctrl`
-- **Action discovery**: discover available actions from system state (processes, workspaces, windows)
+### Agent & Ollama
 
-CLI:
-
-```bash
-fiona --discover-actions    # Discover available actions
-```
-
-This is the base for future screen capture, object/window recognition, and command context. If the command is run from a restricted sandbox or service without access to the desktop session bus, it may report `backend: unavailable`; running it as the active desktop user should return the focused app.
-
-## EyeControl
-
-EyeControl is Fiona's optional eye-controlled mouse tracker integration. The tracker now lives at `EyeControl/Eye_Controlled_Mouse_Tracker.py`, and the umbrella CLI imports it through the `EyeControl` package so opening Fiona help does not start the camera loop.
-
-Check dependency readiness:
+The Agent bridge communicates with Ollama's local OpenAI-compatible API:
 
 ```bash
-python3 -m fiona.cli eyecontrol status
-python3 -m fiona.cli cli --preview
-python3 -m fiona.cli fat status
+python3 -m fiona.cli agent ask --model qwen3:8b "What is the status?"
 ```
 
-Run against an IP camera snapshot URL:
+Includes a think-act-observe loop for tool use and scientific query enrichment.
+
+## Running Tests
 
 ```bash
-python3 -m fiona.cli eyecontrol run --url http://192.168.0.103:8080/shot.jpg
+python -m pytest tests/ -v
+# 1058+ tests across all subsystems (49 in test_cmdtrace_recallvault.py)
+python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect \
+  QuikTieper SciRetrieval SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
-
-Run against a local OpenCV camera index:
-
-```bash
-python3 -m fiona.cli eyecontrol run --camera-index 0
-```
-
-Move the pointer without blink-clicking while testing:
-
-```bash
-python3 -m fiona.cli eyecontrol run --camera-index 0 --no-click
-```
-
-EyeControl requires camera access and optional packages such as OpenCV, MediaPipe, and PyAutoGUI, so it may be unoperational on machines without a camera or those packages.
-
-## Fiona Terminal Assistance
-
-Fiona Terminal Assistance (`fAT`) is a high-fidelity, btop-inspired terminal command center. It provides real-time system monitoring, an interactive sliding TUI, and a JSON API for system status.
-
-Open the sliding command center:
-
-```bash
-fiona cli
-```
-
-Inside the TUI, controls are:
-
-```text
-left/right or h/l: slide pages (Dashboard, Management, QuikTieper, etc.)
-up/down or k/j:    select action
-/:                 live search across all available actions
-enter:             run selected Fiona command or external tool
-q or Esc:          quit (or clear search)
-```
-
-The TUI automatically refreshes every second, providing live metrics for CPU load, memory usage, disk usage, and system uptime on the **Dashboard** page.
-
-One-shot commands load their output inside the fAT output panel. Interactive actions (marked with `↗`) such as `btop` launch in the foreground.
-
-Show the redesigned terminal dashboard:
-
-```bash
-fiona fat status
-```
-
-Print machine-readable system status (JSON API):
-
-```bash
-fiona api
-# or
-fiona fat api
-```
-
-Launch external management tools from the TUI:
-- Navigate to the **Management** page.
-- Select **System Monitor (btop)** to launch btop directly.
-
-The current TUI pages include:
-- **Dashboard**: Fullscreen live system metrics (CPU usage/temp, Mem/Swap, Disk I/O, Network traffic, Power).
-- **Quick Actions**: DE-aware session controls (Lock, Logout, Suspend, Reboot).
-- **Management**: External tools and host service checks.
-- **QuikTieper**: Local access/action layer management.
-- **CamComs**: Secure communication paths and audit logs.
-- **Core**: Macro lists and RecallVault management.
-- **Apps**: Standalone Fiona application launchers.
-- **History**: Real-time sliding list of the latest routed actions.
-- **Recall**: Quick snippets from the RecallVault.
-
-fAT can also generate and launch a Zellij workspace:
-
-```bash
-fiona fat run
-```
-
-## QuikTieper
-
-QuikTieper is the local access layer. It listens for simultaneous global key chords and runs configured actions.
-
-Default config path:
-
-```text
-~/.config/fiona/bindings.json
-```
-
-Basic commands:
-
-```bash
-python3 -m fiona.cli init
-python3 -m fiona.cli list
-python3 -m fiona.cli import-apps --dry-run
-python3 -m fiona.cli import-apps
-python3 -m fiona.cli normalize-app-cmds --dry-run
-python3 -m fiona.cli normalize-app-cmds
-python3 -m fiona.cli assign-keys --dry-run
-python3 -m fiona.cli assign-keys
-python3 -m fiona.cli run
-python3 -m fiona.cli edit
-```
-
-Command details:
-
-- `python3 -m fiona.cli init`: creates `~/.config/fiona/bindings.json` if it does not exist. It is safe to run more than once because it does not overwrite an existing bindings file.
-- `python3 -m fiona.cli list`: prints every configured app launch chord and shortcut command. Use this to confirm Fiona can read the active bindings file.
-- `python3 -m fiona.cli import-apps --dry-run`: scans installed Linux `.desktop` launchers and reports how many app entries would be added without changing the bindings file.
-- `python3 -m fiona.cli import-apps`: imports newly discovered desktop apps into the bindings file. Imported apps start with no launch keys, so they cannot trigger accidentally until keys are assigned.
-- `python3 -m fiona.cli import-apps --include-all-k-apps`: imports all `K...` apps instead of using Fiona's curated K-app allowlist.
-- `python3 -m fiona.cli import-apps --include-low-value-apps`: also imports entries Fiona normally skips, such as games, education apps, helpers, demos, and settings panels.
-- `python3 -m fiona.cli normalize-app-cmds --dry-run`: shows which app launch commands would be normalized to Fiona's curated command presets without saving changes.
-- `python3 -m fiona.cli normalize-app-cmds`: applies the curated command presets. This cleans noisy desktop launcher wrappers into direct commands where possible, while keeping installed full-path/AppImage fallbacks where needed.
-- `python3 -m fiona.cli assign-keys --dry-run`: reports how many app launch entries still need generated launch keys.
-- `python3 -m fiona.cli assign-keys`: assigns generated launch keys to apps missing keys. Generated launch chords use `alt` plus three safer letters and avoid duplicate pressed-key sets.
-- `python3 -m fiona.cli assign-keys --reassign`: regenerates imported-app launch keys while preserving the original hand-written default app chords.
-- `python3 -m fiona.cli run`: starts the global QuikTieper listener. This is a foreground process and keeps running until stopped. It requires runtime dependencies such as `pynput`, and on Wayland may need `ydotoold`.
-- `python3 -m fiona.cli edit`: opens the shared Fiona GUI editor. This is a foreground GUI process and keeps running until the window is closed.
-
-Installed-command equivalents:
-
-```bash
-fiona init
-fiona list
-fiona import-apps --dry-run
-fiona import-apps
-fiona normalize-app-cmds --dry-run
-fiona normalize-app-cmds
-fiona assign-keys --dry-run
-fiona assign-keys
-fiona run
-fiona edit
-```
-
-Explicit layer commands:
-
-```bash
-python3 -m fiona.cli quiktieper list
-python3 -m fiona.cli quiktieper run
-python3 -m fiona.cli quiktieper edit
-```
-
-The explicit `quiktieper` form runs the same QuikTieper commands as the short form. For example, `python3 -m fiona.cli quiktieper list` and `python3 -m fiona.cli list` read the same bindings file.
-
-Current capabilities:
-
-- app launching from chord bindings
-- installed desktop application discovery from `.desktop` launchers
-- app-specific shortcuts gated by active-window matching
-- shell command execution (with safety checks)
-- pointer movement and click helpers
-- allowlisted remote actions for CamComs instructions
-- structured macro instructions with nested steps
-
-`import-apps` scans standard Linux desktop launcher directories such as `~/.local/share/applications`, `/usr/local/share/applications`, and `/usr/share/applications`. Imported apps are added with no launch keys by default so they are visible in the GUI but cannot accidentally trigger until chords are assigned.
-
-The importer filters obvious low-value entries such as games, education apps, settings panels, helper launchers, demos, and uninstallers. It also skips most `K...` apps by default while keeping a curated practical allowlist such as Konsole, Kate, KWrite, KCalc, KDE Connect, KDE System Settings, Kdenlive, KDevelop, KMail, KOrganizer, KRDC, KSystemLog, and similar tools. Use these override flags only when needed:
-
-```bash
-python3 -m fiona.cli import-apps --include-all-k-apps
-python3 -m fiona.cli import-apps --include-low-value-apps
-```
-
-`assign-keys` fills in missing launch chords. Generated launch chords use `alt` plus three distinct letters from a safer alphabet, avoid duplicate pressed-key sets, and preserve the original hand-written default app chords. Use `--reassign` to regenerate imported-app chords while keeping those defaults:
-
-```bash
-python3 -m fiona.cli assign-keys --reassign
-```
-
-`normalize-app-cmds` applies Fiona's curated command presets for common workstation apps after desktop import. It keeps installed fallbacks where needed, so entries such as Terminal, Files, browsers, KDE tools, Jupyter, media apps, and system utilities use direct launch commands instead of noisy desktop launcher wrappers:
-
-```bash
-python3 -m fiona.cli normalize-app-cmds --dry-run
-python3 -m fiona.cli normalize-app-cmds
-```
-
-Example default bindings:
-
-- `alt + b + r + v` opens Brave
-- `alt + v + s + c` opens VS Code
-- `alt + t + e + r` opens terminal
-
-## RecallVault (Remembrance)
-
-RecallVault is a lightweight, persistent remembrance store for key-value snippets, categorized for different contexts.
-
-Manage remembrances:
-
-```bash
-fiona recall remember <key> <value> --category <cat>
-fiona recall search <query>
-fiona recall forget <key>
-fiona recall categories
-fiona recall clear
-```
-
-The RecallVault provides the "long-term memory" for Fiona actions and future agent reasoning.
-
-## CmdTrace (Observability)
-
-CmdTrace is a high-performance, append-only JSONL log of every action routed through Fiona.
-
-Audit actions:
-
-```bash
-fiona action history --limit 50
-fiona action history --name host.status
-fiona action clear
-```
-
-The trace log ensures a perfect audit trail of system activity, which is also visible in real-time through the fAT TUI.
-
-## CamComs
-
-CamComs is the communication and encryption layer.
-
-Current communication direction:
-
-```text
-ESP32 sender -> encoded encrypted HTTP POST -> Fiona host receiver
-```
-
-Implemented pieces:
-
-- X25519 key agreement
-- HKDF-SHA256 key derivation
-- AES-GCM encrypted payloads
-- Ed25519 sender signatures
-- base64url JSON envelope encoding/decoding
-- trusted sender public-key storage with optional expiry
-- replay protection for duplicate/stale messages
-- host receiver and host service skeleton
-- audit log for accepted/rejected message processing
-- strict JSON instruction validation
-- pairing protocol with fingerprint approval
-- key rotation with atomic writes
-
-Default CamComs storage paths:
-
-```text
-~/.config/fiona/identity.json       # Host private identity (new location)
-~/.config/fiona/identity.pub        # Host public key bundle (new location)
-~/.config/fiona/trusted/            # Trusted sender directory
-~/.config/fiona/camcoms/            # Legacy CamComs key paths
-~/.config/fiona/camcoms/trusted/    # Legacy trusted sender directory
-~/.config/fiona/camcoms/audit.log   # Legacy audit log
-~/.config/fiona/audit.log           # Audit log (new location)
-```
-
-Useful commands:
-
-```bash
-python3 -m fiona.cli camcoms smoke-test
-python3 -m fiona.cli camcoms paths
-python3 -m fiona.cli camcoms keygen --device-id host
-python3 -m fiona.cli camcoms keygen --device-id esp32
-python3 -m fiona.cli camcoms trust --public ~/.config/fiona/camcoms/esp32.public.json
-python3 -m fiona.cli camcoms trust --list
-python3 -m fiona.cli camcoms audit
-python3 -m fiona.cli camcoms rotate-keys
-python3 -m fiona.cli camcoms prune
-python3 -m fiona.cli camcoms fingerprint
-```
-
-Command details:
-
-- `python3 -m fiona.cli camcoms smoke-test`: creates temporary in-memory identities, encrypts a sample `alt+s` press instruction, decrypts it, and prints the decoded JSON instruction. This does not write key files.
-- `python3 -m fiona.cli camcoms paths`: prints the default visible CamComs storage paths for host keys, ESP32 keys, trusted sender keys, and audit logs.
-- `python3 -m fiona.cli camcoms keygen --device-id host`: creates or overwrites the default host private/public identity files under `~/.config/fiona/camcoms/`.
-- `python3 -m fiona.cli camcoms keygen --device-id esp32`: creates or overwrites the default ESP32 provisioning identity files under `~/.config/fiona/camcoms/`.
-- `python3 -m fiona.cli camcoms keygen --device-id <name> --private-out <path> --public-out <path>`: writes a named identity to explicit paths instead of Fiona's default key paths.
-- `python3 -m fiona.cli camcoms keygen --device-id <name> --passphrase <passphrase>`: encrypts the private identity file with a passphrase. Use a real secret outside shell history for production.
-- `python3 -m fiona.cli camcoms public --private <private.json> --public-out <public.json>`: exports a public key bundle from an existing private identity file.
-- `python3 -m fiona.cli camcoms trust --public <public.json>`: stores a sender public key in the trusted sender directory. The receiver only accepts signed messages from trusted senders.
-- `python3 -m fiona.cli camcoms trust --list`: lists trusted sender public keys.
-- `python3 -m fiona.cli camcoms trust --remove <device-id>`: removes a trusted sender by device id, such as `esp32`.
-- `python3 -m fiona.cli camcoms trust --public <public.json> --expires-in 30`: adds a sender with 30-day automatic expiry.
-- `python3 -m fiona.cli camcoms audit`: prints recent receiver audit events from `~/.config/fiona/camcoms/audit.log`.
-- `python3 -m fiona.cli camcoms audit --limit 10`: prints only the 10 most recent audit events.
-- `python3 -m fiona.cli camcoms rotate-keys`: rotates the host identity with a confirmation prompt.
-- `python3 -m fiona.cli camcoms rotate-keys --yes`: rotates without confirmation.
-- `python3 -m fiona.cli camcoms prune`: removes expired trusted sender entries.
-- `python3 -m fiona.cli camcoms fingerprint`: prints the host identity's public key fingerprint.
-
-Encrypt a press instruction for the host:
-
-```bash
-python3 -m fiona.cli camcoms encrypt \
-  --sender-private ~/.config/fiona/camcoms/esp32.private.json \
-  --recipient-public ~/.config/fiona/camcoms/host.public.json \
-  --press alt s
-```
-
-`camcoms encrypt` requires either `--press ...` or `--instruction-json ...`. Without one of those inputs it exits with a usage error.
-
-Encrypt a structured instruction JSON object:
-
-```bash
-python3 -m fiona.cli camcoms encrypt \
-  --sender-private ~/.config/fiona/camcoms/esp32.private.json \
-  --recipient-public ~/.config/fiona/camcoms/host.public.json \
-  --instruction-json '{"version":1,"type":"press","keys":["alt","s"]}'
-```
-
-Print the full envelope JSON instead of the compact encoded text:
-
-```bash
-python3 -m fiona.cli camcoms encrypt \
-  --sender-private ~/.config/fiona/camcoms/esp32.private.json \
-  --recipient-public ~/.config/fiona/camcoms/host.public.json \
-  --press alt s \
-  --json
-```
-
-Decrypt an encoded envelope:
-
-```bash
-python3 -m fiona.cli camcoms decrypt \
-  --recipient-private ~/.config/fiona/camcoms/host.private.json \
-  --sender-public ~/.config/fiona/camcoms/esp32.public.json \
-  --encoded '<encoded-message>'
-```
-
-Decrypt an envelope JSON file:
-
-```bash
-python3 -m fiona.cli camcoms decrypt \
-  --recipient-private ~/.config/fiona/camcoms/host.private.json \
-  --sender-public ~/.config/fiona/camcoms/esp32.public.json \
-  --envelope ./message-envelope.json
-```
-
-`camcoms decrypt` requires `--recipient-private` plus either `--encoded` or `--envelope`.
-
-Send an encoded message to a host/IP endpoint:
-
-```bash
-python3 -m fiona.cli camcoms send \
-  --host 192.168.1.50 \
-  --port 8080 \
-  --path / \
-  --encoded '<encoded-message>'
-```
-
-Send an envelope JSON file:
-
-```bash
-python3 -m fiona.cli camcoms send \
-  --host 192.168.1.50 \
-  --port 8080 \
-  --envelope ./message-envelope.json
-```
-
-`camcoms send` requires `--host` plus either `--encoded` or `--envelope`. It posts the compact encoded message to the configured HTTP endpoint.
-
-Run the receiver directly:
-
-```bash
-python3 -m fiona.cli camcoms receive --private ~/.config/fiona/camcoms/host.private.json --port 8080
-```
-
-Receiver details:
-
-- `python3 -m fiona.cli camcoms receive`: starts the host receiver on `0.0.0.0:8080` using the default host private key and trusted sender directory.
-- `python3 -m fiona.cli camcoms receive --host 127.0.0.1 --port 8081`: binds to a specific interface and port.
-- `python3 -m fiona.cli camcoms receive --execute`: executes approved QuikTieper remote actions. Without `--execute`, the receiver uses dry-run mode for safer testing.
-- `python3 -m fiona.cli camcoms receive --trusted-dir <dir>`: reads trusted sender public keys from a custom directory.
-
-`camcoms receive` is a foreground server process. Leave it running while ESP32 or other senders post messages to the host.
-
-### Pairing Server
-
-The pairing server runs on port 8090 and accepts pairing requests from ESP32 devices:
-
-```bash
-# Start the pairing server (via GUI Pairing tab toggle, or programmatically)
-```
-
-### Key Rotation
-
-```bash
-python3 -m fiona.cli camcoms rotate-keys
-```
-
-This generates a new host identity, saves it atomically, and prints both the old and new fingerprints. Existing trusted senders will need to re-pair.
-
-Host service commands:
-
-```bash
-python3 -m fiona.cli host init
-python3 -m fiona.cli host status
-python3 -m fiona.cli host run
-python3 -m fiona.cli host install-service --print
-```
-
-Host service command details:
-
-- `python3 -m fiona.cli host init`: writes the default unified Fiona host service config to `~/.config/fiona/config.json`. If the file already exists, it refuses to overwrite it.
-- `python3 -m fiona.cli host init --force`: overwrites the host service config with defaults.
-- `python3 -m fiona.cli host status`: prints config, key paths, trusted sender status, QuikTieper summary, dependency checks, and system/session details.
-- `python3 -m fiona.cli host status --check-port`: also checks whether the configured receiver port can bind.
-- `python3 -m fiona.cli host run`: starts the unified host service in the foreground. It can own the CamComs receiver and, depending on config, the QuikTieper listener.
-- `python3 -m fiona.cli host run --passphrase <passphrase>`: starts the host service with a passphrase for an encrypted host private key.
-- `python3 -m fiona.cli host install-service --print`: prints the user systemd unit without writing it.
-- `python3 -m fiona.cli host install-service`: writes `~/.config/systemd/user/fiona-host.service`.
-- `python3 -m fiona.cli host install-service --name my-fiona.service`: writes a custom user service name.
-- `python3 -m fiona.cli host install-service --working-directory <repo-path> --python <python-path>`: controls the working directory and Python executable used by the generated service.
-
-`install-service --print` previews the user systemd service. Running it without `--print` writes `~/.config/systemd/user/fiona-host.service`, after which a Linux user can run:
-
-```bash
-systemctl --user daemon-reload
-systemctl --user enable --now fiona-host.service
-```
-
-The older nested service commands also exist:
-
-```bash
-python3 -m fiona.cli camcoms service init
-python3 -m fiona.cli camcoms service status
-python3 -m fiona.cli camcoms service run
-```
-
-These nested commands call the same host service implementation as `python3 -m fiona.cli host ...`. Prefer the shorter `host` form for normal use.
-
-### Host Service Systemd GUI Controls
-
-The Host tab in the GUI provides:
-
-- **Live status dot**: green (running), yellow (running but issues), red (not running), gray (unknown)
-- **Start/Stop/Restart** buttons: invoke `systemctl --user`
-- **Journal button**: shows last 100 lines of service journal in a scrollable text area
-- State is polled every 3 seconds
-
-## FionaCore (Shared Primitives)
-
-FionaCore provides shared primitives used across all subsystems.
-
-### Action Router
-
-Central action dispatch with ACL and verification:
-
-- Register named actions with handler functions
-- Optional `sender_scope` and `requires_confirmation` fields
-- Thread-safe via `RLock`
-
-### ACL System
-
-Sender-scoped permissions:
-
-```python
-from FionaCore.acl import SenderACLRule
-rule = SenderACLRule(pattern="agent:*", scope="safe")
-```
-
-- Built-in profiles: `local`, `ssh`, `websocket`, `ble`
-- Unknown senders denied by default
-- Integrated into ActionRouter
-
-### Shell Safety
-
-Blocks destructive shell commands:
-
-```bash
-python3 -m fiona.cli run-shell "rm -rf /"   # BLOCKED
-python3 -m fiona.cli run-shell "echo hello"  # ALLOWED
-```
-
-30+ patterns blocked at all 5 shell execution points.
-
-### Macro Engine
-
-Extended macros with:
-
-```python
-step = MacroStep(
-    action="launch:brave",
-    wait_type="wait_for_window",
-    wait_value="Brave",
-    condition_type="process_running",
-    fallback_action="notify:Brave not found",
-)
-```
-
-- Waits: `sleep`, `wait_for_window`, `wait_for_process`
-- Conditions: `window_active`, `process_running`, `action_result`
-- Branching: `fallback_action` when condition fails
-- GOTO: `GOTO:macro_name` to jump between macros (max depth 10)
-- Variable interpolation: `${var}` in any string field
-
-CLI:
-
-```bash
-python3 -m fiona.cli --run-macro my_macro
-python3 -m fiona.cli --list-macros
-```
-
-### Verification Prompts
-
-- Desktop (Tkinter dialog) or Terminal (stdin) prompts
-- Falls back from desktop → terminal → automatic denial
-- Used for high-risk actions flagged with `requires_confirmation`
-
-## Voice
-
-Fiona's voice interface subsystem.
-
-Wake word detection (auto-detected backend):
-
-- `pvporcupine` (Picovoice) — best
-- `snowboy` — alternative
-- Manual trigger — fallback if no library installed
-
-Push-to-talk:
-
-- Global hotkey via `pynput` (Ctrl+Space)
-- Graceful degradation if `pynput` not available
-
-Feedback:
-
-- Audio via `aplay`/`paplay`
-- Desktop notifications via `notify-send`
-- Test: `python3 -m fiona.cli voice feedback-test`
-
-## System Tray
-
-A system tray icon provides quick access to Fiona:
-
-```bash
-python3 -m fiona.cli --tray-only
-```
-
-- Color-coded status: green (running + listening), yellow (running), red (stopped)
-- Right-click menu: Show Fiona, read-only status indicators, Quit Fiona
-- Minimize-to-tray checkbox in GUI Settings
-- Auto-refreshes every 5 seconds
-
-## Vsee
-
-Vsee is the current holography software layer. It is intentionally simple right now: a point/edge model rendered as a 3D wireframe in the GUI.
-
-Open the standalone Vsee window:
-
-```bash
-python3 -m fiona.cli vsee
-```
-
-Open Vsee with point and edge CSV files:
-
-```bash
-python3 -m fiona.cli vsee --points ./points.csv --edges ./edges.csv
-```
-
-`vsee` is a foreground GUI process. It stays open until the window is closed.
-
-Vsee input format:
-
-```csv
-id,x,y,z
-A,-1,-1,-1
-B,1,-1,-1
-```
-
-Edge format:
-
-```csv
-source,target
-A,B
-```
-
-Current capabilities:
-
-- load/edit point and edge tables in the GUI
-- validate duplicate point IDs and missing edge references
-- project 3D coordinates into a 2D canvas using `numpy`
-- parse editable table data using `pandas`
-- render connected wireframe shapes with rotation and scale controls
-
-## PhiConnect
-
-PhiConnect is the computer-to-computer communication app. It is separate from `fiona edit`, like `Vsee Holography`, and uses the existing CamComs encryption primitives for chat instead of remote-control instructions.
-
-Open PhiConnect:
-
-```bash
-python3 -m fiona.cli phiconnect
-```
-
-Current capabilities:
-
-- creates a local PhiConnect identity under `~/.config/fiona/phiconnect/`
-- shows your public key in the Settings tab
-- lets you trust another computer's public key
-- starts a local encrypted chat receiver on port `5000` by default
-- sends chat messages to a peer host/port
-- encrypts every sent message with the peer public key
-- decrypts received messages with the local private key
-- records inbound/outbound chat events in `~/.config/fiona/phiconnect/chat.log`
-- displays messages from the last 3 minutes, refreshing every 5 seconds
-- trust expiry checking for paired devices
-- optional Agent bridge for forwarding chat to local Ollama
-
-Two computers can communicate by exchanging public key JSON files, trusting each other's keys, then pointing each PhiConnect instance at the other machine's IP and port.
-
-For local Fiona loopback testing, open PhiConnect, use `Use Local Public Key` in Settings, start the receiver, then send to `127.0.0.1` port `5000`. A send error saying the peer public key is missing means the outbound encryption key has not been set yet. A connection-refused error means no receiver is listening on the target host/port.
-
-## DataClient
-
-DataClient is a standalone research and data collection app. It is separate from `fiona edit`, like Vsee and PhiConnect.
-
-Open the DataClient GUI:
-
-```bash
-python3 -m fiona.cli dataclient
-```
-
-The GUI has two tabs:
-
-- `Research`: quick topic mining and bounded deep research.
-- `MiniExcel`: lightweight CSV/JSON/SQLite table viewer and editor.
-
-The app menu includes a `Miner` menu for starting quick mining, starting deep research, and clearing the miner log without digging through the tab controls.
-
-Quick mode searches DuckDuckGo HTML results, scrapes the selected number of pages, summarizes page text, and saves a CSV. Deep mode starts from search results, follows same-domain links up to a controlled depth/page limit, and records each page's depth and parent URL.
-
-CLI quick mining:
-
-```bash
-python3 -m fiona.cli dataclient mine "local desktop automation" --out ./research.csv --max-links 30
-```
-
-CLI deep research:
-
-```bash
-python3 -m fiona.cli dataclient deep "local desktop automation" --out ./deep-research.csv --seed-links 10 --depth 1 --page-limit 50
-```
-
-DataClient CSV columns:
-
-- `topic`
-- `url`
-- `title`
-- `summary`
-- `depth`
-- `parent_url`
-
-Deep mode is intentionally bounded. By default it stays on the same domain as each seed page and only crawls one level deep. Use `--cross-domain` only when you intentionally want broader crawling.
-
-MiniExcel can open CSV, JSON, and SQLite files, show them as rows/columns, edit a selected cell, add rows, add columns, delete rows, and save/export the table. It also has a formula bar for selected cells. Formulas start with `=` and support cell references such as `A1`, ranges such as `B1:B5`, arithmetic, and safe functions including `SUM`, `AVG`, `MIN`, `MAX`, `COUNT`, `LEN`, `LOWER`, and `UPPER`.
-
-Convert between table formats:
-
-```bash
-python3 -m fiona.cli dataclient convert ./research.csv --out ./research.json
-python3 -m fiona.cli dataclient convert ./research.json --out ./research.db --table research
-```
-
-Preview a table from the terminal:
-
-```bash
-python3 -m fiona.cli dataclient view ./research.csv --limit 5
-```
-
-## SciRetrieval — Scientific Knowledge Retrieval
-
-SciRetrieval is a multi-provider scientific knowledge retrieval subsystem. Given a free-text query, it:
-
-1. **Classifies** the query into a scientific domain (biology, chemistry, physics) and intent (lookup, compare, explain, list).
-2. **Routes** to the best-fit provider (NCBI, PubChem, NIST) based on domain.
-3. **Retrieves** data with graceful degradation (provider failures never crash the pipeline).
-4. **Normalizes** results into a standard schema.
-5. **Resolves entities** via a synonym registry (`synonyms.json`) with canonical ID assignment.
-6. **Processes** through the SciLab pipeline for structured summarization.
-7. **Caches** conversation results (TTL 5 min) and NIST datasets (disk-persisted).
-
-Architecture:
-
-```text
-User Query → Router → EntityResolver → Normalizer → Providers (NCBI/PubChem/NIST)
-                                                        │
-                                                        ▼
-                                                  SciLab Processor
-                                                        │
-                                                        ▼
-                                              CacheManager → Response
-```
-
-### CLI
-
-```bash
-# Route through the full pipeline
-fiona sire query "What is the molecular weight of Aspirin?"
-fiona sr  query "How does p53 regulate apoptosis?"
-
-# Classify a query without retrieving
-fiona sire classify "What is the speed of light?"
-
-# List registered providers
-fiona sire providers
-
-# Direct provider lookup
-fiona sire getdata pubchem aspirin
-```
-
-### Agent Integration
-
-The Agent chat system auto-detects scientific queries and optionally enriches prompts with scientific context:
-
-```bash
-# Agent ask with scientific enrichment
-python3 -m fiona.cli agent ask --model qwen3:8b --enrich-science "What is the function of BRCA1?"
-
-# Web API (fionaLocalPages)
-curl -X POST http://localhost:8765/api/v1/agent/ask \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What is the speed of light?", "enrich_science": true}'
-```
-
-### Terminal Integration (fionaLocalPages)
-
-In the web terminal page:
-
-```text
-science search <query>     Search scientific databases
-science classify <query>   Classify a scientific query
-science providers          List registered data providers
-science getdata <p> <e>    Direct provider lookup
-science cache              Clear retrieval caches
-```
-
-### REST API
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/v1/sciretrieval/search` | POST | Full pipeline search |
-| `/api/v1/sciretrieval/classify` | POST | Classify query domain |
-| `/api/v1/sciretrieval/providers` | GET | List registered providers |
-| `/api/v1/sciretrieval/getdata` | POST | Direct provider lookup |
-| `/api/v1/sciretrieval/enrich` | POST | Detect if message is scientific |
-| `/api/v1/sciretrieval/cache/clear` | POST | Clear all caches |
-
-### Dependencies
-
-SciRetrieval has optional dependencies for HTTP-based providers:
-
-```bash
-pip install -e ".[sciretrieval]"    # Installs aiohttp for NCBI/PubChem/NIST
-```
-
-Without `aiohttp`, the providers degrade gracefully and return informative error messages.
-
-### Data Files
-
-- `SciRetrieval/data/keywordlist.json` — Domain classification keywords (30 biology, 32 chemistry, 34 physics) + intent patterns
-- `SciRetrieval/data/synonyms.json` — Entity synonym registry with canonical IDs (Aspirin, Glucose, TP53, BRCA1)
-
-### Tests
-
-```bash
-python3 -m pytest tests/sci_retrieval/ -v
-# 278 tests across 13 files
-```
-
-## Agent And Ollama
-
-Agent is the bridge toward the future AI agent. It talks to Ollama as a local inference server, using Ollama's OpenAI-compatible API.
-
-Start Ollama's local server, then test the connection:
-
-```bash
-python3 -m fiona.cli agent status
-```
-
-`agent status` checks Ollama's local OpenAI-compatible API endpoint and prints the health response or connection error.
-
-Ask the local model a question:
-
-```bash
-python3 -m fiona.cli agent ask --model <model-id> "Summarize Fiona status."
-```
-
-Agent command options:
-
-- `python3 -m fiona.cli agent status --base-url http://localhost:11434/v1`: checks a custom Ollama endpoint.
-- `python3 -m fiona.cli agent ask --model <model-id> "Prompt text"`: sends a prompt to the selected local model.
-- `python3 -m fiona.cli agent ask --system "System prompt" --temperature 0.3 --max-tokens 512 --model <model-id> "Prompt text"`: customizes the system prompt and sampling/output limits.
-
-Default Ollama endpoint:
-
-```text
-http://localhost:11434/v1
-```
-
-The agent also includes a think-act-observe loop for tool use:
-
-```bash
-python3 -m fiona.cli agent commands    # Show available commands
-```
-
-Important: this is inference, not model training. Fine-tuning/training with GPU acceleration, large CPU thread counts, dataset preparation, and memory controls is a separate future system. Fiona should first use Ollama for local reasoning and tool planning, then add training/fine-tuning infrastructure only after the agent workflow and datasets are defined.
-
-## Debug Mode
-
-The GUI Debug tab is a restricted project editor. It can view and edit text/code files only under:
-
-```text
-tests/
-scripts/
-QuikTieper/
-CamComs/
-```
-
-It intentionally does not expose the whole filesystem or every project directory. It also skips generated cache directories such as `__pycache__`.
-
-## Wrapper Scripts
-
-Local scripts are available:
-
-```bash
-./scripts/fiona-edit
-./scripts/fiona-run
-```
-
-They are intended to activate the project environment, enter the repo, and launch Fiona.
 
 ## Current State
 
-Working today:
+**Working today:**
 
-- installable Fiona umbrella CLI
-- shared Tkinter GUI with 7 tabs
-- standalone Vsee, PhiConnect, DataClient GUIs
+- FLoP web frontend with 24 server-rendered pages, AJAX interactions, real-time polling
+- Installable Fiona umbrella CLI with 40+ commands
+- Shared Tkinter GUI editor with 7 tabs
+- Standalone Vsee, PhiConnect, DataClient GUIs
 - SeeOnDesk desktop-awareness with process tracking and workspace awareness
 - EyeControl optional camera tracker
 - fAT terminal dashboard and Zellij layout helper
 - QuikTieper binding editor/listener/action runner
-- CamComs encryption/decryption/transport/receiver/pairing
-- trusted sender lifecycle with expiry and audit logging
-- host service config/status/run commands with GUI systemd controls
-- user systemd service unit generation
-- ACL sender-scoped permission system
-- shell command safety (30+ patterns blocked)
-- extended macro engine with waits, conditions, branching, GOTO
-- verification prompts for high-risk actions
-- ESP32 pairing protocol with fingerprint approval
-- key rotation with atomic writes
-- system tray icon with `--tray-only` mode
-- voice wake-word detection, push-to-talk, feedback engine
+- CamComs encryption/decryption/transport/receiver/pairing/key rotation
+- Trusted sender lifecycle with expiry and audit logging
+- Host service config/status/run with GUI systemd controls
+- ACL sender-scoped permission system, shell safety, extended macro engine
+- Voice wake-word detection, push-to-talk, feedback engine
 - Ollama local inference bridge with planning loop
-- DataClient quick mining and bounded deep research CSV export
-- encrypted computer-to-computer chat through PhiConnect
-- Vsee point/edge hologram viewer
-- project-restricted GUI debug editor
-- curated app command presets through `normalize-app-cmds`
-- Scientific knowledge retrieval with domain classification, multi-provider routing (NCBI/PubChem/NIST), normalization, entity resolution, SciLab processing, and cache-managed memory
-- Web terminal integration with `science` commands (search, classify, providers, getdata, cache)
-- Agent chat enrichment with auto-detection of scientific queries
-- REST API for all retrieval operations (6 endpoints)
-- Python tests for SciRetrieval subsystem (278 tests, 13 files)
-- Python tests for core model, crypto, transport, service, ACL, shell safety, macro engine, pairing, voice, and system tray paths (740+ tests)
+- Encrypted computer-to-computer chat (PhiConnect)
+- Scientific knowledge retrieval (NCBI/PubChem/NIST) with caching
+- CmdTrace action audit log with statistics, advanced search, export (JSON/CSV), auto-compaction, and live tail
+- RecallVault key-value store with TTL expiry, tags, import/export (JSON/CSV), timestamped backup, statistics dashboard, and TF-IDF semantic search
+- Python test suite (1058+ tests)
 
-Still incomplete:
+**Still in progress:**
 
-- no full AI agent planner/tool loop yet (partial: think-act-observe exists)
-- no screen-recording or ML classifier layer for SeeOnDesk yet
-- no Fiona training/fine-tuning pipeline yet
-- ESP32 firmware crypto adapter is still a template, not hardware-verified
-- no ESP32 Wi-Fi provisioning, retries, reconnect behavior
-- no encrypted replies from host back to trusted devices
-- Vsee is currently a wireframe coordinate viewer, not true optical holography
-- no per-platform dependency guidance or release packaging
-
-## Validation
-
-Run all current tests:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-Or with pytest:
-
-```bash
-python -m pytest tests/ -v
-```
-
-Compile the main packages:
-
-```bash
-python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SciRetrieval SeeOnDesk TerminalAssist Voice Vsee fiona
-```
-
-Current latest known result:
-
-```text
-1018 tests in 33.03s
-OK (17 pre-existing environment failures unrelated to roadmap)
-compileall OK
-```
+- Full AI agent planner/tool loop (partial: think-act-observe exists)
+- Screen-recording/ML classifier for SeeOnDesk
+- ESP32 firmware hardware verification
+- Encrypted replies from host back to trusted devices
+- Release packaging and per-platform dependency guidance

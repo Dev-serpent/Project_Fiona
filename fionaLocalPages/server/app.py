@@ -210,6 +210,7 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_get("/api/v1/actions", actions.list_actions)
     app.router.add_post("/api/v1/actions/run", actions.run_action)
     app.router.add_get("/api/v1/actions/history", actions.action_history)
+    app.router.add_get("/api/v1/actions/stats", actions.action_stats_endpoint)
     # File-based action CRUD
     app.router.add_get("/api/v1/actions/file/get", actions.file_get)
     app.router.add_post("/api/v1/actions/file/save", actions.file_save)
@@ -263,6 +264,7 @@ def _setup_api_routes(app: web.Application) -> None:
     app.router.add_get("/api/v1/recall/search", recall.recall_search)
     app.router.add_post("/api/v1/recall/remember", recall.recall_remember)
     app.router.add_delete("/api/v1/recall/forget/{key}", recall.recall_forget)
+    app.router.add_get("/api/v1/recall/stats", recall.recall_stats_endpoint)
 
     # ── Macros ─────────────────────────────────────────────────────────
     app.router.add_get("/api/v1/macros", macros.list_macros)

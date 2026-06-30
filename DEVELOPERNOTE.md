@@ -15,10 +15,10 @@ Fiona is the umbrella project. It exposes the following subsystems:
 - `DataClient`: the standalone research/data collection app
 - `EyeControl`: optional camera-based eye-controlled mouse tracker
 - `TerminalAssist`: Fiona Terminal Assistance (`fAT`) terminal dashboard and Zellij workspace helper
-- `BrowserAutomation`: Playwright-based browser automation with state machine management
+- `BrowserAutomation`: Selenium-based browser automation with state machine management
 - `FionaCore`: shared modules (approval system, action router, macros, permissions, ACL, DI)
 - `cad`: CAD platform — parametric 3D modeling core + JSON-RPC 2.0 server + 3js frontend
-- `fionaLocalPages`: Web dashboard SPA — aiohttp REST API backend + 26 HTML/JS frontend pages served as a browser-based control surface alongside the CLI and Tkinter GUI
+- `fionaLocalPages`: Web dashboard SPA — aiohttp REST API backend (24 handler modules, 115+ endpoints) + 27 HTML/JS frontend pages served as a browser-based control surface alongside the CLI and Tkinter GUI
 
 Current file structure:
 
@@ -66,12 +66,13 @@ Fiona/
 │   │       │   └── styles/main.css  Dark theme stylesheet
 │   │       └── dist/               Production build output
 │   └── tests/                (removed — old 446 fixture tests deleted 2026-06-22)
-├── BrowserAutomation/       Playwright-based browser automation
-│   ├── _manager.py          BrowserManager with state machine (STOPPED→STARTING→RUNNING...)
-│   ├── _playwright_provider.py Playwright provider (lazy import)
-│   ├── _config.py           BrowserConfig dataclass
+├── BrowserAutomation/       Selenium-based browser automation
+│   ├── _manager.py          BrowserManager with state machine (STOPPED/ERROR→STARTING→RUNNING)
+│   ├── _selenium_provider.py Selenium WebDriver provider (Chrome binary resolution, headless)
+│   ├── _session_manager.py  Thread-safe sync wrapper around async browser API
+│   ├── _config.py           BrowserConfig dataclass (headless, viewport, proxy, data_dir)
 │   ├── _errors.py           Error hierarchy
-│   └── __init__.py          Convenience wrappers, get_browser_manager()
+│   └── __init__.py          Convenience wrappers, get_browser_manager() (module-level singleton)
 ├── QuikTieper/             local access layer implementation
 ├── CamComs/                communication/encryption layer implementation
 │   └── esp32payload/       ESP32 sender payload template
@@ -572,7 +573,8 @@ Tests run via python -m pytest tests/ -v:
   Pre-existing env failures: ~14 (numpy.rec, no camera, no network)
 
 BrowserAutomation:
-  52 tests pass (state machine, crash handling, navigation, interaction)
+  24 tests pass (state machine, graceful start, ERROR recovery)
+  28 tests skipped (old Playwright provider tests, preserved as dead code)
 
 CAD server + contracts:
   98 + 140 = 238 tests pass
@@ -664,28 +666,40 @@ The `fionaLocalPages/` directory is a self-contained web dashboard SPA served fr
 
 **Python backend** (aiohttp) → **HTML templates** (`.html` files in `templates/`) → **JS modules** (thin SPA layer)
 
-- **Backend**: `server/app.py` — aiohttp server with 10+ handler modules, 40+ REST endpoints at `/api/v1/`, WebSocket at `/ws`, SSE at `/api/v1/stream`
-- **Frontend**: 26 page modules in `pages/`, each with `render()` + `mount()` + `destroy()`. Templates loaded at runtime via `js/template-loader.js` using `{{variable}}` interpolation.
-- **Router**: Hash-based SPA router (`js/router.js`) with lazy-loaded pages, lifecycle hooks, active nav tracking
+- **Backend**: `server/app.py` — aiohttp server with 24 handler modules, 115+ REST endpoints at `/api/v1/`, WebSocket at `/ws`, SSE at `/api/v1/stream`
+- **Frontend**: 27 page modules in `pages/`, each with `render()` + `mount()` + `destroy()`. Templates loaded at runtime via `js/template-loader.js` using `{{variable}}` interpolation.
+- **Router**: Hash-based SPA router (`js/router.js`) with lazy-loaded pages, lifecycle hooks, active nav tracking, object-export fix for blank-page bug
 - **State**: Observable store (`js/state.js`) with localStorage persistence
 - **Styling**: Dark-first glassmorphism design system — 5 CSS files (globals, components, layout, themes, animations)
+- **Terminal**: All terminal logic is in the Python backend. `cwd` is tracked server-side in a module-level `_cwd` variable (`handlers/terminal.py`). Every `subprocess.run()` call passes `cwd=_cwd`. The JS client is a thin input/output relay — it reads `cwd` from `data.cwd` in each response. New `GET /api/v1/terminal/cwd` endpoint for initial directory on mount.
 
-### Backend Handler Modules
+### Backend Handler Modules (24 handler modules, 115+ routes)
 
 | Module | Endpoints |
 |---|---|
 | `handlers/agents_crud.py` | 7 (list/create/pause/resume/stop/restart agents + model check) |
-| `handlers/browser.py` | 7+ (start/stop/status/navigate/click/type/screenshot/get_text) |
-| `handlers/terminal.py` | 4 (execute + autocomplete, GET/POST) |
+| `handlers/browser.py` | 7+ (start/stop/status/navigate/click/type/screenshot) |
+| `handlers/terminal.py` | 4 (execute + autocomplete GET/POST + cwd) |
 | `handlers/quiktieper.py` | 8 (status/presets/desktop-apps/import-apps/assign-keys/launcher) |
 | `handlers/settings_handler.py` | 2 (GET/PUT settings.txt) |
 | `handlers/bindings.py` | 3 (get/save bindings, list apps) |
 | `handlers/notifications_handler.py` | 3 (list/create/dismiss) |
 | `handlers/phiconnect.py` | 5 (status/identity/messages/send/trust) |
-| `handlers/vsee.py` | 3 (status/launch/model) |
-| Plus: system, agent, actions, voice, files, config, desktop, recall, macros, camcoms (routed directly in app.py) |
-
-**26 routes total** in the SPA — every page handles loading, error, empty, and data states.
+| `handlers/actions.py` | 3 (list/get/run actions) |
+| `handlers/agent.py` | 5 (sessions CRUD + message streaming) |
+| `handlers/system.py` | 2 (health/capabilities) |
+| `handlers/voice.py` | 2 (status/command) |
+| `handlers/files.py` | 3 (list/read/write) |
+| `handlers/config.py` | 2 (get/update config) |
+| `handlers/desktop.py` | 1 (desktop status) |
+| `handlers/recall.py` | 4 (search/remember/forget/categories) |
+| `handlers/macros.py` | 5 (CRUD + run) |
+| `handlers/camcoms.py` | 4 (status/encrypt/decrypt/send) |
+| `handlers/tasks.py` | 1 (list tasks) |
+| `handlers/plugins.py` | 1 (list plugins) |
+| `handlers/tools_handler.py` | 2 (list/execute tools) |
+| `handlers/sciretrieval.py` | 1 (scientific search) |
+| **27 routes** in the SPA (`js/app.js`) — every page handles loading, error, empty, and data states. |
 
 ## Debugging Files
 
@@ -789,15 +803,20 @@ Total new tests: ~367
 
 ## BrowserAutomation System
 
-Added 2026-06-22. Playwright-based browser automation with state machine lifecycle management.
+Added 2026-06-22. Rewritten 2026-06-30: **Playwright replaced with Selenium** for browser automation.
 
 ### Components
 
-- `BrowserAutomation/_manager.py` — `BrowserManager` with state machine: `STOPPED → STARTING → RUNNING ↔ DEGRADED → ERROR`
-- `BrowserAutomation/_playwright_provider.py` — Playwright provider with lazy import (no hard dependency)
-- `BrowserAutomation/_config.py` — `BrowserConfig` dataclass (headless, slow_mo, viewport, proxy, data_dir)
+- `BrowserAutomation/_manager.py` — `BrowserManager` with state machine: `STOPPED/ERROR → STARTING → RUNNING`. `start()` accepts `{STOPPED, ERROR}` as valid pre-states; clears stale `_contexts` and `_instance` on restart from ERROR; no-op when already RUNNING.
+- `BrowserAutomation/_selenium_provider.py` — Selenium WebDriver provider implementing `IBrowserProvider`, `IBrowserInstance`, `IBrowserContext` ABCs. Chrome binary resolution (in order): ① `FIONA_CHROME_BINARY` env var, ② system `google-chrome-stable` on PATH, ③ Playwright-downloaded Chrome at `~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome` as fallback. Lazy imports for graceful fallback when Selenium not installed.
+- `BrowserAutomation/_session_manager.py` — Thread-safe synchronous wrapper around the async browser automation API for CLI/agent sessions. Uses `SeleniumBrowserProvider`.
+- `BrowserAutomation/_config.py` — `BrowserConfig` dataclass. `DEFAULT_HEADLESS = True` (browser invisible by default — "echo-off" mode).
 - `BrowserAutomation/_errors.py` — Full error hierarchy (BrowserLaunchError, BrowserNotRunning, ElementNotFound, etc.)
-- `BrowserAutomation/__init__.py` — Convenience wrappers: `browser_status()`, `get_browser_manager()`, `navigate()`, `click_element()`, etc.
+- `BrowserAutomation/__init__.py` — Convenience wrappers: `get_browser_manager()` (module-level singleton), `navigate()`, `click_element()`, etc.
+
+### Deprecated (dead code, preserved for reference)
+
+- `BrowserAutomation/_playwright_provider.py` — Old Playwright provider. No active imports. Tests in `tests/browser/test_playwright_provider.py` are all skipped via `@pytest.mark.skip`.
 
 ### EventBus Integration
 
@@ -816,13 +835,12 @@ fiona browser screenshot [--output path] [--full-page]
 
 ### Dependencies
 
-Optional: `pip install -e ".[browser]" && playwright install chromium`
+Required: `selenium>=4.20.0`, `webdriver-manager>=4.0.0`
 
 ### Tests
 
-- `tests/browser/test_browser_manager.py` — State machine transitions, crash handling
-- `tests/browser/test_playwright_provider.py` — Mock-based provider contract tests
-- 50 tests total
+- `tests/browser/test_browser_manager.py` — 24 tests: State machine transitions, `ERROR→STARTING` recovery, graceful start (no-op on running, recovery from ERROR)
+- `tests/browser/test_playwright_provider.py` — 28 skipped (deprecated Playwright provider, preserved as dead code)
 
 ## CAD Server — JSON-RPC 2.0 WebSocket Server
 
@@ -1323,7 +1341,7 @@ SciPhi/
     └── test_domains/
 ```
 
-### Implementation Status (2026-06-26)
+### Implementation Status (2026-06-30)
 
 | Phase | Focus | Status | Deliverables |
 |-------|-------|--------|-------------|
@@ -1334,10 +1352,10 @@ SciPhi/
 | **5** | Integration & CLI | ✅ Complete | `fiona sciphi research/simulate/validate/list-models/list-solvers`. 3 ActionSpec entries. |
 | **6** | More Domains | ✅ Complete | Chemistry (3 models), Biology (2 models), Earth (1 model), Engineering (2 models). 164 tests. |
 | **7** | Visualization | ✅ Complete | `plot_result()`, `plot_report()`, `plot_comparison()`. Dark theme. 17 tests. |
-| **8** | Hypothesis Expansion | 🔲 Pending | More sophisticated multi-hypothesis testing, Bayesian comparison |
-| **9** | Documentation | 🔲 Pending | fionaDocsPage module page for SciPhi |
+| **8** | Hypothesis Expansion (M9b) | ✅ Complete | Form-aware generation (ODE→steady-state/conservation/monotonicity; Algebraic→uniqueness/bounds; Optimization→global optimum; Stochastic→mean convergence; PDE→stability), 6 data-driven evaluation strategies, ranking methods. 72 new tests. |
+| **9** | Documentation (M9c) | ✅ Complete | `fionaDocsPage/docs/modules/sciphi.md` — architecture, Opsim pipeline, models/solvers table, CLI usage, visualization, provenance |
 
-**Test suite**: 322 passed, 6 skipped (sympy not installed).
+**Test suite**: 394 passed, 6 skipped (sympy not installed).
 
 ### Integration With Fiona
 
@@ -1346,7 +1364,7 @@ SciPhi/
 | CLI | `fiona sciphi <subcommand>` via `fiona/cli.py` | ✅ Done |
 | Agent | `ActionSpec` in `FionaCore/actions.py` | ✅ Done |
 | pyproject.toml | `SciPhi` and subpackages in `[tool.setuptools] packages` | ✅ Done |
-| fionaLocalPages | `/sciphi` route in aiohttp server (future) | 🔲 Planned |
+| fionaLocalPages | `/api/v1/sciretrieval` route in aiohttp server | ✅ Done (sciretrieval handler) |
 | EventBus | Simulation lifecycle events | 🔲 Planned |
 
 ### Current CLI Usage

@@ -46,7 +46,7 @@ from CamComs import (
     trusted_public_key_path,
 )
 from Agent import DEFAULT_OLLAMA_BASE_URL, OllamaClient, command_registry
-from CmdTrace import clear_trace, read_trace
+from CmdTrace import clear_trace, read_trace, trace_compact, trace_export, trace_stats, trace_tail
 from DataClient import convert_table, deep_research_topic, load_table, mine_topic
 from FionaCore import (
     ActionRouter,
@@ -61,7 +61,7 @@ from FionaCore import (
     WhisperEngine,
 )
 from QuikTieper.remote import RemoteActionRunner
-from RecallVault import clear_recall, forget, list_categories, remember, search_recall
+from RecallVault import backup_recall, clear_recall, export_recall, forget, import_recall, list_categories, recall_stats, remember, search_recall
 from SeeOnDesk import active_window_info, desktop_snapshot, discover_actions
 from TerminalAssist import (
     build_cli_preview,
@@ -337,6 +337,20 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     action_history.add_argument("--trace-path", type=Path, default=None)
     action_clear = action_subparsers.add_parser("clear", help="Clear the routed command trace log.")
     action_clear.add_argument("--trace-path", type=Path, default=None, dest="path")
+    action_stats = action_subparsers.add_parser("stats", help="Show action trace statistics.")
+    action_stats.add_argument("--trace-path", type=Path, default=None, dest="path")
+    action_export = action_subparsers.add_parser("export", help="Export action trace to file.")
+    action_export.add_argument("--format", choices=["json", "csv"], default="json")
+    action_export.add_argument("--output", type=Path, default=None)
+    action_export.add_argument("--trace-path", type=Path, default=None, dest="path")
+    action_compact = action_subparsers.add_parser("compact", help="Compact/rotate the action trace log.")
+    action_compact.add_argument("--max-size-mb", type=float, default=10.0)
+    action_compact.add_argument("--max-age-days", type=float, default=30.0)
+    action_compact.add_argument("--keep-last", type=int, default=10000)
+    action_compact.add_argument("--trace-path", type=Path, default=None, dest="path")
+    action_tail = action_subparsers.add_parser("tail", help="Follow new trace entries in real time.")
+    action_tail.add_argument("--interval", type=float, default=1.0)
+    action_tail.add_argument("--trace-path", type=Path, default=None, dest="path")
 
     voice = subparsers.add_parser("voice", help="Translate typed speech text into Fiona actions.")
     voice_subparsers = voice.add_subparsers(dest="voice_command", required=True)
@@ -394,6 +408,17 @@ Use "fiona <group> --help" for a group-specific command grid.""",
     recall_forget.add_argument("--path", type=Path, default=None)
     recall_clear = recall_subparsers.add_parser("clear", help="Clear the entire RecallVault.")
     recall_clear.add_argument("--path", type=Path, default=None)
+    recall_stats_cmd = recall_subparsers.add_parser("stats", help="Show RecallVault statistics.")
+    recall_stats_cmd.add_argument("--path", type=Path, default=None)
+    recall_export = recall_subparsers.add_parser("export", help="Export RecallVault to file.")
+    recall_export.add_argument("--format", choices=["json", "csv"], default="json")
+    recall_export.add_argument("--output", type=Path, default=None)
+    recall_export.add_argument("--path", type=Path, default=None)
+    recall_import = recall_subparsers.add_parser("import", help="Import entries into RecallVault.")
+    recall_import.add_argument("input", type=Path)
+    recall_import.add_argument("--path", type=Path, default=None)
+    recall_backup = recall_subparsers.add_parser("backup", help="Backup the RecallVault file.")
+    recall_backup.add_argument("--path", type=Path, default=None)
 
     fat = subparsers.add_parser(
         "fat",
@@ -1023,6 +1048,29 @@ def _run_action_router(args: argparse.Namespace) -> None:
         cleared = clear_trace(path)
         print(f"{'Cleared' if cleared else 'No trace file found at'} {path}")
         return
+    if args.action_command == "stats":
+        path = args.path or DEFAULT_TRACE_PATH
+        stats = trace_stats(path=path)
+        print(_pretty_json(stats))
+        return
+    if args.action_command == "export":
+        path = args.path or DEFAULT_TRACE_PATH
+        output = trace_export(path=path, output=args.output, fmt=args.format)
+        print(f"Exported to {output}")
+        return
+    if args.action_command == "compact":
+        path = args.path or DEFAULT_TRACE_PATH
+        report = trace_compact(max_size_mb=args.max_size_mb, max_age_days=args.max_age_days, keep_last=args.keep_last, path=path)
+        print(_pretty_json(report))
+        return
+    if args.action_command == "tail":
+        path = args.path or DEFAULT_TRACE_PATH
+        try:
+            for event in trace_tail(path=path, interval=args.interval):
+                print(json.dumps(event, sort_keys=True))
+        except KeyboardInterrupt:
+            print("\nStopped.")
+        return
     raise SystemExit(f"unknown action command: {args.action_command}")
 
 
@@ -1221,6 +1269,26 @@ def _run_recall(args: argparse.Namespace) -> None:
         path = args.path or DEFAULT_RECALL_PATH
         cleared = clear_recall(path)
         print(f"{'Cleared' if cleared else 'No RecallVault file found at'} {path}")
+        return
+    if args.recall_command == "stats":
+        path = args.path or DEFAULT_RECALL_PATH
+        stats = recall_stats(path=path)
+        print(_pretty_json(stats))
+        return
+    if args.recall_command == "export":
+        path = args.path or DEFAULT_RECALL_PATH
+        output = export_recall(path=path, output=args.output, fmt=args.format)
+        print(f"Exported to {output}")
+        return
+    if args.recall_command == "import":
+        path = args.path or DEFAULT_RECALL_PATH
+        count = import_recall(path=path, input=args.input)
+        print(f"Imported {count} entr{'ies' if count != 1 else 'y'} into {path}")
+        return
+    if args.recall_command == "backup":
+        path = args.path or DEFAULT_RECALL_PATH
+        backup = backup_recall(path=path)
+        print(f"Backup saved to {backup}")
         return
     raise SystemExit(f"unknown recall command: {args.recall_command}")
 

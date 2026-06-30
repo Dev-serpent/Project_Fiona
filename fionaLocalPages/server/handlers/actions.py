@@ -13,7 +13,7 @@ from typing import Any
 
 from aiohttp.web import Request, Response, json_response
 
-from CmdTrace import read_trace
+from CmdTrace import read_trace, trace_stats
 from FionaCore import ActionRouter
 
 from fionaLocalPages.server.middleware import ApiError
@@ -125,6 +125,16 @@ async def action_history(request: Request) -> Response:
         return json_response({"ok": True, "data": events})
     except Exception as exc:
         logger.exception("Failed to read action history")
+        raise ApiError(500, str(exc)) from exc
+
+
+async def action_stats_endpoint(request: Request) -> Response:
+    """GET /api/v1/actions/stats — calls CmdTrace.trace_stats()."""
+    try:
+        stats = trace_stats()
+        return json_response({"ok": True, "data": stats})
+    except Exception as exc:
+        logger.exception("Failed to read action stats")
         raise ApiError(500, str(exc)) from exc
 
 

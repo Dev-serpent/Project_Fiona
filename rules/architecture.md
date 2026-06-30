@@ -15,7 +15,7 @@ subsystem.
 | `Agent/` | LLM agent integration (Ollama), orchestration, chat, permissions, personalities | `ollama.py`, `orchestrator.py`, `orchestration.py`, `personality.py`, `command_registry.py`, `chat_handler.py`, `chat_store.py`, `permission.py`, `cancellation.py`, `query_detector.py` |
 | `FionaCore/` | Shared primitives: action router, permissions, approval, voice, macros, notifications, shell safety, verification | `actions.py`, `permissions.py`, `approval.py`, `voice.py`, `macros.py`, `notifications.py`, `shell_safety.py`, `verification.py`, `speech.py`, `acl.py`, `gui_theme.py`, `voice_engine.py`, `macro_engine.py` |
 | `cad/` | Parametric 3D modeler with JSON-RPC 2.0 server and 3js frontend | `server/_app_builder.py`, `server/_server.py`, `server/_document_manager.py`, `server/_command_executor.py`, `server/_export_manager.py`, `server/_handlers.py`, `server/_protocol.py`, `server/_websocket_handler.py`, `server/_frontend/` |
-| `BrowserAutomation/` | Playwright-based browser automation, state machine, module-level convenience API | `_manager.py`, `_playwright_provider.py`, `_config.py`, `_errors.py`, `_session_manager.py`, `__init__.py` |
+| `BrowserAutomation/` | Selenium-based browser automation, state machine, module-level convenience API | `_manager.py`, `_selenium_provider.py`, `_config.py`, `_errors.py`, `_session_manager.py`, `__init__.py` |
 | `QuikTieper/` | Local access layer: keyboard, mouse, app launcher | — |
 | `CamComs/` | Encrypted computer-to-computer communication | — |
 | `Voice/` | Wake word detection, audio feedback | — |
@@ -77,7 +77,7 @@ subsystem.
 - `fiona.tracing`: `tracer` singleton.
 
 ### Lazy Optional Dependencies
-- `BrowserAutomation` imports Playwright lazily (in `_playwright_provider.py`).
+- `BrowserAutomation` imports Selenium lazily (in `_selenium_provider.py`).
 - `Voice` backends imported lazily.
 - YAML support in `plugin_system.py` conditionally imported.
 
@@ -90,7 +90,8 @@ and `sys.modules` aliasing, plus `__getattr__` lazy loading for `ChordListener`.
 
 ```
 tests/
-├── browser/test_browser_manager.py, test_playwright_provider.py
+├── browser/test_browser_manager.py            # 24 tests (Selenium state machine)
+├── browser/test_playwright_provider.py         # 28 skipped (deprecated Playwright)
 ├── cad_server/test_command_executor.py, test_document_manager.py, test_export_manager.py, test_protocol.py
 ├── contracts/test_interface_contracts.py
 └── test_*.py  (flat file-per-subsystem, ~55 files)

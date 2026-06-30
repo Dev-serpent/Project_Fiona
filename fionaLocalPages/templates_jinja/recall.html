@@ -46,6 +46,23 @@
     white-space: nowrap;
     text-align: right;
   }
+  .recall-item__tags {
+    display: flex; gap: var(--space-1); flex-wrap: wrap;
+  }
+  .recall-item__tag {
+    font-size: 10px; padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-transparent, rgba(99, 102, 241, 0.12));
+    color: var(--accent, #6366f1);
+    white-space: nowrap;
+  }
+  .recall-item__ttl {
+    font-size: 10px; color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .recall-item__header {
+    display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+  }
   .recall-item__copy {
     display: inline-flex; align-items: center; justify-content: center;
     background: transparent; border: 1px solid var(--border);
@@ -101,6 +118,34 @@
   </div>
 </div>
 
+{% if recall_stats and recall_stats.total_entries is defined and recall_stats.total_entries > 0 %}
+<!-- Stats cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4);">
+  <div class="c-card" style="padding: var(--space-3); text-align: center;">
+    <div style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);">{{ recall_stats.total_entries }}</div>
+    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Total Entries</div>
+  </div>
+  <div class="c-card" style="padding: var(--space-3); text-align: center;">
+    <div style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);">{{ recall_stats.categories|length }}</div>
+    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Categories</div>
+  </div>
+  {% if recall_stats.per_tag and recall_stats.per_tag.keys()|list|length > 0 %}
+  <div class="c-card" style="padding: var(--space-3); text-align: center;">
+    <div style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);">{{ recall_stats.per_tag.keys()|list|length }}</div>
+    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Tags</div>
+  </div>
+  {% endif %}
+  <div class="c-card" style="padding: var(--space-3); text-align: center;">
+    <div style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);">{{ recall_stats.tagged_entries }}</div>
+    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Tagged</div>
+  </div>
+  <div class="c-card" style="padding: var(--space-3); text-align: center;">
+    <div style="font-size: var(--font-size-xs); font-weight: var(--font-weight-bold);">{{ recall_stats.total_storage_human }}</div>
+    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">Storage</div>
+  </div>
+</div>
+{% endif %}
+
 {% if recall_items %}
 <!-- Header stats -->
 <div class="recall-header-stats">
@@ -126,8 +171,22 @@
 <div class="recall-list" id="recall-list">
   {% for item in recall_items %}
   <div class="recall-item" data-recall-key="{{ item.key|default('')|lower }}" data-recall-value="{{ item.value|default('')|lower }}">
-    <div class="recall-item__key" title="{{ item.key|default('') }}">
-      {{ item.key|default('—') }}
+    <div>
+      <div class="recall-item__header">
+        <div class="recall-item__key" title="{{ item.key|default('') }}">
+          {{ item.key|default('—') }}
+        </div>
+        {% if item.tags is defined and item.tags and item.tags|length > 0 %}
+        <div class="recall-item__tags">
+          {% for tag in item.tags %}
+          <span class="recall-item__tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if item.ttl_seconds is defined and item.ttl_seconds %}
+        <span class="recall-item__ttl" title="Expires {{ item.ttl_seconds }}s after creation">TTL {{ item.ttl_seconds }}s</span>
+        {% endif %}
+      </div>
     </div>
     <div class="recall-item__value" title="{{ item.value|default('') }}">
       {% if item.value is none %}
@@ -142,7 +201,7 @@
       {% endif %}
     </div>
     <div class="recall-item__time">
-      {{ item.updated_at[:10] if item.updated_at else '—' }}
+      {{ item.created_at[:10] if item.created_at else '—' }}
     </div>
     <div>
       <button class="recall-item__copy" data-copy-key="{{ item.key|default('') }}" title="Copy key">
