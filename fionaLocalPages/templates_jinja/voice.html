@@ -12,8 +12,9 @@
   }
   .voice-status__indicator {
     width: 12px; height: 12px; border-radius: 50%;
-    background: var(--text-muted); flex-shrink: 0;
-    position: relative;
+    flex-shrink: 0; position: relative;
+    background: var(--text-muted);
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
   }
   .voice-status__indicator--active {
     background: var(--success, #22c55e);
@@ -78,6 +79,17 @@
     font-size: var(--font-size-sm); color: var(--text-secondary);
     line-height: 1.6;
   }
+  .voice-tip {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    line-height: 1.6; padding: var(--space-2) 0;
+  }
+  .voice-tip::before {
+    content: "💡 ";
+  }
+  .voice-section-title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary); margin: 0 0 var(--space-3) 0;
+  }
 </style>
 
 <div style="margin-bottom: var(--space-5);">
@@ -92,18 +104,26 @@
 
 <!-- Status Indicator -->
 <div class="voice-status">
+  {% if voice_available %}
+  <div class="voice-status__indicator voice-status__indicator--active" id="voice-indicator"></div>
+  <div>
+    <div class="voice-status__label">Voice Service</div>
+    <div class="voice-status__status" id="voice-status-text">Available</div>
+  </div>
+  {% else %}
   <div class="voice-status__indicator voice-status__indicator--inactive" id="voice-indicator"></div>
   <div>
     <div class="voice-status__label">Voice Service</div>
-    <div class="voice-status__status" id="voice-status-text">Not connected</div>
+    <div class="voice-status__status" id="voice-status-text">Not connected — setup required</div>
   </div>
+  {% endif %}
 </div>
 
 <!-- Info Cards -->
 <div class="voice-info-grid">
   <div class="c-card">
     <div class="c-card__header">
-      <span class="c-card__title">Voice Commands</span>
+      <span class="c-card__title">Available Commands</span>
     </div>
     <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
       <div class="voice-command-item">
@@ -122,19 +142,46 @@
         <span class="voice-command-item__phrase">"run macro [name]"</span>
         <span class="voice-command-item__action">Runs a saved macro</span>
       </div>
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"open files"</span>
+        <span class="voice-command-item__action">Opens File Explorer</span>
+      </div>
+      <div class="voice-command-item">
+        <span class="voice-command-item__phrase">"search for [query]"</span>
+        <span class="voice-command-item__action">Searches across Fiona</span>
+      </div>
     </div>
   </div>
 
   <div class="c-card">
     <div class="c-card__header">
-      <span class="c-card__title">Requirements</span>
+      <span class="c-card__title">Setup Guide</span>
     </div>
     <div class="c-card__body" style="padding: var(--space-4);">
+      {% if voice_available %}
+      <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin: 0 0 var(--space-3) 0; line-height: 1.6;">
+        Voice processing is available. To get started:
+      </p>
       <ul style="margin: 0; padding-left: var(--space-4); font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">
-        <li>Microphone access enabled in your browser</li>
-        <li>Speech recognition API support (Chrome, Edge, Safari)</li>
-        <li>Backend voice processing service running</li>
+        <li>Grant microphone permission when prompted by your browser</li>
+        <li>Use the microphone icon in the status bar to activate listening</li>
+        <li>Configure a push-to-talk key in Settings for quick access</li>
+        <li>Speak commands clearly in a quiet environment</li>
       </ul>
+      {% else %}
+      <p style="font-size: var(--font-size-sm); color: var(--text-secondary); margin: 0 0 var(--space-3) 0; line-height: 1.6;">
+        The voice backend is not currently loaded. To enable voice commands:
+      </p>
+      <ul style="margin: 0; padding-left: var(--space-4); font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">
+        <li>Ensure the <strong>WhisperEngine</strong> dependency is installed</li>
+        <li>Start the Fiona backend with speech recognition support</li>
+        <li>Verify microphone access is enabled for the application</li>
+        <li>Restart the server after installing required dependencies</li>
+      </ul>
+      <div class="voice-tip">
+        Run <code style="font-family: var(--font-mono); font-size: var(--font-size-xs); background: var(--surface-raised); padding: 1px 4px; border-radius: 3px;">pip install fiona-core[voice]</code> to install voice dependencies.
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -172,8 +219,25 @@
   </div>
 </div>
 
+<!-- Tips Section -->
+<div class="c-card" style="margin-bottom: var(--space-5);">
+  <div class="c-card__header">
+    <span class="c-card__title">Tips</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-4);">
+    <ul style="margin: 0; padding-left: var(--space-4); font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 2;">
+      <li>Speak at a natural pace — the system handles varied speech speeds</li>
+      <li>Use specific command phrases to avoid ambiguity</li>
+      <li>Voice commands work best with minimal background noise</li>
+      <li>Check the command list above for all supported phrases</li>
+      <li>Custom macros can be triggered by name via voice</li>
+    </ul>
+  </div>
+</div>
+
+{% if not voice_available %}
 <p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>Voice Commands</strong> — This page provides a reference for available voice commands.
-  Full voice interaction requires the backend speech recognition service to be running and connected.
+  <strong>Voice Commands</strong> — The voice backend module is not loaded. Voice command functionality requires the speech recognition service. Follow the Setup Guide to enable this feature.
 </p>
+{% endif %}
 {% endblock %}

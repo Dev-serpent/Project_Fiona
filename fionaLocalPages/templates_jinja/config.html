@@ -7,57 +7,150 @@
   .config-section { margin-bottom: var(--space-5); }
   .config-section:last-child { margin-bottom: 0; }
   .config-field {
-    display: grid; grid-template-columns: 220px 1fr;
+    display: grid; grid-template-columns: 220px 1fr 32px;
     gap: var(--space-3); padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border-subtle);
-    align-items: center;
+    align-items: start;
   }
   .config-field:last-child { border-bottom: none; }
   .config-field__key {
     font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
     color: var(--text-primary); font-family: var(--font-mono);
-    word-break: break-all;
+    word-break: break-all; padding-top: 2px;
   }
   .config-field__value {
     font-size: var(--font-size-sm); color: var(--text-secondary);
     font-family: var(--font-mono); word-break: break-all;
+    line-height: 1.5;
   }
   .config-field__value--null {
     color: var(--text-muted); font-style: italic;
   }
+  .config-field__value--json {
+    cursor: pointer;
+    white-space: pre-wrap;
+    font-size: var(--font-size-xs);
+    max-height: 2.4em;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+  }
+  .config-field__value--json.expanded {
+    max-height: none;
+  }
+  .config-field__value--collapsed-hint {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    margin-left: var(--space-1);
+  }
+  .config-field__copy {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: var(--radius-sm);
+    width: 28px; height: 28px; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .config-field__copy:hover {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+  .config-field__copy.copied {
+    background: var(--success-transparent, rgba(34, 197, 94, 0.15));
+    color: var(--success, #22c55e);
+    border-color: var(--success, #22c55e);
+  }
+  .config-field--hidden { display: none; }
   .empty-state { text-align: center; padding: 10vh var(--space-4); }
+  .config-search-wrapper {
+    position: relative; max-width: 360px;
+  }
+  .config-search-wrapper .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    display: flex; color: var(--text-muted); width: 16px; height: 16px;
+    pointer-events: none;
+  }
+  .config-search-wrapper input {
+    padding-left: 32px; height: 34px; width: 100%;
+  }
+  .config-count-badge {
+    margin-left: var(--space-2);
+  }
+  .config-json-toggle {
+    display: inline-flex; align-items: center;
+    font-size: var(--font-size-xs); color: var(--accent);
+    cursor: pointer; margin-top: var(--space-1);
+    background: none; border: none; padding: 0;
+    font-family: inherit;
+  }
+  .config-json-toggle:hover {
+    text-decoration: underline;
+  }
 </style>
 
 <div style="margin-bottom: var(--space-5);">
-  <div style="display: flex; align-items: center; justify-content: space-between;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
     <div>
       <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
         Application configuration — system and user-defined settings.
       </p>
     </div>
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      {% if configs %}
+      <span class="c-badge c-badge--sm" id="config-count-badge">
+        {{ configs|length if configs is sequence else configs|length if configs is mapping else '—' }} entr{{ 'ies' if (configs|length if configs is sequence else 0) != 1 else 'y' }}
+      </span>
+      {% endif %}
+    </div>
   </div>
 </div>
 
 {% if configs %}
-<div class="c-card config-section">
+<!-- Search / Filter -->
+{% set total_entries = configs|length if configs is sequence else (configs.items()|list|length if configs is mapping else 0) %}
+<div style="margin-bottom: var(--space-4);" id="config-search-section">
+  <div class="config-search-wrapper">
+    <span class="search-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input type="text" class="c-input" id="config-search-input"
+           placeholder="Search keys…" autocomplete="off" />
+  </div>
+</div>
+
+<div class="c-card config-section" id="config-card">
   <div class="c-card__header">
     <span class="c-card__title">Configuration</span>
   </div>
-  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);" id="config-fields-container">
     {% if configs is mapping %}
       {% for key, value in configs.items() %}
-      <div class="config-field">
+      <div class="config-field" data-config-key="{{ key|lower }}">
         <div class="config-field__key">{{ key }}</div>
         <div class="config-field__value{% if value is none %} config-field__value--null{% endif %}">
           {% if value is none %}
-            null
+            <em>null</em>
           {% elif value is boolean %}
             {{ value|lower }}
-          {% elif value is mapping or value is sequence and value is not string %}
-            {{ value|tojson }}
+          {% elif value is mapping or (value is sequence and value is not string) %}
+            {% set json_str = value|tojson %}
+            <div class="config-field__value--json" data-json-full="{{ json_str|e }}">
+              {{ json_str[:120] }}{% if json_str|length > 120 %}<span class="config-field__value--collapsed-hint">…</span>{% endif %}
+            </div>
+            {% if json_str|length > 120 %}
+            <button class="config-json-toggle" data-action="toggle-json">Expand</button>
+            {% endif %}
           {% else %}
             {{ value }}
           {% endif %}
+        </div>
+        <div>
+          <button class="config-field__copy" data-copy-value="{% if value is none %}null{% elif value is boolean %}{{ value|lower }}{% elif value is mapping or (value is sequence and value is not string) %}{{ value|tojson|e }}{% else %}{{ value }}{% endif %}" title="Copy value">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
         </div>
       </div>
       {% endfor %}
@@ -65,18 +158,31 @@
       {% for entry in configs %}
         {% if entry is mapping %}
           {% for key, value in entry.items() %}
-          <div class="config-field">
+          <div class="config-field" data-config-key="{{ key|lower }}">
             <div class="config-field__key">{{ key }}</div>
             <div class="config-field__value{% if value is none %} config-field__value--null{% endif %}">
               {% if value is none %}
-                null
+                <em>null</em>
               {% elif value is boolean %}
                 {{ value|lower }}
-              {% elif value is mapping or value is sequence and value is not string %}
-                {{ value|tojson }}
+              {% elif value is mapping or (value is sequence and value is not string) %}
+                {% set json_str = value|tojson %}
+                <div class="config-field__value--json" data-json-full="{{ json_str|e }}">
+                  {{ json_str[:120] }}{% if json_str|length > 120 %}<span class="config-field__value--collapsed-hint">…</span>{% endif %}
+                </div>
+                {% if json_str|length > 120 %}
+                <button class="config-json-toggle" data-action="toggle-json">Expand</button>
+                {% endif %}
               {% else %}
                 {{ value }}
               {% endif %}
+            </div>
+            <div>
+              <button class="config-field__copy" data-copy-value="{% if value is none %}null{% elif value is boolean %}{{ value|lower }}{% elif value is mapping or (value is sequence and value is not string) %}{{ value|tojson|e }}{% else %}{{ value }}{% endif %}" title="Copy value">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
             </div>
           </div>
           {% endfor %}
@@ -85,6 +191,7 @@
     {% endif %}
   </div>
 </div>
+
 {% else %}
 <div class="empty-state">
   <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
@@ -99,4 +206,131 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── Search / filter config keys ─────────────────────────────── */
+  var searchInput = document.getElementById('config-search-input');
+  var configFields = document.querySelectorAll('.config-field');
+  var countBadge = document.getElementById('config-count-badge');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var query = this.value.trim().toLowerCase();
+      var visibleCount = 0;
+      var totalCount = 0;
+
+      configFields.forEach(function (field) {
+        totalCount++;
+        var key = field.getAttribute('data-config-key') || '';
+        var match = !query || key.indexOf(query) !== -1;
+        field.classList.toggle('config-field--hidden', !match);
+        if (match) visibleCount++;
+      });
+
+      if (countBadge) {
+        if (query) {
+          countBadge.textContent = visibleCount + ' of ' + totalCount + ' entr' + (totalCount !== 1 ? 'ies' : 'y');
+        } else {
+          countBadge.textContent = totalCount + ' entr' + (totalCount !== 1 ? 'ies' : 'y');
+        }
+      }
+    });
+  }
+
+  /* ── Copy value to clipboard ─────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.config-field__copy');
+    if (!btn) return;
+
+    var value = btn.getAttribute('data-copy-value');
+    if (value === undefined || value === null) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function () {
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        }, 2000);
+      }).catch(function () {
+        // fallback
+        fallbackCopy(value, btn);
+      });
+    } else {
+      fallbackCopy(value, btn);
+    }
+  });
+
+  function fallbackCopy(text, btn) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(function () {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch (err) {
+      /* ignore */
+    }
+    document.body.removeChild(textarea);
+  }
+
+  /* ── Expand / collapse JSON values ───────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var toggleBtn = e.target.closest('.config-json-toggle');
+    if (!toggleBtn) return;
+
+    var valueDiv = toggleBtn.parentNode.querySelector('.config-field__value--json');
+    if (!valueDiv) return;
+
+    var isExpanded = valueDiv.classList.toggle('expanded');
+    toggleBtn.textContent = isExpanded ? 'Collapse' : 'Expand';
+
+    if (isExpanded) {
+      var fullJson = valueDiv.getAttribute('data-json-full');
+      if (fullJson) {
+        valueDiv.textContent = fullJson;
+      }
+    } else {
+      var fullJson = valueDiv.getAttribute('data-json-full');
+      if (fullJson) {
+        valueDiv.innerHTML = fullJson.slice(0, 120) + '<span class="config-field__value--collapsed-hint">…</span>';
+      }
+    }
+  });
+
+  /* ── Also toggle JSON on clicking the collapsed value itself ─── */
+  document.addEventListener('click', function (e) {
+    var valueDiv = e.target.closest('.config-field__value--json');
+    if (!valueDiv) return;
+    // Ignore clicks inside the toggle button
+    if (e.target.closest('.config-json-toggle')) return;
+
+    var parent = valueDiv.parentNode;
+    var toggleBtn = parent ? parent.querySelector('.config-json-toggle') : null;
+    if (toggleBtn) {
+      var isExpanded = valueDiv.classList.toggle('expanded');
+      toggleBtn.textContent = isExpanded ? 'Collapse' : 'Expand';
+      var fullJson = valueDiv.getAttribute('data-json-full');
+      if (fullJson) {
+        valueDiv.textContent = isExpanded ? fullJson : fullJson.slice(0, 120) + '…';
+      }
+    }
+  });
+
+})();
+</script>
 {% endblock %}

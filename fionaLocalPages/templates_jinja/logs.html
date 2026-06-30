@@ -4,95 +4,485 @@
 
 {% block content %}
 <style>
+  .logs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+  .logs-header__title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .logs-header__meta {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
   .logs-terminal {
-    height: calc(100vh - 260px); min-height: 350px;
-    border: 1px solid var(--border); border-radius: var(--radius-md);
-    overflow: hidden; position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
   }
   #logs-container {
-    width: 100%; height: 100%;
+    width: 100%;
+    height: calc(100vh - 280px);
+    min-height: 350px;
     background: #0c0d14;
     font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-    font-size: 13px; line-height: 1.6;
+    font-size: 13px;
+    line-height: 1.7;
     padding: var(--space-4);
-    box-sizing: border-box;
     overflow-y: auto;
     color: #c0caf5;
     position: relative;
+    box-sizing: border-box;
   }
-  .logs-placeholder {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; height: 100%;
-    text-align: center; gap: var(--space-3);
-    color: var(--text-muted);
+
+  /* Terminal-like log lines */
+  .log-line {
+    display: flex;
+    gap: var(--space-3);
+    padding: 1px 0;
+    line-height: 1.6;
+    transition: background var(--transition-fast);
+    border-radius: var(--radius-sm);
   }
-  .logs-placeholder__icon { opacity: 0.3; }
-  .logs-placeholder__title {
-    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+  .log-line:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .log-line__timestamp {
+    color: #565f89;
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+  }
+  .log-line__level {
+    flex-shrink: 0;
+    width: 44px;
+    text-align: center;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+  }
+  .log-line__level--info    { color: #7aa2f7; }
+  .log-line__level--warn    { color: #e0af68; }
+  .log-line__level--error   { color: #f7768e; }
+  .log-line__level--debug   { color: #565f89; }
+  .log-line__level--success { color: #9ece6a; }
+  .log-line__message {
+    color: #a9b1d6;
+    flex: 1;
+    word-break: break-word;
+  }
+
+  /* System info banner inside terminal */
+  .log-sysinfo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-6);
+    padding: var(--space-3) var(--space-3);
+    margin-bottom: var(--space-3);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+  }
+  .log-sysinfo__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .log-sysinfo__label {
+    color: #565f89;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 10px;
+  }
+  .log-sysinfo__value {
+    color: #a9b1d6;
+    font-family: var(--font-mono);
+  }
+
+  /* Empty state inside terminal */
+  .logs-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    gap: var(--space-3);
+    color: #565f89;
+  }
+  .logs-empty__icon {
+    opacity: 0.3;
+  }
+  .logs-empty__title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     color: var(--text-secondary);
   }
-  .logs-placeholder__note {
-    font-size: var(--font-size-xs); color: var(--text-muted);
-    max-width: 360px; line-height: 1.6;
+  .logs-empty__desc {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: 1.6;
   }
-  .logs-fake-line {
-    display: flex; gap: var(--space-3);
-    font-size: var(--font-size-xs); opacity: 0.4;
-    margin-top: var(--space-2);
+
+  /* Fake/placeholder log lines */
+  .log-fake {
+    display: flex;
+    gap: var(--space-3);
+    font-size: var(--font-size-xs);
+    opacity: 0.35;
+    padding: 1px 0;
   }
-  .logs-fake-line__timestamp { color: var(--text-muted); }
-  .logs-fake-line__level { color: var(--accent); }
-  .logs-fake-line__message { color: var(--text-secondary); }
+  .log-fake__timestamp { color: #565f89; }
+  .log-fake__level     { color: #7aa2f7; width: 44px; text-align: center; }
+  .log-fake__message   { color: #565f89; }
+
+  /* Status indicator */
+  .logs-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+  .logs-status__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .logs-status__dot--connected {
+    background: var(--success);
+    box-shadow: 0 0 4px var(--success);
+  }
+  .logs-status__dot--error {
+    background: var(--danger);
+    box-shadow: 0 0 4px var(--danger);
+  }
+  .logs-status__dot--loading {
+    background: var(--warning);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
+
+  .logs-scroll-btn {
+    position: absolute;
+    bottom: var(--space-3);
+    right: var(--space-3);
+    padding: var(--space-1) var(--space-3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    z-index: 5;
+  }
+  .logs-scroll-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-subtle);
+  }
+  .logs-scroll-btn--visible {
+    opacity: 1;
+  }
 </style>
 
-<div style="margin-bottom: var(--space-4);">
-  <div style="display: flex; align-items: center; justify-content: space-between;">
-    <div>
-      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
-        System log viewer — requires JavaScript and backend connection for live output.
-      </p>
-    </div>
+<div class="logs-header">
+  <div>
+    <h2 class="logs-header__title">System Logs</h2>
+    <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: var(--space-1) 0 0 0;">
+      Real-time system log viewer
+    </p>
+  </div>
+  <div style="display: flex; align-items: center; gap: var(--space-4);">
+    <span class="logs-status" id="logs-status">
+      <span class="logs-status__dot" id="logs-status-dot"></span>
+      <span id="logs-status-text">Idle</span>
+    </span>
+    <span class="logs-header__meta" id="logs-timestamp">
+      {% if metrics and metrics.get('timestamp') %}
+        {{ metrics['timestamp'] }}
+      {% endif %}
+    </span>
   </div>
 </div>
 
+{% if metrics and (metrics.get('uptime') or metrics.get('process_count') is not none or metrics.get('loadavg')) %}
+{% set has_metrics = true %}
+{% else %}
+{% set has_metrics = false %}
+{% endif %}
+
 <div class="logs-terminal">
   <div id="logs-container">
-    <div class="logs-placeholder">
-      <div class="logs-placeholder__icon">
+    {% if not has_metrics %}
+    <!-- Empty state -->
+    <div class="logs-empty" id="logs-empty-state">
+      <div class="logs-empty__icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
           <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
         </svg>
       </div>
-      <div class="logs-placeholder__title">Log viewer coming soon</div>
-      <div class="logs-placeholder__note">
-        The log viewer will display real-time system logs once the backend logging service is connected. This placeholder will be replaced with a live log stream.
+      <div class="logs-empty__title">No log data available</div>
+      <div class="logs-empty__desc">
+        System metrics and logs are not yet available. The backend logging service will populate this view with real-time entries once connected.
       </div>
       <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: var(--space-4); width: 280px;">
-        <div class="logs-fake-line">
-          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:00]</span>
-          <span class="logs-fake-line__level">INFO</span>
-          <span class="logs-fake-line__message">System initialized</span>
+        <div class="log-fake">
+          <span class="log-fake__timestamp">[--:--:--]</span>
+          <span class="log-fake__level">INFO</span>
+          <span class="log-fake__message">Waiting for data…</span>
         </div>
-        <div class="logs-fake-line">
-          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:01]</span>
-          <span class="logs-fake-line__level">INFO</span>
-          <span class="logs-fake-line__message">Backend connected</span>
-        </div>
-        <div class="logs-fake-line">
-          <span class="logs-fake-line__timestamp">[2026-06-29 12:00:02]</span>
-          <span class="logs-fake-line__level">INFO</span>
-          <span class="logs-fake-line__message">Modules loaded</span>
+        <div class="log-fake">
+          <span class="log-fake__timestamp">[--:--:--]</span>
+          <span class="log-fake__level">INFO</span>
+          <span class="log-fake__message">Backend connection required</span>
         </div>
       </div>
     </div>
+    {% else %}
+    <!-- System info banner -->
+    <div class="log-sysinfo" id="logs-sysinfo">
+      <div class="log-sysinfo__item">
+        <span class="log-sysinfo__label">Uptime</span>
+        <span class="log-sysinfo__value" id="log-uptime">{{ metrics.get('uptime', '—') }}</span>
+      </div>
+      <div class="log-sysinfo__item">
+        <span class="log-sysinfo__label">Processes</span>
+        <span class="log-sysinfo__value" id="log-procs">{{ metrics.get('process_count', '—') }}</span>
+      </div>
+      <div class="log-sysinfo__item">
+        <span class="log-sysinfo__label">CPU</span>
+        <span class="log-sysinfo__value" id="log-cpu">{{ metrics.get('cpu_percent', '—') }}%</span>
+      </div>
+      <div class="log-sysinfo__item">
+        <span class="log-sysinfo__label">Load</span>
+        <span class="log-sysinfo__value" id="log-load">
+          {%- set load = metrics.get('loadavg', []) -%}
+          {{ load[0] if load|length > 0 else '—' }} /
+          {{ load[1] if load|length > 1 else '—' }} /
+          {{ load[2] if load|length > 2 else '—' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Log entries will be rendered here by JS -->
+    <div id="log-entries">
+      <div class="log-line">
+        <span class="log-line__timestamp" id="log-init-ts">[--:--:--]</span>
+        <span class="log-line__level log-line__level--info">INFO</span>
+        <span class="log-line__message">Log viewer initialized. Polling for system events…</span>
+      </div>
+    </div>
+    {% endif %}
   </div>
+
+  <!-- Scroll-to-bottom button -->
+  <button class="logs-scroll-btn" id="logs-scroll-btn" title="Scroll to bottom">
+    &#x2193; Latest
+  </button>
 </div>
 
-<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-3); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>Logs</strong> — This page provides a container for a live log viewer. To activate: connect to the backend logging endpoint and render log entries in real time.
-</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  var container = document.getElementById('logs-container');
+  var statusDot = document.getElementById('logs-status-dot');
+  var statusText = document.getElementById('logs-status-text');
+  var timestampEl = document.getElementById('logs-timestamp');
+  var scrollBtn = document.getElementById('logs-scroll-btn');
+  var emptyState = document.getElementById('logs-empty-state');
+  var sysInfo = document.getElementById('logs-sysinfo');
+  var logEntries = document.getElementById('log-entries');
+  var uptimeEl = document.getElementById('log-uptime');
+  var procsEl = document.getElementById('log-procs');
+  var cpuEl = document.getElementById('log-cpu');
+  var loadEl = document.getElementById('log-load');
+
+  var isAtBottom = true;
+  var logBuffer = [];
+  var maxLogLines = 500;
+
+  function setStatus(state, text) {
+    if (!statusDot || !statusText) return;
+    statusDot.className = 'logs-status__dot';
+    if (state === 'connected') {
+      statusDot.classList.add('logs-status__dot--connected');
+    } else if (state === 'error') {
+      statusDot.classList.add('logs-status__dot--error');
+    } else if (state === 'loading') {
+      statusDot.classList.add('logs-status__dot--loading');
+    }
+    statusText.textContent = text || state;
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    return d.toISOString().replace('T', ' ').substring(0, 19);
+  }
+
+  function addLogLine(level, message, timestamp) {
+    if (!logEntries) return;
+    var ts = timestamp ? '[' + formatTimestamp(timestamp) + ']'
+                       : '[' + new Date().toLocaleTimeString() + ']';
+    var line = document.createElement('div');
+    line.className = 'log-line';
+
+    var tsSpan = document.createElement('span');
+    tsSpan.className = 'log-line__timestamp';
+    tsSpan.textContent = ts;
+
+    var lvlSpan = document.createElement('span');
+    lvlSpan.className = 'log-line__level log-line__level--' + (level || 'info').toLowerCase();
+    lvlSpan.textContent = (level || 'INFO').toUpperCase();
+
+    var msgSpan = document.createElement('span');
+    msgSpan.className = 'log-line__message';
+    msgSpan.textContent = message || '';
+
+    line.appendChild(tsSpan);
+    line.appendChild(lvlSpan);
+    line.appendChild(msgSpan);
+    logEntries.appendChild(line);
+
+    // Trim buffer
+    while (logEntries.children.length > maxLogLines) {
+      logEntries.removeChild(logEntries.firstChild);
+    }
+
+    if (isAtBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  function updateSysInfo(data) {
+    if (!data) return;
+    if (uptimeEl && data.uptime) uptimeEl.textContent = data.uptime;
+    if (procsEl && data.process_count != null) procsEl.textContent = data.process_count;
+    if (cpuEl && data.cpu_percent != null) cpuEl.textContent = data.cpu_percent + '%';
+    if (loadEl && data.loadavg && Array.isArray(data.loadavg)) {
+      var la = data.loadavg;
+      loadEl.textContent = (la[0] || '—') + ' / ' + (la[1] || '—') + ' / ' + (la[2] || '—');
+    }
+  }
+
+  function updateTimestamp(ts) {
+    if (timestampEl && ts) {
+      timestampEl.textContent = formatTimestamp(ts);
+    }
+  }
+
+  function showEmptyState() {
+    if (emptyState) emptyState.style.display = '';
+    if (sysInfo) sysInfo.style.display = 'none';
+    if (logEntries) logEntries.style.display = 'none';
+    setStatus('loading', 'Waiting…');
+  }
+
+  function showContent() {
+    if (emptyState) emptyState.style.display = 'none';
+    if (sysInfo) sysInfo.style.display = '';
+    if (logEntries) logEntries.style.display = '';
+  }
+
+  async function pollMetrics() {
+    setStatus('loading', 'Fetching…');
+    try {
+      var resp = await fetch('/api/v1/system/metrics');
+      if (!resp.ok) {
+        setStatus('error', 'Error ' + resp.status);
+        return;
+      }
+      var json = await resp.json();
+      if (json && json.ok && json.data) {
+        var data = json.data;
+        setStatus('connected', 'Connected');
+        showContent();
+        updateSysInfo(data);
+        updateTimestamp(data.timestamp);
+
+        // Add a periodic status log entry
+        var msg = 'CPU: ' + (data.cpu_percent != null ? data.cpu_percent + '%' : '—')
+                + ' | Mem: ' + (data.memory && data.memory.used_gb != null ? data.memory.used_gb + ' GB' : '—')
+                + ' | Processes: ' + (data.process_count != null ? data.process_count : '—');
+        addLogLine('INFO', msg, data.timestamp);
+      } else {
+        setStatus('error', 'Bad response');
+      }
+    } catch (err) {
+      setStatus('error', 'Disconnected');
+      if (!sysInfo || sysInfo.style.display !== 'none') {
+        // Only add error line if we were previously showing content
+        addLogLine('ERROR', 'Failed to fetch metrics: ' + err.message);
+      }
+    }
+  }
+
+  // Scroll detection
+  if (container) {
+    container.addEventListener('scroll', function() {
+      var threshold = 60;
+      isAtBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < threshold;
+      if (scrollBtn) {
+        scrollBtn.classList.toggle('logs-scroll-btn--visible', !isAtBottom);
+      }
+    });
+  }
+
+  if (scrollBtn) {
+    scrollBtn.addEventListener('click', function() {
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+        isAtBottom = true;
+        scrollBtn.classList.remove('logs-scroll-btn--visible');
+      }
+    });
+  }
+
+  // Initial state
+  {% if has_metrics %}
+  setStatus('connected', 'Connected');
+  // Set initial timestamp in the init log line
+  var initTs = document.getElementById('log-init-ts');
+  if (initTs) {
+    {% if metrics and metrics.get('timestamp') %}
+    initTs.textContent = '[' + formatTimestamp({{ metrics['timestamp'] }}) + ']';
+    {% else %}
+    initTs.textContent = '[' + new Date().toLocaleTimeString() + ']';
+    {% endif %}
+  }
+  {% if metrics and metrics.get('timestamp') %}
+  updateTimestamp({{ metrics['timestamp'] }});
+  {% endif %}
+  {% else %}
+  setStatus('loading', 'Waiting…');
+  {% endif %}
+
+  // Start polling
+  pollMetrics();
+  setInterval(pollMetrics, 10000);
+})();
+</script>
 {% endblock %}

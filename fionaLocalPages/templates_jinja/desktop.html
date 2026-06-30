@@ -3,41 +3,131 @@
 {% block title %}Fiona — SeeOnDesk{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: var(--space-4);">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-1);">
-    <div>
-      <h1 style="font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold); color: var(--text-primary); margin: 0;">
-        SeeOnDesk
-      </h1>
-      <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 2px 0 0 0;">
-        Desktop awareness — active window, processes, and system resources
-      </p>
-    </div>
-  </div>
-</div>
+<style>
+  .desktop-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .desktop-resource-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .desktop-resource-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .desktop-resource-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+  .desktop-app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-3);
+  }
+  .desktop-app-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
+    transition: background var(--transition-fast);
+    text-decoration: none;
+    cursor: default;
+  }
+  .desktop-app-item:hover {
+    background: var(--surface-hover);
+  }
+  .desktop-app-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+  }
+  .desktop-app-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .desktop-app-name {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .desktop-app-comment {
+    font-size: var(--font-size-xxs);
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .desktop-active-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+  @media (max-width: 900px) {
+    .desktop-two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 
-<!-- Quick Stats -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">
+<!-- Top row: Active Window + System Resources -->
+<div class="desktop-two-col">
+  <!-- Active Window Card -->
   <div class="c-card">
     <div class="c-card__header">
       <span class="c-card__title">Active Window</span>
+      {% if active_data and active_data.get('ok') and active_data.get('data') %}
+        {% set win = active_data['data'] %}
+        {% if win.get('title') %}
+        <span class="c-badge c-badge--accent c-badge--sm">Active</span>
+        {% endif %}
+      {% endif %}
     </div>
     <div class="c-card__body">
       {% if active_data and active_data.get('ok') and active_data.get('data') %}
         {% set win = active_data['data'] %}
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); font-size: var(--font-size-sm);">
+        <div class="desktop-active-grid">
+          {% if win.get('title') %}
           <div style="color: var(--text-muted);">Title</div>
           <div style="color: var(--text-primary); font-weight: var(--font-weight-medium); word-break: break-word;">
-            {{ win.get('title', '—') }}
+            {{ win['title'] }}
           </div>
+          {% endif %}
+          {% if win.get('app_name') %}
           <div style="color: var(--text-muted);">Application</div>
           <div style="color: var(--text-primary);">
-            {{ win.get('app_name', '—') }}
+            {{ win['app_name'] }}
           </div>
+          {% endif %}
+          {% if win.get('window_id') %}
           <div style="color: var(--text-muted);">Window ID</div>
           <div style="color: var(--text-primary); font-family: var(--font-mono); font-size: var(--font-size-xs); word-break: break-all;">
-            {{ win.get('window_id', '—') }}
+            {{ win['window_id'] }}
           </div>
+          {% endif %}
           {% if win.get('backend') %}
           <div style="color: var(--text-muted);">Backend</div>
           <div style="color: var(--text-primary); font-family: var(--font-mono); font-size: var(--font-size-xs);">
@@ -46,17 +136,183 @@
           {% endif %}
         </div>
       {% else %}
-        <div style="color: var(--text-muted); font-style: italic; font-size: var(--font-size-sm);">
-          Unable to fetch active window information.
+        <div class="empty-state" style="padding: var(--space-6) var(--space-2);">
+          <div class="empty-state__description">No active window data available.</div>
         </div>
       {% endif %}
     </div>
   </div>
+
+  <!-- System Resources Card -->
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">System Resources</span>
+    </div>
+    <div class="c-card__body">
+      {% set res_cpu = resources.get('cpu', {}) %}
+      {% set res_mem = resources.get('memory', {}) %}
+      {% set res_disk = resources.get('disk', {}) %}
+
+      <div class="desktop-resource-section">
+        <!-- CPU -->
+        <div class="desktop-resource-item">
+          <div class="desktop-resource-header">
+            <span>CPU</span>
+            <span>{{ res_cpu.get('percent', '—') }}%</span>
+          </div>
+          <div class="c-progress c-progress--sm">
+            <div class="c-progress__bar {% if res_cpu.get('percent', 0) > 80 %}c-progress__bar--danger{% elif res_cpu.get('percent', 0) > 60 %}c-progress__bar--warning{% else %}c-progress__bar--success{% endif %}"
+                 style="width: {{ res_cpu.get('percent', 0) }}%;">
+            </div>
+          </div>
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>{{ res_cpu.get('count', '—') }} cores</span>
+            {% set loadavg = res_cpu.get('loadavg', []) %}
+            {% if loadavg and loadavg|length >= 3 %}
+            <span>Load: {{ loadavg[0] }} / {{ loadavg[1] }} / {{ loadavg[2] }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Memory -->
+        <div class="desktop-resource-item">
+          <div class="desktop-resource-header">
+            <span>Memory</span>
+            <span>
+              {% if res_mem.get('used_gb') is not none and res_mem.get('total_gb') is not none %}
+                {{ "%.1f"|format(res_mem['used_gb']) }} / {{ res_mem['total_gb'] }} GB
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="c-progress c-progress--sm">
+            <div class="c-progress__bar {% if res_mem.get('percent_used', 0) > 80 %}c-progress__bar--danger{% elif res_mem.get('percent_used', 0) > 60 %}c-progress__bar--warning{% else %}c-progress__bar--success{% endif %}"
+                 style="width: {{ res_mem.get('percent_used', 0) }}%;">
+            </div>
+          </div>
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted);">
+            {{ res_mem.get('percent_used', '—') }}% used
+          </div>
+        </div>
+
+        <!-- Disk -->
+        <div class="desktop-resource-item">
+          <div class="desktop-resource-header">
+            <span>Disk</span>
+            <span>
+              {% if res_disk.get('used_gb') is not none and res_disk.get('total_gb') is not none %}
+                {{ res_disk['used_gb'] }} / {{ res_disk['total_gb'] }} GB
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="c-progress c-progress--sm">
+            <div class="c-progress__bar {% if res_disk.get('percent_used', 0) > 80 %}c-progress__bar--danger{% elif res_disk.get('percent_used', 0) > 60 %}c-progress__bar--warning{% else %}c-progress__bar--success{% endif %}"
+                 style="width: {{ res_disk.get('percent_used', 0) }}%;">
+            </div>
+          </div>
+          <div style="font-size: var(--font-size-xxs); color: var(--text-muted);">
+            {{ res_disk.get('percent_used', '—') }}% used
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Note for developers -->
-<p style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-4); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>SeeOnDesk</strong> — This page shows a server-rendered view of desktop awareness data.
-  More features (processes, applications, workspace management, polling) will be added in subsequent updates.
-</p>
+<!-- Bottom row: Applications + Processes -->
+<div class="desktop-two-col">
+  <!-- Installed Applications -->
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Installed Applications</span>
+      {% if applications %}
+      <span class="c-badge c-badge--accent c-badge--sm">{{ applications|length }}</span>
+      {% endif %}
+    </div>
+    <div class="c-card__body">
+      {% if applications %}
+      <div class="desktop-app-grid">
+        {% for app in applications[:24] %}
+        <div class="desktop-app-item" title="{{ app.get('comment', app.get('name', '')) }}">
+          <div class="desktop-app-icon">
+            {{ app.get('name', '?')[0] if app.get('name') else '?' }}
+          </div>
+          <div class="desktop-app-info">
+            <div class="desktop-app-name">{{ app.get('name', '—') }}</div>
+            {% if app.get('comment') %}
+            <div class="desktop-app-comment">{{ app['comment'] }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding: var(--space-6) var(--space-2);">
+        <div class="empty-state__description">No installed applications data available.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Running Processes -->
+  <div class="c-card">
+    <div class="c-card__header">
+      <span class="c-card__title">Running Processes</span>
+      {% if processes %}
+      <span class="c-badge c-badge--accent c-badge--sm">Top {{ processes[:10]|length }}</span>
+      {% endif %}
+    </div>
+    <div class="c-card__body" style="padding: 0;">
+      {% if processes %}
+      <div class="c-table-wrapper">
+        <table class="c-table">
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>Name</th>
+              <th>CPU %</th>
+              <th>Mem %</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for proc in processes[:10] %}
+            <tr>
+              <td style="font-family: var(--font-mono); font-size: var(--font-size-xs);">{{ proc.get('pid', '—') }}</td>
+              <td style="font-weight: var(--font-weight-medium); color: var(--text-primary);">
+                {{ proc.get('name', '—') }}
+              </td>
+              <td>{{ proc.get('cpu_percent', '—') }}</td>
+              <td>{{ proc.get('memory_percent', '—') }}</td>
+              <td>
+                {% set status = proc.get('status', '') %}
+                {% if status %}
+                <span class="c-badge c-badge--sm
+                  {%- if status == 'R' %} c-badge--success
+                  {%- elif status == 'S' %} c-badge--info
+                  {%- elif status == 'D' %} c-badge--warning
+                  {%- elif status == 'Z' %} c-badge--danger
+                  {%- else %} c-badge--default{% endif %}">
+                  {{ status }}
+                </span>
+                {% else %}
+                —
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding: var(--space-6) var(--space-2);">
+        <div class="empty-state__description">No process data available.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

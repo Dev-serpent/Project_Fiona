@@ -55,20 +55,38 @@ def register_routes(app: flask.Flask) -> None:
         return {}
 
     def _dashboard_data() -> dict:
+        out = {"data": {}, "metrics": {}, "notifications_summary": {}}
         try:
-            from fionaLocalPages.server.handlers.system import system_status
-            return {"data": _call_handler(system_status, {})}
+            from fionaLocalPages.server.handlers.system import system_status, system_metrics
+            status = _call_handler(system_status, {})
+            if isinstance(status, dict) and status.get("ok"): out["data"] = status.get("data", {})
+            metrics = _call_handler(system_metrics, {})
+            if isinstance(metrics, dict) and metrics.get("ok"): out["metrics"] = metrics.get("data", {})
         except Exception as e:
             logger.warning("Dashboard data unavailable: %s", e)
-            return {"data": {}}
+        try:
+            from fionaLocalPages.server.handlers.notifications_handler import list_notifications
+            n = _call_handler(list_notifications, {})
+            if isinstance(n, dict) and n.get("ok"): out["notifications_summary"] = n.get("data", {})
+        except Exception:
+            pass
+        return out
 
     def _desktop_data() -> dict:
+        data = {"active_data": {}, "resources": {}, "applications": [], "processes": []}
         try:
-            from fionaLocalPages.server.handlers.desktop import desktop_active
-            return {"active_data": _call_handler(desktop_active, {})}
+            from fionaLocalPages.server.handlers.desktop import desktop_active, desktop_system_resources, desktop_applications, desktop_processes
+            act = _call_handler(desktop_active, {})
+            if isinstance(act, dict): data["active_data"] = act
+            res = _call_handler(desktop_system_resources, {})
+            if isinstance(res, dict) and res.get("ok"): data["resources"] = res.get("data", {})
+            apps = _call_handler(desktop_applications, {})
+            if isinstance(apps, dict) and apps.get("ok"): data["applications"] = apps.get("data", [])
+            procs = _call_handler(desktop_processes, {})
+            if isinstance(procs, dict) and procs.get("ok"): data["processes"] = procs.get("data", [])
         except Exception as e:
             logger.warning("Desktop data unavailable: %s", e)
-            return {"active_data": {}}
+        return data
 
     def _tasks_data() -> dict:
         try:
@@ -170,7 +188,13 @@ def register_routes(app: flask.Flask) -> None:
         return {"bindings": []}
 
     def _voice_data() -> dict:
-        return {}  # Static info page for now
+        try:
+            from fionaLocalPages.server.handlers.voice import voice_transcribe
+            # Just check if handler loads — voice is a POST-only feature
+            return {"voice_available": True}
+        except Exception as e:
+            logger.warning("Voice data unavailable: %s", e)
+            return {"voice_available": False}
 
     def _recall_data() -> dict:
         try:
@@ -183,13 +207,34 @@ def register_routes(app: flask.Flask) -> None:
         return {"recall_items": []}
 
     def _logs_data() -> dict:
-        return {}  # Static placeholder - data handled by JS/fetch
+        try:
+            from fionaLocalPages.server.handlers.system import system_metrics
+            result = _call_handler(system_metrics, {})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"metrics": result.get("data", {})}
+        except Exception as e:
+            logger.warning("Logs data unavailable: %s", e)
+        return {"metrics": {}}
 
     def _camcoms_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.camcoms import camcoms_status
+            result = _call_handler(camcoms_status, {})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"camcoms_status": result.get("data", {})}
+        except Exception as e:
+            logger.warning("CamComs data unavailable: %s", e)
+        return {"camcoms_status": {}}
 
     def _workspace_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.desktop import desktop_workspaces
+            result = _call_handler(desktop_workspaces, {})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"workspaces": result.get("data", [])}
+        except Exception as e:
+            logger.warning("Workspace data unavailable: %s", e)
+        return {"workspaces": []}
 
     def _plugins_data() -> dict:
         try:
@@ -212,22 +257,70 @@ def register_routes(app: flask.Flask) -> None:
         return {"configs": []}
 
     def _performance_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.desktop import desktop_system_resources
+            result = _call_handler(desktop_system_resources, {})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"resources": result.get("data", {})}
+        except Exception as e:
+            logger.warning("Performance data unavailable: %s", e)
+        return {"resources": {}}
 
     def _diagnostics_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.system import system_status, system_metrics
+            status = _call_handler(system_status, {})
+            metrics = _call_handler(system_metrics, {})
+            data = {}
+            if isinstance(status, dict) and status.get("ok"):
+                data["status"] = status.get("data", {})
+            if isinstance(metrics, dict) and metrics.get("ok"):
+                data["metrics"] = metrics.get("data", {})
+            return data
+        except Exception as e:
+            logger.warning("Diagnostics data unavailable: %s", e)
+        return {"status": {}, "metrics": {}}
 
     def _devtools_data() -> dict:
-        return {}  # Static placeholder
+        return {}  # Developer tools info page
 
     def _phiconnect_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.phiconnect import phiconnect_status
+            result = _call_handler(phiconnect_status, {})
+            out = {}
+            if isinstance(result, dict) and result.get("ok"):
+                out["phiconnect_status"] = result.get("data", {})
+            from fionaLocalPages.server.handlers.phiconnect import phiconnect_peers_list
+            peers = _call_handler(phiconnect_peers_list, {})
+            if isinstance(peers, dict) and peers.get("ok"):
+                out["peers"] = peers.get("data", [])
+            else:
+                out["peers"] = []
+            return out
+        except Exception as e:
+            logger.warning("PhiConnect data unavailable: %s", e)
+        return {"phiconnect_status": {}, "peers": []}
 
     def _browser_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.browser import browser_status_handler
+            result = _call_handler(browser_status_handler, {})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"browser_status": result.get("data", {})}
+        except Exception as e:
+            logger.warning("Browser data unavailable: %s", e)
+        return {"browser_status": {"state": "unknown", "running": False}}
 
     def _files_data() -> dict:
-        return {}  # Static placeholder
+        try:
+            from fionaLocalPages.server.handlers.files import file_list
+            result = _call_handler(file_list, {"path": "."})
+            if isinstance(result, dict) and result.get("ok"):
+                return {"files": result.get("data", []), "current_path": "."}
+        except Exception as e:
+            logger.warning("Files data unavailable: %s", e)
+        return {"files": [], "current_path": "."}
 
     def _agent_status_data() -> dict:
         return {}  # Requires agent ID from URL

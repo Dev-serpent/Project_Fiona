@@ -5,141 +5,436 @@
 {% block content %}
 <style>
   .perf-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--space-4); margin-bottom: var(--space-5);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
   }
-  .perf-metric {
-    text-align: center; padding: var(--space-4);
+  .perf-resource-card {
+    padding: var(--space-4);
   }
-  .perf-metric__value {
-    font-size: var(--font-size-xxl); font-weight: var(--font-weight-bold);
-    color: var(--text-primary); font-family: var(--font-mono);
-    line-height: 1.2;
-  }
-  .perf-metric__label {
-    font-size: var(--font-size-xs); color: var(--text-muted);
-    margin-top: var(--space-1); text-transform: uppercase;
+  .perf-resource-card__label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: var(--space-2);
   }
-  .perf-metric__unit {
-    font-size: var(--font-size-sm); color: var(--text-muted);
+  .perf-resource-card__value {
+    font-size: var(--font-size-xxl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    line-height: 1.2;
+    margin-bottom: var(--space-3);
+  }
+  .perf-resource-card__value .unit {
+    font-size: var(--font-size-sm);
     font-weight: var(--font-weight-normal);
+    color: var(--text-muted);
   }
-  .perf-placeholder {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; padding: var(--space-8) var(--space-4);
-    text-align: center; gap: var(--space-3);
+  .perf-bar {
+    height: 6px;
+    background: var(--surface-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--space-3);
   }
-  .perf-placeholder__icon { color: var(--text-muted); opacity: 0.3; }
-  .perf-placeholder__title {
-    font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+  .perf-bar__fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s ease;
+  }
+  .perf-bar__fill--ok { background: var(--success); }
+  .perf-bar__fill--warn { background: var(--warning); }
+  .perf-bar__fill--danger { background: var(--danger); }
+  .perf-bar__fill--accent { background: var(--accent); }
+  .perf-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+  .perf-details__label {
+    color: var(--text-muted);
+  }
+  .perf-details__value {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    text-align: right;
+  }
+  .perf-details__value--full {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .perf-loadavg {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+  }
+  .perf-loadavg-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .perf-loadavg-item__value {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+  .perf-loadavg-item__label {
+    font-size: var(--font-size-xxs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .perf-last-updated {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: var(--space-1);
+  }
+  .perf-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-10) var(--space-4);
+    text-align: center;
+    gap: var(--space-3);
+  }
+  .perf-empty__icon {
+    color: var(--text-muted);
+    opacity: 0.3;
+  }
+  .perf-empty__title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
     color: var(--text-secondary);
   }
-  .perf-placeholder__desc {
-    font-size: var(--font-size-xs); color: var(--text-muted);
-    max-width: 400px; line-height: 1.6;
+  .perf-empty__desc {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: 1.6;
   }
-  .perf-section { margin-bottom: var(--space-5); }
-  .perf-chart-placeholder {
-    height: 200px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface-raised);
-    border: 1px dashed var(--border-subtle);
+  .perf-error-banner {
+    padding: var(--space-3) var(--space-4);
+    background: var(--danger-muted);
+    border: 1px solid var(--danger);
     border-radius: var(--radius-md);
-    color: var(--text-muted); font-size: var(--font-size-sm);
+    color: var(--danger);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-4);
+    display: none;
   }
 </style>
 
-<div style="margin-bottom: var(--space-5);">
+<div style="margin-bottom: var(--space-4);">
   <div style="display: flex; align-items: center; justify-content: space-between;">
     <div>
       <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin: 0;">
-        System performance monitoring — real-time metrics and resource usage.
+        System resource monitoring — CPU, memory, and disk usage.
       </p>
     </div>
-  </div>
-</div>
-
-<!-- Quick Metrics -->
-<div class="perf-grid">
-  <div class="c-card">
-    <div class="perf-metric">
-      <div class="perf-metric__value">— <span class="perf-metric__unit">%</span></div>
-      <div class="perf-metric__label">CPU Usage</div>
-    </div>
-  </div>
-
-  <div class="c-card">
-    <div class="perf-metric">
-      <div class="perf-metric__value">— <span class="perf-metric__unit">MB</span></div>
-      <div class="perf-metric__label">Memory</div>
-    </div>
-  </div>
-
-  <div class="c-card">
-    <div class="perf-metric">
-      <div class="perf-metric__value">— <span class="perf-metric__unit">%</span></div>
-      <div class="perf-metric__label">Disk Usage</div>
-    </div>
-  </div>
-
-  <div class="c-card">
-    <div class="perf-metric">
-      <div class="perf-metric__value">— <span class="perf-metric__unit">ms</span></div>
-      <div class="perf-metric__label">Latency</div>
+    <div>
+      <span class="perf-last-updated" id="perf-last-updated"></span>
     </div>
   </div>
 </div>
 
-<!-- Charts Section -->
-<div class="c-card perf-section">
-  <div class="c-card__header">
-    <span class="c-card__title">CPU Load</span>
+<div id="perf-error" class="perf-error-banner"></div>
+
+<!-- System Resources -->
+<div class="perf-grid" id="perf-resources">
+  <!-- CPU Card -->
+  <div class="c-card perf-resource-card" id="perf-card-cpu">
+    <div class="perf-resource-card__label">CPU</div>
+    <div class="perf-resource-card__value" id="perf-cpu-value">
+      {% if resources and resources.get('cpu') %}
+        {{ resources['cpu'].get('percent', '—') }}<span class="unit">%</span>
+      {% else %}
+        —<span class="unit">%</span>
+      {% endif %}
+    </div>
+    <div class="perf-bar">
+      <div class="perf-bar__fill perf-bar__fill--accent"
+           id="perf-cpu-bar"
+           style="width: {% if resources and resources.get('cpu') %}{{ resources['cpu'].get('percent', 0) }}{% else %}0{% endif %}%;"></div>
+    </div>
+    <div class="perf-details">
+      <span class="perf-details__label">Cores</span>
+      <span class="perf-details__value" id="perf-cpu-count">
+        {% if resources and resources.get('cpu') %}
+          {{ resources['cpu'].get('count', '—') }}
+        {% else %}
+          —
+        {% endif %}
+      </span>
+    </div>
+    {% set loadavg = resources.get('cpu', {}).get('loadavg', []) if resources else [] %}
+    <div class="perf-loadavg" id="perf-loadavg">
+      <div class="perf-loadavg-item">
+        <span class="perf-loadavg-item__value" id="perf-load-1">
+          {{ loadavg[0] if loadavg|length > 0 else '—' }}
+        </span>
+        <span class="perf-loadavg-item__label">1m</span>
+      </div>
+      <div class="perf-loadavg-item">
+        <span class="perf-loadavg-item__value" id="perf-load-5">
+          {{ loadavg[1] if loadavg|length > 1 else '—' }}
+        </span>
+        <span class="perf-loadavg-item__label">5m</span>
+      </div>
+      <div class="perf-loadavg-item">
+        <span class="perf-loadavg-item__value" id="perf-load-15">
+          {{ loadavg[2] if loadavg|length > 2 else '—' }}
+        </span>
+        <span class="perf-loadavg-item__label">15m</span>
+      </div>
+    </div>
   </div>
-  <div class="c-card__body" style="padding: var(--space-4);">
-    <div class="perf-chart-placeholder">
-      <span style="display: flex; align-items: center; gap: var(--space-2);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Chart placeholder
+
+  <!-- Memory Card -->
+  <div class="c-card perf-resource-card" id="perf-card-memory">
+    <div class="perf-resource-card__label">Memory</div>
+    {% set mem = resources.get('memory', {}) if resources else {} %}
+    <div class="perf-resource-card__value" id="perf-mem-value">
+      {% if mem and 'used_gb' in mem %}
+        {{ mem['used_gb'] }}<span class="unit"> GB</span>
+        <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); color: var(--text-muted);">
+          / {{ mem.get('total_gb', '?') }} GB
+        </span>
+      {% else %}
+        —<span class="unit"> GB</span>
+      {% endif %}
+    </div>
+    <div class="perf-bar">
+      <div class="perf-bar__fill"
+           id="perf-mem-bar"
+           style="width: {% if mem and 'percent_used' in mem %}{{ mem['percent_used'] }}{% else %}0{% endif %}%;
+                  background: {% if mem and mem.get('percent_used', 0) > 90 %}var(--danger){% elif mem and mem.get('percent_used', 0) > 75 %}var(--warning){% else %}var(--info){% endif %};"></div>
+    </div>
+    <div class="perf-details">
+      <span class="perf-details__label">Used</span>
+      <span class="perf-details__value" id="perf-mem-used">
+        {% if mem and 'used_gb' in mem %}{{ mem['used_gb'] }} GB{% else %}—{% endif %}
+      </span>
+      <span class="perf-details__label">Available</span>
+      <span class="perf-details__value" id="perf-mem-avail">
+        {% if mem and 'available_gb' in mem %}{{ mem['available_gb'] }} GB{% else %}—{% endif %}
+      </span>
+      <span class="perf-details__label">Usage</span>
+      <span class="perf-details__value" id="perf-mem-pct">
+        {% if mem and 'percent_used' in mem %}{{ mem['percent_used'] }}%{% else %}—{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Disk Card -->
+  <div class="c-card perf-resource-card" id="perf-card-disk">
+    <div class="perf-resource-card__label">Disk</div>
+    {% set disk = resources.get('disk', {}) if resources else {} %}
+    <div class="perf-resource-card__value" id="perf-disk-value">
+      {% if disk and 'used_gb' in disk %}
+        {{ disk['used_gb'] }}<span class="unit"> GB</span>
+        <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); color: var(--text-muted);">
+          / {{ disk.get('total_gb', '?') }} GB
+        </span>
+      {% else %}
+        —<span class="unit"> GB</span>
+      {% endif %}
+    </div>
+    <div class="perf-bar">
+      <div class="perf-bar__fill"
+           id="perf-disk-bar"
+           style="width: {% if disk and 'percent_used' in disk %}{{ disk['percent_used'] }}{% else %}0{% endif %}%;
+                  background: {% if disk and disk.get('percent_used', 0) > 90 %}var(--danger){% elif disk and disk.get('percent_used', 0) > 75 %}var(--warning){% else %}var(--success){% endif %};"></div>
+    </div>
+    <div class="perf-details">
+      <span class="perf-details__label">Used</span>
+      <span class="perf-details__value" id="perf-disk-used">
+        {% if disk and 'used_gb' in disk %}{{ disk['used_gb'] }} GB{% else %}—{% endif %}
+      </span>
+      <span class="perf-details__label">Free</span>
+      <span class="perf-details__value" id="perf-disk-free">
+        {% if disk and 'free_gb' in disk %}{{ disk['free_gb'] }} GB{% else %}—{% endif %}
+      </span>
+      <span class="perf-details__label">Usage</span>
+      <span class="perf-details__value" id="perf-disk-pct">
+        {% if disk and 'percent_used' in disk %}{{ disk['percent_used'] }}%{% else %}—{% endif %}
       </span>
     </div>
   </div>
 </div>
 
-<div class="c-card perf-section">
-  <div class="c-card__header">
-    <span class="c-card__title">Memory Usage</span>
-  </div>
-  <div class="c-card__body" style="padding: var(--space-4);">
-    <div class="perf-chart-placeholder">
-      <span style="display: flex; align-items: center; gap: var(--space-2);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Chart placeholder
-      </span>
+{% if not resources or not resources.get('cpu') and not resources.get('memory') and not resources.get('disk') %}
+<div class="c-card">
+  <div class="perf-empty">
+    <div class="perf-empty__icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </div>
+    <div class="perf-empty__title">Resource data unavailable</div>
+    <div class="perf-empty__desc">
+      System metrics could not be fetched. The backend monitoring service may be unavailable.
+      Data will update automatically once the connection is restored.
     </div>
   </div>
 </div>
+{% endif %}
 
-<div class="c-card perf-section">
-  <div class="c-card__header">
-    <span class="c-card__title">System metrics coming soon</span>
-  </div>
-  <div class="c-card__body" style="padding: var(--space-4);">
-    <div class="perf-placeholder">
-      <div class="perf-placeholder__icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-      </div>
-      <div class="perf-placeholder__title">Real-time charts coming soon</div>
-      <div class="perf-placeholder__desc">
-        Performance charts will display real-time CPU, memory, disk, and network metrics once the backend monitoring service is connected. Charts will update automatically with streaming data.
-      </div>
-    </div>
-  </div>
-</div>
+{% endblock %}
 
-<p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>Performance</strong> — This page provides a placeholder for system performance monitoring. Full functionality requires the backend metrics service and a charting library (e.g., Chart.js) to be connected.
-</p>
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  const errorEl = document.getElementById('perf-error');
+  const lastUpdatedEl = document.getElementById('perf-last-updated');
+
+  const cpuValue   = document.getElementById('perf-cpu-value');
+  const cpuBar     = document.getElementById('perf-cpu-bar');
+  const cpuCount   = document.getElementById('perf-cpu-count');
+  const load1      = document.getElementById('perf-load-1');
+  const load5      = document.getElementById('perf-load-5');
+  const load15     = document.getElementById('perf-load-15');
+
+  const memValue   = document.getElementById('perf-mem-value');
+  const memBar     = document.getElementById('perf-mem-bar');
+  const memUsed    = document.getElementById('perf-mem-used');
+  const memAvail   = document.getElementById('perf-mem-avail');
+  const memPct     = document.getElementById('perf-mem-pct');
+
+  const diskValue  = document.getElementById('perf-disk-value');
+  const diskBar    = document.getElementById('perf-disk-bar');
+  const diskUsed   = document.getElementById('perf-disk-used');
+  const diskFree   = document.getElementById('perf-disk-free');
+  const diskPct    = document.getElementById('perf-disk-pct');
+
+  function showError(msg) {
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+  }
+
+  function hideError() {
+    if (errorEl) {
+      errorEl.style.display = 'none';
+    }
+  }
+
+  function updateTimestamp() {
+    if (lastUpdatedEl) {
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      lastUpdatedEl.textContent = 'Last updated: ' + time;
+    }
+  }
+
+  function setBarColor(bar, pct, okColor, warnColor, dangerColor) {
+    if (!bar) return;
+    if (pct > 90) {
+      bar.style.background = dangerColor || 'var(--danger)';
+    } else if (pct > 75) {
+      bar.style.background = warnColor || 'var(--warning)';
+    } else {
+      bar.style.background = okColor || 'var(--accent)';
+    }
+  }
+
+  function updateCPU(data) {
+    if (!data || data.error) return;
+    const pct = data.percent != null ? data.percent : null;
+    const count = data.count != null ? data.count : null;
+    const loadavg = data.loadavg;
+
+    if (cpuValue && pct !== null) {
+      cpuValue.innerHTML = pct + '<span class="unit">%</span>';
+    }
+    if (cpuBar && pct !== null) {
+      cpuBar.style.width = pct + '%';
+    }
+    if (cpuCount && count !== null) {
+      cpuCount.textContent = count;
+    }
+    if (loadavg && Array.isArray(loadavg)) {
+      if (load1) load1.textContent = loadavg[0] || '—';
+      if (load5) load5.textContent = loadavg[1] || '—';
+      if (load15) load15.textContent = loadavg[2] || '—';
+    }
+  }
+
+  function updateMemory(data) {
+    if (!data || data.error) return;
+    const usedGb = data.used_gb;
+    const totalGb = data.total_gb;
+    const availGb = data.available_gb;
+    const pct = data.percent_used;
+
+    if (memValue && usedGb != null && totalGb != null) {
+      memValue.innerHTML = usedGb + '<span class="unit"> GB</span>' +
+        ' <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); color: var(--text-muted);">/ ' + totalGb + ' GB</span>';
+    }
+    if (memBar && pct != null) {
+      memBar.style.width = pct + '%';
+      setBarColor(memBar, pct, 'var(--info)', 'var(--warning)', 'var(--danger)');
+    }
+    if (memUsed && usedGb != null) memUsed.textContent = usedGb + ' GB';
+    if (memAvail && availGb != null) memAvail.textContent = availGb + ' GB';
+    if (memPct && pct != null) memPct.textContent = pct + '%';
+  }
+
+  function updateDisk(data) {
+    if (!data || data.error) return;
+    const usedGb = data.used_gb;
+    const totalGb = data.total_gb;
+    const freeGb = data.free_gb;
+    const pct = data.percent_used;
+
+    if (diskValue && usedGb != null && totalGb != null) {
+      diskValue.innerHTML = usedGb + '<span class="unit"> GB</span>' +
+        ' <span style="font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); color: var(--text-muted);">/ ' + totalGb + ' GB</span>';
+    }
+    if (diskBar && pct != null) {
+      diskBar.style.width = pct + '%';
+      setBarColor(diskBar, pct, 'var(--success)', 'var(--warning)', 'var(--danger)');
+    }
+    if (diskUsed && usedGb != null) diskUsed.textContent = usedGb + ' GB';
+    if (diskFree && freeGb != null) diskFree.textContent = freeGb + ' GB';
+    if (diskPct && pct != null) diskPct.textContent = pct + '%';
+  }
+
+  async function pollResources() {
+    try {
+      const resp = await fetch('/api/v1/desktop/system-resources');
+      if (!resp.ok) {
+        showError('API returned status ' + resp.status);
+        return;
+      }
+      const json = await resp.json();
+      hideError();
+
+      if (json && json.ok && json.data) {
+        const data = json.data;
+        updateCPU(data.cpu);
+        updateMemory(data.memory);
+        updateDisk(data.disk);
+        updateTimestamp();
+      }
+    } catch (err) {
+      showError('Failed to fetch system resources: ' + err.message);
+    }
+  }
+
+  // Initial timestamp
+  updateTimestamp();
+
+  // Poll every 10 seconds
+  setInterval(pollResources, 10000);
+})();
+</script>
 {% endblock %}

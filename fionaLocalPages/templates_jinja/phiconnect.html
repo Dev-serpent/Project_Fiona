@@ -16,11 +16,15 @@
   }
   .phiconnect-status__dot {
     width: 12px; height: 12px; border-radius: 50%;
-    background: var(--text-muted); flex-shrink: 0;
+    flex-shrink: 0;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
   }
-  .phiconnect-status__dot--connected {
+  .phiconnect-status__dot--ready {
     background: var(--success, #22c55e);
     box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  }
+  .phiconnect-status__dot--not-ready {
+    background: var(--text-muted);
   }
   .phiconnect-status__label {
     font-size: var(--font-size-sm); color: var(--text-secondary);
@@ -55,6 +59,44 @@
   .phiconnect-info-row__value {
     color: var(--text-primary); font-weight: var(--font-weight-medium);
     font-family: var(--font-mono); font-size: var(--font-size-xs);
+    word-break: break-all;
+  }
+  .phiconnect-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-5);
+  }
+  .phiconnect-table {
+    width: 100%; border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+  .phiconnect-table th {
+    text-align: left; padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    color: var(--text-secondary); font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-xs); text-transform: uppercase;
+    letter-spacing: 0.5px; white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .phiconnect-table td {
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+  }
+  .phiconnect-table tr:last-child td { border-bottom: none; }
+  .phiconnect-table tr:hover td { background: var(--surface-raised); }
+  .phiconnect-table__id {
+    font-weight: var(--font-weight-medium); white-space: nowrap;
+  }
+  .phiconnect-table__key {
+    font-family: var(--font-mono); font-size: var(--font-size-xs);
+    color: var(--text-muted);
+  }
+  .phiconnect-table__date {
+    font-size: var(--font-size-xs); color: var(--text-muted);
+    white-space: nowrap;
   }
 </style>
 
@@ -68,12 +110,64 @@
   </div>
 </div>
 
+{% set ps = phiconnect_status|default({}) %}
+{% set is_ready = ps.get('ready', False) %}
+
 <!-- Status -->
 <div class="phiconnect-status">
-  <div class="phiconnect-status__dot" id="phiconnect-indicator"></div>
+  {% if is_ready %}
+  <div class="phiconnect-status__dot phiconnect-status__dot--ready"></div>
   <div>
     <div class="phiconnect-status__label">PhiConnect Service</div>
-    <div class="phiconnect-status__value" id="phiconnect-status-text">Not connected</div>
+    <div class="phiconnect-status__value">Ready</div>
+  </div>
+  {% else %}
+  <div class="phiconnect-status__dot phiconnect-status__dot--not-ready"></div>
+  <div>
+    <div class="phiconnect-status__label">PhiConnect Service</div>
+    <div class="phiconnect-status__value">Not ready — setup required</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Status Details -->
+<div class="c-card" style="margin-bottom: var(--space-5);">
+  <div class="c-card__header">
+    <span class="c-card__title">Status Details</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+    <div class="phiconnect-info-row">
+      <span class="phiconnect-info-row__label">Port</span>
+      <span class="phiconnect-info-row__value">{{ ps.get('port', '—') }}</span>
+    </div>
+    <div class="phiconnect-info-row">
+      <span class="phiconnect-info-row__label">Config Directory</span>
+      <span class="phiconnect-info-row__value">{{ ps.get('config_dir', '—') }}</span>
+    </div>
+    <div class="phiconnect-info-row">
+      <span class="phiconnect-info-row__label">Identity Exists</span>
+      <span class="phiconnect-info-row__value">
+        {% if ps.get('identity_exists') %}
+        <span style="color: var(--success, #22c55e);">Yes</span>
+        {% else %}
+        <span style="color: var(--text-muted);">No</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="phiconnect-info-row">
+      <span class="phiconnect-info-row__label">Trusted Peers</span>
+      <span class="phiconnect-info-row__value">{{ ps.get('trusted_peers', '—') }}</span>
+    </div>
+    <div class="phiconnect-info-row">
+      <span class="phiconnect-info-row__label">Service Readiness</span>
+      <span class="phiconnect-info-row__value">
+        {% if is_ready %}
+        <span class="c-badge c-badge--sm" style="background: var(--success-transparent, rgba(34, 197, 94, 0.15)); color: var(--success, #22c55e);">Ready</span>
+        {% else %}
+        <span class="c-badge c-badge--sm c-badge--danger" style="background: rgba(239, 68, 68, 0.15); color: var(--danger, #ef4444);">Not Ready</span>
+        {% endif %}
+      </span>
+    </div>
   </div>
 </div>
 
@@ -120,32 +214,72 @@
   </div>
 </div>
 
-<!-- Connection Details -->
-<div class="c-card" style="margin-bottom: var(--space-5);">
-  <div class="c-card__header">
-    <span class="c-card__title">Connection Details</span>
+<!-- Trusted Peers -->
+<div class="phiconnect-table-wrapper">
+  {% if peers and peers|length > 0 %}
+  <table class="phiconnect-table">
+    <thead>
+      <tr>
+        <th>Peer</th>
+        <th>Public Key</th>
+        <th>Trusted At</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for peer in peers %}
+      <tr>
+        <td class="phiconnect-table__id">
+          {{ peer.get('name') or peer.get('device_id', peer.get('id', '—')) }}
+        </td>
+        <td class="phiconnect-table__key">
+          {{ peer.get('public_key') or peer.get('truncated_fingerprint') or peer.get('fingerprint', '—') }}
+        </td>
+        <td class="phiconnect-table__date">
+          {% set ts = peer.get('trusted_at') or peer.get('added_at') %}
+          {% if ts %}
+            {% if ts is string %}
+              {{ ts }}
+            {% else %}
+              {{ ts|int|default(ts)|string }}
+            {% endif %}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% if peer.get('is_expired') %}
+          <span class="c-badge c-badge--sm c-badge--danger">Expired</span>
+          {% elif peer.get('trust_status') == 'trusted' or peer.get('trust_status') %}
+          <span class="c-badge c-badge--sm" style="background: var(--success-transparent, rgba(34, 197, 94, 0.15)); color: var(--success, #22c55e);">Trusted</span>
+          {% else %}
+          <span style="color: var(--text-muted);">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state" style="padding: 6vh var(--space-4);">
+    <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div class="empty-state__title">No peers connected</div>
+    <div class="empty-state__description">
+      Trusted peers will appear here once you connect and pair with other devices.
+      Use the PhiConnect API or share your public key with a remote device to get started.
+    </div>
   </div>
-  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
-    <div class="phiconnect-info-row">
-      <span class="phiconnect-info-row__label">Device ID</span>
-      <span class="phiconnect-info-row__value">—</span>
-    </div>
-    <div class="phiconnect-info-row">
-      <span class="phiconnect-info-row__label">Tunnel Status</span>
-      <span class="phiconnect-info-row__value" style="color: var(--text-muted);">Inactive</span>
-    </div>
-    <div class="phiconnect-info-row">
-      <span class="phiconnect-info-row__label">Connected Peers</span>
-      <span class="phiconnect-info-row__value">0</span>
-    </div>
-    <div class="phiconnect-info-row">
-      <span class="phiconnect-info-row__label">Last Sync</span>
-      <span class="phiconnect-info-row__value">—</span>
-    </div>
-  </div>
+  {% endif %}
 </div>
 
+{% if not is_ready %}
 <p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>PhiConnect</strong> — This page provides a placeholder for the PhiConnect service interface. Full functionality will be available once the backend tunnel service is running.
+  <strong>PhiConnect</strong> — The PhiConnect service is not ready. Ensure the identity is initialized and the configuration directory exists. Check the Status Details above for more information.
 </p>
+{% endif %}
 {% endblock %}

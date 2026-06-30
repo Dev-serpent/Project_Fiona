@@ -16,7 +16,19 @@
   }
   .camcoms-status__dot {
     width: 12px; height: 12px; border-radius: 50%;
-    background: var(--text-muted); flex-shrink: 0;
+    flex-shrink: 0;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .camcoms-status__dot--running {
+    background: var(--success, #22c55e);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  }
+  .camcoms-status__dot--stopped {
+    background: var(--text-muted);
+  }
+  .camcoms-status__dot--error {
+    background: var(--danger, #ef4444);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
   }
   .camcoms-status__label {
     font-size: var(--font-size-sm); color: var(--text-secondary);
@@ -24,6 +36,19 @@
   .camcoms-status__value {
     font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
     color: var(--text-primary);
+  }
+  .camcoms-info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-sm);
+  }
+  .camcoms-info-row:last-child { border-bottom: none; }
+  .camcoms-info-row__label { color: var(--text-muted); }
+  .camcoms-info-row__value {
+    color: var(--text-primary); font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono); font-size: var(--font-size-xs);
+    word-break: break-all;
   }
   .camcoms-feature {
     padding: var(--space-4);
@@ -41,6 +66,34 @@
     font-size: var(--font-size-xs); color: var(--text-muted);
     line-height: 1.5;
   }
+  .camcoms-pairing {
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    overflow: hidden; margin-bottom: var(--space-5);
+  }
+  .camcoms-pairing__header {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .camcoms-pairing__title {
+    font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+  }
+  .camcoms-pairing__body {
+    padding: var(--space-4);
+    font-size: var(--font-size-sm); color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .camcoms-pairing__status-item {
+    display: flex; align-items: center; gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .camcoms-pairing__status-item:last-child { margin-bottom: 0; }
+  .camcoms-pairing__dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .camcoms-pairing__dot--paired { background: var(--success, #22c55e); }
+  .camcoms-pairing__dot--unpaired { background: var(--text-muted); }
 </style>
 
 <div style="margin-bottom: var(--space-5);">
@@ -53,12 +106,152 @@
   </div>
 </div>
 
+{% set cs = camcoms_status|default({}) %}
+{% set is_running = cs.get('running', False) %}
+{% set is_ready = cs.get('ready', False) %}
+{% set has_error = cs.get('error') is not none and cs.get('error') %}
+
 <!-- Status -->
 <div class="camcoms-status">
-  <div class="camcoms-status__dot" id="camcoms-indicator"></div>
+  {% if is_running %}
+  <div class="camcoms-status__dot camcoms-status__dot--running"></div>
   <div>
     <div class="camcoms-status__label">CamComs Service</div>
-    <div class="camcoms-status__value" id="camcoms-status-text">Not initialized</div>
+    <div class="camcoms-status__value">Running</div>
+  </div>
+  {% elif has_error %}
+  <div class="camcoms-status__dot camcoms-status__dot--error"></div>
+  <div>
+    <div class="camcoms-status__label">CamComs Service</div>
+    <div class="camcoms-status__value">Error — {{ cs.get('error') }}</div>
+  </div>
+  {% elif is_ready %}
+  <div class="camcoms-status__dot camcoms-status__dot--running"></div>
+  <div>
+    <div class="camcoms-status__label">CamComs Service</div>
+    <div class="camcoms-status__value">Ready</div>
+  </div>
+  {% else %}
+  <div class="camcoms-status__dot camcoms-status__dot--stopped"></div>
+  <div>
+    <div class="camcoms-status__label">CamComs Service</div>
+    <div class="camcoms-status__value">Stopped</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Service Details -->
+<div class="c-card" style="margin-bottom: var(--space-5);">
+  <div class="c-card__header">
+    <span class="c-card__title">Service Details</span>
+  </div>
+  <div class="c-card__body" style="padding: var(--space-1) var(--space-4);">
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Hostname</span>
+      <span class="camcoms-info-row__value">{{ cs.get('hostname', '—') }}</span>
+    </div>
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Port</span>
+      <span class="camcoms-info-row__value">{{ cs.get('port', '—') }}</span>
+    </div>
+    {% if cs.get('pid') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Process ID</span>
+      <span class="camcoms-info-row__value">{{ cs['pid'] }}</span>
+    </div>
+    {% endif %}
+    {% if cs.get('identity') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Identity</span>
+      <span class="camcoms-info-row__value" style="font-size: var(--font-size-xs);">{{ cs['identity'] }}</span>
+    </div>
+    {% endif %}
+    {% if cs.get('fingerprint') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Fingerprint</span>
+      <span class="camcoms-info-row__value" style="font-size: var(--font-size-xs);">{{ cs['fingerprint'] }}</span>
+    </div>
+    {% endif %}
+    {% if cs.get('config_exists') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Configuration</span>
+      <span class="camcoms-info-row__value">
+        {% if cs['config_exists'] %}
+        <span style="color: var(--success, #22c55e);">Present</span>
+        {% else %}
+        <span style="color: var(--text-muted);">Missing</span>
+        {% endif %}
+      </span>
+    </div>
+    {% endif %}
+    {% if cs.get('version') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Version</span>
+      <span class="camcoms-info-row__value">{{ cs['version'] }}</span>
+    </div>
+    {% endif %}
+    {% if cs.get('uptime') is not none %}
+    <div class="camcoms-info-row">
+      <span class="camcoms-info-row__label">Uptime</span>
+      <span class="camcoms-info-row__value">{{ cs['uptime'] }}s</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Pairing Status -->
+<div class="camcoms-pairing">
+  <div class="camcoms-pairing__header">
+    <span class="camcoms-pairing__title">Pairing Status</span>
+  </div>
+  <div class="camcoms-pairing__body">
+    {% set paired_devices = cs.get('paired_devices', []) %}
+    {% if paired_devices and paired_devices|length > 0 %}
+      {% for device in paired_devices %}
+      <div class="camcoms-pairing__status-item">
+        <div class="camcoms-pairing__dot camcoms-pairing__dot--paired"></div>
+        <div>
+          <span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">
+            {{ device.get('name', device.get('id', 'Unknown device')) }}
+          </span>
+          {% if device.get('since') %}
+          <span style="color: var(--text-muted); font-size: var(--font-size-xs);">
+            — paired {{ device['since'] }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% elif cs.get('paired_count') is not none %}
+      {% if cs['paired_count'] > 0 %}
+      <div class="camcoms-pairing__status-item">
+        <div class="camcoms-pairing__dot camcoms-pairing__dot--paired"></div>
+        <div>
+          <span style="font-weight: var(--font-weight-medium); color: var(--text-primary);">
+            {{ cs['paired_count'] }} device(s) paired
+          </span>
+        </div>
+      </div>
+      {% else %}
+      <div class="camcoms-pairing__status-item">
+        <div class="camcoms-pairing__dot camcoms-pairing__dot--unpaired"></div>
+        <div>
+          <span style="color: var(--text-muted);">No devices paired</span>
+        </div>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="camcoms-pairing__status-item">
+        <div class="camcoms-pairing__dot camcoms-pairing__dot--unpaired"></div>
+        <div>
+          <span style="color: var(--text-muted);">Pairing information unavailable</span>
+        </div>
+      </div>
+    {% endif %}
+    <p style="margin: var(--space-3) 0 0 0; font-size: var(--font-size-xs); color: var(--text-muted);">
+      Pair trusted devices to enable camera and audio sharing between them.
+      Use the <strong>CamComs API</strong> to initiate pairing or manage trusted senders from the Settings page.
+    </p>
   </div>
 </div>
 
@@ -73,7 +266,7 @@
         </svg>
       </div>
       <div class="camcoms-feature__title">Camera</div>
-      <div class="camcoms-feature__desc">Capture and stream video from connected cameras.</div>
+      <div class="camcoms-feature__desc">Capture and stream video from connected cameras to paired devices.</div>
     </div>
   </div>
 
@@ -88,7 +281,7 @@
         </svg>
       </div>
       <div class="camcoms-feature__title">Audio</div>
-      <div class="camcoms-feature__desc">Microphone input and audio stream management.</div>
+      <div class="camcoms-feature__desc">Microphone input and audio stream management for real-time communication.</div>
     </div>
   </div>
 
@@ -96,17 +289,20 @@
     <div class="camcoms-feature">
       <div class="camcoms-feature__icon">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
-          <path d="M6 6h.01M6 10h.01M6 14h.01M6 18h.01"/>
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
         </svg>
       </div>
-      <div class="camcoms-feature__title">Devices</div>
-      <div class="camcoms-feature__desc">Manage connected cameras, microphones, and speakers.</div>
+      <div class="camcoms-feature__title">Screen Sharing</div>
+      <div class="camcoms-feature__desc">Share your desktop or application screens with trusted remote peers.</div>
     </div>
   </div>
 </div>
 
+{% if not is_running and not is_ready %}
 <p style="font-size: var(--font-size-xs); color: var(--text-muted); padding: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md);">
-  <strong>CamComs</strong> — This page provides a placeholder for camera and communications interfaces. Full functionality will be available once the backend CamComs service is connected.
+  <strong>CamComs</strong> — The CamComs service is not running. Start the service from the API or check the configuration to enable camera and communications features.
 </p>
+{% endif %}
 {% endblock %}

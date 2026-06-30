@@ -4,46 +4,91 @@
 
 {% block content %}
 <style>
-  .recall-table-wrapper {
-    overflow-x: auto;
+  .recall-list {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+    overflow: hidden;
   }
-  .recall-table {
-    width: 100%; border-collapse: collapse;
-    font-size: var(--font-size-sm);
-  }
-  .recall-table th {
-    text-align: left; padding: var(--space-3) var(--space-4);
-    background: var(--surface-raised);
-    color: var(--text-secondary); font-weight: var(--font-weight-medium);
-    font-size: var(--font-size-xs); text-transform: uppercase;
-    letter-spacing: 0.5px; white-space: nowrap;
-    border-bottom: 1px solid var(--border);
-  }
-  .recall-table td {
+  .recall-item {
+    display: grid;
+    grid-template-columns: 1fr 2fr 140px 36px;
+    gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    color: var(--text-primary);
     border-bottom: 1px solid var(--border-subtle);
-    vertical-align: middle;
+    align-items: center;
+    transition: background var(--transition-fast);
   }
-  .recall-table tr:last-child td { border-bottom: none; }
-  .recall-table tr:hover td { background: var(--surface-raised); }
-  .recall-table__key {
+  .recall-item:last-child { border-bottom: none; }
+  .recall-item:hover { background: var(--surface-raised); }
+  .recall-item__key {
     font-weight: var(--font-weight-medium);
-    font-family: var(--font-mono); font-size: var(--font-size-xs);
-    white-space: nowrap; word-break: break-all;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-primary);
+    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .recall-table__value {
-    color: var(--text-secondary); font-family: var(--font-mono);
-    font-size: var(--font-size-xs); word-break: break-word;
-    max-width: 400px;
-  }
-  .recall-table__time {
-    font-size: var(--font-size-xs); color: var(--text-muted);
+  .recall-item__value {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    word-break: break-word;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .recall-item__time {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-align: right;
+  }
+  .recall-item__copy {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: var(--radius-sm);
+    width: 28px; height: 28px; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .recall-item__copy:hover {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+  .recall-item__copy.copied {
+    background: var(--success-transparent, rgba(34, 197, 94, 0.15));
+    color: var(--success, #22c55e);
+    border-color: var(--success, #22c55e);
+  }
+  .recall-item--hidden { display: none; }
   .empty-state { text-align: center; padding: 10vh var(--space-4); }
+  .recall-search-wrapper {
+    position: relative; max-width: 100%;
+  }
+  .recall-search-wrapper .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    display: flex; color: var(--text-muted); width: 16px; height: 16px;
+    pointer-events: none;
+  }
+  .recall-search-wrapper input {
+    padding-left: 32px; height: 34px; width: 100%;
+  }
+  .recall-header-stats {
+    display: flex; align-items: center; gap: var(--space-3);
+    margin-bottom: var(--space-4); flex-wrap: wrap;
+  }
+  .recall-item__value-truncated::after {
+    content: '…';
+    color: var(--text-muted);
+  }
+  .recall-empty-filter {
+    text-align: center; padding: var(--space-8) var(--space-4);
+    color: var(--text-muted); font-size: var(--font-size-sm);
+  }
 </style>
 
 <div style="margin-bottom: var(--space-5);">
@@ -57,26 +102,64 @@
 </div>
 
 {% if recall_items %}
-<div class="recall-table-wrapper">
-  <table class="recall-table">
-    <thead>
-      <tr>
-        <th>Key</th>
-        <th>Value</th>
-        <th>Last Updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in recall_items %}
-      <tr>
-        <td class="recall-table__key">{{ item.key|default('—') }}</td>
-        <td class="recall-table__value">{{ item.value|default('—') }}</td>
-        <td class="recall-table__time">{{ item.updated_at[:10] if item.updated_at else '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- Header stats -->
+<div class="recall-header-stats">
+  <span class="c-badge c-badge--sm" id="recall-count-badge">
+    {{ recall_items|length }} item{{ 's' if recall_items|length != 1 }}
+  </span>
 </div>
+
+<!-- Search / Filter -->
+<div style="margin-bottom: var(--space-4);">
+  <div class="recall-search-wrapper">
+    <span class="search-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input type="text" class="c-input" id="recall-search-input"
+           placeholder="Search by key or value…" autocomplete="off" />
+  </div>
+</div>
+
+<!-- Items list -->
+<div class="recall-list" id="recall-list">
+  {% for item in recall_items %}
+  <div class="recall-item" data-recall-key="{{ item.key|default('')|lower }}" data-recall-value="{{ item.value|default('')|lower }}">
+    <div class="recall-item__key" title="{{ item.key|default('') }}">
+      {{ item.key|default('—') }}
+    </div>
+    <div class="recall-item__value" title="{{ item.value|default('') }}">
+      {% if item.value is none %}
+      <em style="color: var(--text-muted);">null</em>
+      {% elif item.value is boolean %}
+      {{ item.value|lower }}
+      {% elif item.value is mapping or (item.value is sequence and item.value is not string) %}
+      {{ item.value|tojson }}
+      {% else %}
+      {% set value_str = item.value|string %}
+      {{ value_str[:80] }}{% if value_str|length > 80 %}<span class="recall-item__value-truncated"></span>{% endif %}
+      {% endif %}
+    </div>
+    <div class="recall-item__time">
+      {{ item.updated_at[:10] if item.updated_at else '—' }}
+    </div>
+    <div>
+      <button class="recall-item__copy" data-copy-key="{{ item.key|default('') }}" title="Copy key">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Empty filter results message (hidden by default) -->
+<div id="recall-empty-filter" class="recall-empty-filter" style="display: none;">
+  No items match your search.
+</div>
+
 {% else %}
 <div class="empty-state">
   <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
@@ -87,8 +170,96 @@
   </div>
   <div class="empty-state__title">No recall items stored</div>
   <div class="empty-state__description">
-    RecallVault is empty. Store key-value pairs via the API or agents to populate this view.
+    Use <code style="font-family: var(--font-mono); font-size: inherit; background: var(--surface-raised); padding: 2px 6px; border-radius: var(--radius-sm);">/recall/remember</code> to store data.
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── Search / filter recall items by key or value ────────────── */
+  var searchInput = document.getElementById('recall-search-input');
+  var recallItems = document.querySelectorAll('.recall-item');
+  var countBadge = document.getElementById('recall-count-badge');
+  var emptyFilterMsg = document.getElementById('recall-empty-filter');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var query = this.value.trim().toLowerCase();
+      var visibleCount = 0;
+      var totalCount = recallItems.length;
+
+      recallItems.forEach(function (item) {
+        var key = item.getAttribute('data-recall-key') || '';
+        var value = item.getAttribute('data-recall-value') || '';
+        var match = !query || key.indexOf(query) !== -1 || value.indexOf(query) !== -1;
+        item.classList.toggle('recall-item--hidden', !match);
+        if (match) visibleCount++;
+      });
+
+      if (countBadge) {
+        if (query) {
+          countBadge.textContent = visibleCount + ' of ' + totalCount + ' item' + (totalCount !== 1 ? 's' : '');
+        } else {
+          countBadge.textContent = totalCount + ' item' + (totalCount !== 1 ? 's' : '');
+        }
+      }
+
+      if (emptyFilterMsg) {
+        emptyFilterMsg.style.display = (visibleCount === 0 && query) ? 'block' : 'none';
+      }
+    });
+  }
+
+  /* ── Copy key to clipboard ───────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.recall-item__copy');
+    if (!btn) return;
+
+    var key = btn.getAttribute('data-copy-key');
+    if (!key) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(key).then(function () {
+        btn.classList.add('copied');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        }, 2000);
+      }).catch(function () {
+        fallbackCopy(key, btn);
+      });
+    } else {
+      fallbackCopy(key, btn);
+    }
+  });
+
+  function fallbackCopy(text, btn) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(function () {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 2000);
+    } catch (err) {
+      /* ignore */
+    }
+    document.body.removeChild(textarea);
+  }
+
+})();
+</script>
 {% endblock %}

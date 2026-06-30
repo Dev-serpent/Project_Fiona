@@ -36,6 +36,10 @@
     font-size: var(--font-size-xs); color: var(--text-muted);
     margin-top: var(--space-2);
   }
+  .macro-card__stats {
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
   .macro-card__steps {
     margin-top: var(--space-3);
   }
@@ -51,7 +55,51 @@
     background: var(--surface-raised); color: var(--text-muted);
     font-size: 10px; font-weight: var(--font-weight-medium); flex-shrink: 0;
   }
+  .macro-card__actions {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-top: var(--space-3); padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+  }
+  .btn-run-macro {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 4px 14px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: var(--space-1);
+  }
+  .btn-run-macro:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-run-macro:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--text-muted);
+    border-color: var(--border);
+  }
   .empty-state { text-align: center; padding: 10vh var(--space-4); }
+  .macro-search-wrapper {
+    position: relative; max-width: 360px; margin-bottom: var(--space-4);
+  }
+  .macro-search-wrapper .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    display: flex; color: var(--text-muted); width: 16px; height: 16px;
+    pointer-events: none;
+  }
+  .macro-search-wrapper input {
+    padding-left: 32px; height: 34px; width: 100%;
+  }
+  .macro-card--hidden { display: none; }
+  .macro-count-badge {
+    margin-left: var(--space-2);
+  }
 </style>
 
 <div style="margin-bottom: var(--space-5);">
@@ -61,41 +109,87 @@
         Automate repetitive tasks with reusable macros.
       </p>
     </div>
+    {% if macros %}
+    <span class="c-badge c-badge--sm" id="macro-count-badge">{{ macros|length }} macro{{ 's' if macros|length != 1 }}</span>
+    {% endif %}
   </div>
 </div>
 
 {% if macros %}
-<div class="macros-grid">
-  {% for macro in macros %}
-  <div class="c-card macro-card">
+<!-- Search / Filter -->
+<div class="macro-search-wrapper">
+  <span class="search-icon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  </span>
+  <input type="text" class="c-input" id="macros-search-input"
+         placeholder="Search macros by name…" autocomplete="off" />
+</div>
+
+<div class="macros-grid" id="macros-grid">
+  {% for macro in macros|sort(attribute='name') %}
+  <div class="c-card macro-card" data-macro-name="{{ macro.name|default('')|lower }}">
     <div class="c-card__body" style="padding: var(--space-4);">
       <div class="macro-card__header">
         <span class="macro-card__name">{{ macro.name|default('Unnamed Macro') }}</span>
+        {% if macro.shortcut %}
+        <span class="c-badge c-badge--sm" style="background: var(--surface-raised); color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; flex-shrink: 0;">
+          {{ macro.shortcut }}
+        </span>
+        {% endif %}
       </div>
       {% if macro.description %}
       <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: var(--space-2) 0 0 0; word-break: break-word;">
         {{ macro.description }}
       </p>
       {% endif %}
-      {% if macro.created_at %}
+      {% if macro.created_at or macro.steps is defined %}
       <div class="macro-card__meta">
-        Created {{ macro.created_at[:10] }}
+        {% if macro.created_at %}Created {{ macro.created_at[:10] }}{% endif %}
       </div>
       {% endif %}
+      <!-- Stats row: step count -->
+      {% if macro.steps is defined %}
+      <div class="macro-card__stats">
+        <span class="c-badge c-badge--sm" style="background: var(--accent-muted, rgba(99, 102, 241, 0.15)); color: var(--accent);">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 3px; vertical-align: middle;">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          {{ macro.steps|length }} step{{ 's' if macro.steps|length != 1 }}
+        </span>
+      </div>
+      {% endif %}
+      <!-- Steps list (show at most 5, collapsed by default via inline limit) -->
       {% if macro.steps %}
       <div class="macro-card__steps">
-        {% for step in macro.steps %}
+        {% for step in macro.steps[:5] %}
         <div class="macro-card__step">
           <span class="macro-card__step-number">{{ loop.index }}</span>
           <span>{{ step }}</span>
         </div>
         {% endfor %}
+        {% if macro.steps|length > 5 %}
+        <div style="font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-1); padding-left: 26px;">
+          … {{ macro.steps|length - 5 }} more step{{ 's' if macro.steps|length - 5 != 1 }}
+        </div>
+        {% endif %}
       </div>
       {% endif %}
+      <!-- Run button -->
+      <div class="macro-card__actions">
+        <button class="btn-run-macro" data-macro-name="{{ macro.name|e }}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Run
+        </button>
+      </div>
     </div>
   </div>
   {% endfor %}
 </div>
+
 {% else %}
 <div class="empty-state">
   <div class="empty-state__icon" style="color: var(--text-muted); margin-bottom: var(--space-3);">
@@ -109,4 +203,93 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  'use strict';
+
+  /* ── Search / filter macros by name ──────────────────────────── */
+  var searchInput = document.getElementById('macros-search-input');
+  var macroCards = document.querySelectorAll('.macro-card');
+  var countBadge = document.getElementById('macro-count-badge');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var query = this.value.trim().toLowerCase();
+      var visibleCount = 0;
+
+      macroCards.forEach(function (card) {
+        var name = card.getAttribute('data-macro-name') || '';
+        var match = !query || name.indexOf(query) !== -1;
+        card.classList.toggle('macro-card--hidden', !match);
+        if (match) visibleCount++;
+      });
+
+      if (countBadge) {
+        var total = macroCards.length;
+        if (query) {
+          countBadge.textContent = visibleCount + ' of ' + total + ' macro' + (total !== 1 ? 's' : '');
+        } else {
+          countBadge.textContent = total + ' macro' + (total !== 1 ? 's' : '');
+        }
+      }
+    });
+  }
+
+  /* ── Run macro ───────────────────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.btn-run-macro');
+    if (!btn) return;
+
+    var name = btn.getAttribute('data-macro-name');
+    if (!name) return;
+
+    btn.disabled = true;
+    var originalText = btn.innerHTML;
+    btn.innerHTML = 'Running…';
+
+    fetch('/actions/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, source: 'macro' })
+    })
+    .then(function (res) {
+      return res.json().catch(function () { return null; });
+    })
+    .then(function (json) {
+      if (json && json.ok) {
+        var msg = json.data || 'Macro "' + name + '" completed.';
+        var container = document.getElementById('toast-container');
+        if (container) {
+          var toast = document.createElement('div');
+          toast.style.cssText = 'background:var(--accent,#6366f1);color:#fff;padding:8px 16px;border-radius:6px;margin-bottom:6px;font-size:13px;animation:fadeIn 0.2s ease;max-width:420px;word-break:break-word;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+          toast.textContent = msg;
+          container.appendChild(toast);
+          setTimeout(function () {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+          }, 4000);
+        }
+      } else if (json && json.error) {
+        alert('Error: ' + json.error);
+      } else {
+        // Endpoint may not be wired — show a friendly alert for now
+        alert('Macro "' + name + '" would run here. The /actions/run endpoint may not be fully wired yet.');
+      }
+    })
+    .catch(function () {
+      // Network error — endpoint not wired, show friendly fallback
+      alert('Macro "' + name + '" would run here. The /actions/run endpoint may not be fully wired yet.');
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    });
+  });
+
+})();
+</script>
 {% endblock %}
