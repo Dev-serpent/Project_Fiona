@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -510,7 +518,7 @@ result = router.run(&quot;press&quot;, source=&quot;agent&quot;)
 - <code>run_with_fallback()</code> — same as <code>run()</code>, but falls back to <code>fiona.cli</code> subprocess if the action is not registered in <code>ActionRouter</code>
 - <code>list_allowed_actions()</code> — returns the intersection of <code>ActionRouter.list_actions()</code> and the personality's <code>allowed_tools</code></p>
 <h2 id="browser-automation-security">Browser Automation Security</h2>
-<p>The <code>BrowserAutomation</code> subsystem (based on Playwright) includes several security mechanisms to isolate browser activity from the host system.</p>
+<p>The <code>BrowserAutomation</code> subsystem (based on Selenium WebDriver) includes several security mechanisms to isolate browser activity from the host system.</p>
 <h3 id="headless-mode">Headless Mode</h3>
 <p>By default, the browser runs with <code>headless=False</code> (visible window). For automated or untrusted workloads, headless mode can be enabled via <code>BrowserConfig</code>:</p>
 <pre><code class="language-python">from fiona.interfaces import BrowserConfig

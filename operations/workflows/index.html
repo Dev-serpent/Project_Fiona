@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -617,12 +625,11 @@ fiona agent ask
 </code></pre>
 <p>The current Agent layer performs inference only. It does not train models, fine-tune models, execute actions automatically, or decide command permissions.</p>
 <h2 id="browser-automation-workflow">Browser Automation Workflow</h2>
-<p>Goal: control a web browser programmatically via Playwright for automation tasks.</p>
+<p>Goal: control a web browser programmatically via Selenium for automation tasks.</p>
 <pre><code class="language-text">fiona browser start
-  -&gt; asyncio event loop
-  -&gt; Playwright browser launch (chromium/firefox/webkit)
-  -&gt; BrowserManager state machine: STOPPED → STARTING → RUNNING
-  -&gt; module-level default manager created via get_browser_manager()
+  -&gt; Selenium WebDriver launch (Chrome via webdriver-manager)
+  -&gt; BrowserManager state machine: STOPPED/ERROR → STARTING → RUNNING
+  -&gt; module-level default manager via get_browser_manager()
   -&gt; optional EventBus publishes BrowserLaunched event
 
 fiona browser navigate &lt;url&gt;
@@ -640,23 +647,19 @@ fiona browser type &lt;selector&gt; &lt;text&gt;
 
 fiona browser screenshot [--output &lt;path&gt;]
   -&gt; BrowserManager.capture_screenshot(path=path)
-  -&gt; returns raw bytes if no path given
+  -&gt; returns base64 bytes if no path given
 
 fiona browser stop
   -&gt; browser manager closes all contexts
-  -&gt; Playwright browser instance closed
+  -&gt; Selenium WebDriver instance closed
   -&gt; state returns to STOPPED
 </code></pre>
 <h3 id="state-machine">State Machine</h3>
-<pre><code class="language-text">                    start()
-  STOPPED ──────────────────► STARTING ──────────────► RUNNING
-    ▲                            │                        │
-    │                            │ (failure)              │ (crash)
-    │                            ▼                        ▼
-    │                          ERROR ◄───────────────── DEGRADED
-    │                            │
-    └────────────────────────────┘
-         restart() / stop()
+<pre><code class="language-text">  STOPPED ──→ STARTING ──→ RUNNING
+    ↑                           │
+    │     (no-op when running)  │
+    │                           │
+    └──── ERROR ──→ STARTING ───┘
 </code></pre>
 <p>Valid state transitions:</p>
 <table>
@@ -674,19 +677,19 @@ fiona browser stop
 <td>Normal startup sequence</td>
 </tr>
 <tr>
+<td>ERROR → STARTING → RUNNING</td>
+<td><code>start()</code></td>
+<td>Recovery from crash (clears stale contexts)</td>
+</tr>
+<tr>
 <td>RUNNING → STOPPED</td>
 <td><code>stop()</code></td>
 <td>Clean shutdown, idempotent</td>
 </tr>
 <tr>
-<td>RUNNING → ERROR → RUNNING</td>
-<td><code>restart()</code></td>
-<td>Auto-restart on crash</td>
-</tr>
-<tr>
-<td>RUNNING → DEGRADED</td>
-<td>(internal)</td>
-<td>Reduced-capability state</td>
+<td>RUNNING → RUNNING</td>
+<td><code>start()</code></td>
+<td>No-op, safe to call multiple times</td>
 </tr>
 </tbody>
 </table>

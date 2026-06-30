@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="./" class="dropdown-item active" aria-current="page">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="../fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -188,7 +196,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../../current-state/" class="nav-link">
+                                <a rel="next" href="../fionalocalpages/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -218,7 +226,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#auto-restart" class="nav-link">Auto-Restart</a>
+            <li class="nav-item" data-bs-level="3"><a href="#key-behaviors" class="nav-link">Key Behaviors</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -252,6 +260,22 @@
             </li>
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#seleniumbrowserprovider" class="nav-link">SeleniumBrowserProvider</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#chrome-binary-resolution" class="nav-link">Chrome Binary Resolution</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#lazy-imports" class="nav-link">Lazy Imports</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#capabilities" class="nav-link">Capabilities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#session-management" class="nav-link">Session Management</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="3"><a href="#sessionmanager" class="nav-link">SessionManager</a>
@@ -268,20 +292,8 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#playwrightprovider" class="nav-link">PlaywrightProvider</a>
+            <li class="nav-item" data-bs-level="2"><a href="#deprecated-playwrightprovider" class="nav-link">Deprecated: PlaywrightProvider</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="3"><a href="#lazy-imports" class="nav-link">Lazy Imports</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="3"><a href="#capabilities" class="nav-link">Capabilities</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="3"><a href="#launch-argument-mapping" class="nav-link">Launch Argument Mapping</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#cli-commands" class="nav-link">CLI Commands</a>
@@ -308,13 +320,15 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="browserautomation">BrowserAutomation</h1>
-<p>BrowserAutomation provides Playwright-based browser automation for Fiona. It wraps Playwright with the interface contracts defined in <code>fiona.interfaces</code> and exposes a thread-safe state machine, synchronous session wrappers for CLI integration, and a comprehensive error hierarchy.</p>
-<p>All Playwright dependencies are imported <strong>lazily</strong> so the package can be imported and inspected without Playwright installed.</p>
+<p>BrowserAutomation provides <strong>Selenium-based</strong> browser automation for Fiona. It wraps Selenium WebDriver with the interface contracts defined in <code>fiona.interfaces</code> and exposes a thread-safe state machine, synchronous session wrappers for CLI integration, and a comprehensive error hierarchy.</p>
+<p>All Selenium dependencies are imported <strong>lazily</strong> so the package can be imported and inspected without Selenium installed.</p>
 <h2 id="state-machine">State Machine</h2>
 <p>The <code>BrowserManager</code> uses a thread-safe state machine to track browser lifecycle:</p>
-<pre><code>STOPPED → STARTING → RUNNING ↔ DEGRADED → ERROR
-  ↑                                      │
-  └──────────── restart() ───────────────┘
+<pre><code>STOPPED ──→ STARTING ──→ RUNNING
+  ↑                           │
+  │     (no-op when running)  │
+  │                           │
+  └──── ERROR ──→ STARTING ───┘
 </code></pre>
 <h3 id="states">States</h3>
 <table>
@@ -338,24 +352,24 @@
 <td>The browser is running and healthy.</td>
 </tr>
 <tr>
-<td><code>DEGRADED</code></td>
-<td>The browser is running but in a reduced-capability state.</td>
-</tr>
-<tr>
 <td><code>ERROR</code></td>
-<td>The browser has crashed and auto-restart was attempted but failed.</td>
+<td>The browser has crashed or encountered a fatal error.</td>
 </tr>
 </tbody>
 </table>
-<p>Transitions are protected by a <code>threading.Lock</code>. Calling an operation from an invalid state raises <code>RuntimeError</code>.</p>
-<h3 id="auto-restart">Auto-Restart</h3>
-<p>After an unexpected crash (<code>BrowserCrashError</code>), the manager performs <strong>one</strong> automatic restart attempt. If that launch also fails the state remains <code>ERROR</code>. Call <code>restart()</code> to retry.</p>
-<pre><code class="language-python">from BrowserAutomation import BrowserManager
+<h3 id="key-behaviors">Key Behaviors</h3>
+<ul>
+<li><strong><code>start()</code></strong> accepts <code>{STOPPED, ERROR}</code> as valid pre-states. On ERROR restart, stale <code>_contexts</code> and <code>_instance</code> are cleared before relaunch.</li>
+<li><strong><code>start()</code> is a no-op</strong> when already <code>RUNNING</code> — safe to call multiple times.</li>
+<li>There is <strong>no separate <code>restart()</code> method</strong> — calling <code>start()</code> from <code>ERROR</code> performs recovery directly.</li>
+<li>The <code>DEGRADED</code> state from the original Playwright design was removed as Selenium's simpler error model did not require it.</li>
+</ul>
+<pre><code class="language-python">from BrowserAutomation import get_browser_manager
 
-manager = BrowserManager()
-await manager.start()       # STOPPED → STARTING → RUNNING
-await manager.stop()        # RUNNING → STOPPED
-await manager.restart()     # STOPPED → STARTING → RUNNING
+manager = get_browser_manager()
+manager.start()              # STOPPED → STARTING → RUNNING
+manager.start()              # no-op (already RUNNING)
+manager.stop()               # RUNNING → STOPPED
 </code></pre>
 <h2 id="browserconfig">BrowserConfig</h2>
 <p>Configuration is a frozen dataclass defined in <code>fiona.interfaces</code>:</p>
@@ -373,16 +387,10 @@ await manager.restart()     # STOPPED → STARTING → RUNNING
 </thead>
 <tbody>
 <tr>
-<td><code>browser_type</code></td>
-<td><code>str</code></td>
-<td><code>"chromium"</code></td>
-<td>Browser engine (<code>chromium</code>, <code>firefox</code>, <code>webkit</code>).</td>
-</tr>
-<tr>
 <td><code>headless</code></td>
 <td><code>bool</code></td>
-<td><code>False</code></td>
-<td>Run without a visible UI window.</td>
+<td><code>True</code></td>
+<td>Run without a visible UI window ("echo-off" mode).</td>
 </tr>
 <tr>
 <td><code>viewport_width</code></td>
@@ -424,6 +432,7 @@ config = default_config(headless=True, proxy=&quot;http://proxy:8080&quot;)
 # Merge overrides on top of an existing config
 updated = merge_config(config, viewport_width=1920, viewport_height=1080)
 </code></pre>
+<p><code>DEFAULT_HEADLESS = True</code> in <code>_config.py</code> — the browser is invisible by default. All interaction happens through the FLoP UI (<code>fionaLocalPages/pages/browser.js</code>).</p>
 <h2 id="ibrowsercontext-interface">IBrowserContext Interface</h2>
 <p>Each isolated browser context has its own cookies, storage, and authentication — analogous to an incognito window. Contexts created from the same <code>IBrowserInstance</code> are fully isolated.</p>
 <pre><code class="language-python">from fiona.interfaces import IBrowserContext, NavigationEvent, NavigationResult
@@ -455,7 +464,7 @@ updated = merge_config(config, viewport_width=1920, viewport_height=1080)
 </tr>
 <tr>
 <td><code>screenshot(*, path=None, full_page=False)</code></td>
-<td>Capture a PNG screenshot (returns raw bytes).</td>
+<td>Capture a PNG screenshot (returns base64-encoded bytes via the REST API).</td>
 </tr>
 <tr>
 <td><code>evaluate(js, *, timeout=5.0)</code></td>
@@ -513,6 +522,42 @@ updated = merge_config(config, viewport_width=1920, viewport_height=1080)
 </tr>
 </tbody>
 </table>
+<h2 id="seleniumbrowserprovider">SeleniumBrowserProvider</h2>
+<p><code>SeleniumBrowserProvider</code> is the concrete implementation of <code>IBrowserProvider</code>. It translates <code>BrowserConfig</code> into Selenium WebDriver launch arguments and maps Selenium/WebDriver exceptions into the Fiona error hierarchy.</p>
+<h3 id="chrome-binary-resolution">Chrome Binary Resolution</h3>
+<p>Chrome is resolved in the following order (see <code>_selenium_provider.py</code>):</p>
+<ol>
+<li><strong><code>FIONA_CHROME_BINARY</code></strong> environment variable — explicit override</li>
+<li><strong><code>google-chrome-stable</code></strong> on PATH — system-installed Chrome</li>
+<li><strong>Playwright-downloaded Chromium</strong> at <code>~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome</code> — fallback for systems where Playwright was previously installed</li>
+</ol>
+<p>This solves the common <code>webdriver-manager</code> version mismatch (e.g., ChromeDriver v140 vs Playwright Chrome v148).</p>
+<h3 id="lazy-imports">Lazy Imports</h3>
+<p>Selenium is imported <strong>inside methods</strong>, not at module level:</p>
+<pre><code class="language-python">def launch(self, config: BrowserConfig) -&gt; IBrowserInstance:
+    from selenium import webdriver  # lazy import
+    from selenium.webdriver.chrome.options import Options
+
+    options = Options()
+    options.binary_location = _resolve_chrome_binary()
+    options.headless = config.headless
+    driver = webdriver.Chrome(options=options)
+    return SeleniumBrowserInstance(driver=driver)
+</code></pre>
+<p>If Selenium is not installed, a helpful <code>RuntimeError</code> is raised:</p>
+<pre><code>RuntimeError: Selenium is not installed. Install it with:
+  pip install selenium webdriver-manager
+</code></pre>
+<h3 id="capabilities">Capabilities</h3>
+<p>The provider advertises these capabilities:</p>
+<pre><code class="language-python">SELENIUM_CAPABILITIES = frozenset({
+    &quot;screenshot&quot;,
+    &quot;js_eval&quot;,
+    &quot;multi_context&quot;,
+    &quot;emulation&quot;,
+})
+</code></pre>
+<p>Note: <code>pdf</code> and <code>network_intercept</code> capabilities (available in Playwright) are not supported by Selenium WebDriver. If needed, these can be added via browser DevTools Protocol (CDP) bindings.</p>
 <h2 id="session-management">Session Management</h2>
 <h3 id="sessionmanager">SessionManager</h3>
 <p><code>SessionManager</code> provides synchronous wrappers around the async <code>BrowserManager</code> for use in CLI handlers and agent commands. It owns a dedicated event loop running in a daemon thread.</p>
@@ -544,12 +589,12 @@ session.stop()
 </code></pre>
 <p>These are thin wrappers around a shared singleton manager created on first access:</p>
 <pre><code class="language-python">manager = get_browser_manager()
-await manager.start()
+manager.start()
 status = browser_status()   # BrowserManagerState.RUNNING
-await navigate(&quot;https://example.com&quot;)
-await click_element(&quot;#go&quot;)
-await type_text(&quot;#input&quot;, &quot;hello&quot;)
-await capture_screenshot(path=&quot;shot.png&quot;)
+navigate(&quot;https://example.com&quot;)
+click_element(&quot;#go&quot;)
+type_text(&quot;#input&quot;, &quot;hello&quot;)
+capture_screenshot(path=&quot;shot.png&quot;)
 </code></pre>
 <h2 id="error-hierarchy">Error Hierarchy</h2>
 <p>All browser errors are defined in <code>fiona.interfaces</code> and re-exported from <code>BrowserAutomation</code>.</p>
@@ -580,63 +625,12 @@ await capture_screenshot(path=&quot;shot.png&quot;)
 )
 
 try:
-    await manager.start()
+    manager.start()
 except BrowserLaunchError as exc:
     print(f&quot;Failed to launch: {exc}&quot;)
 </code></pre>
-<h2 id="playwrightprovider">PlaywrightProvider</h2>
-<p><code>PlaywrightBrowserProvider</code> is the concrete implementation of <code>IBrowserProvider</code>. It translates <code>BrowserConfig</code> into Playwright launch arguments and maps Playwright exceptions into the Fiona error hierarchy.</p>
-<h3 id="lazy-imports">Lazy Imports</h3>
-<p>Playwright is imported <strong>inside methods</strong>, not at module level:</p>
-<pre><code class="language-python">async def launch(self, config: BrowserConfig) -&gt; IBrowserInstance:
-    _check_playwright_installed()
-
-    from playwright.async_api import async_playwright  # lazy import
-
-    pw = await async_playwright().__aenter__()
-    browser = await getattr(pw, config.browser_type).launch(**args)
-    return PlaywrightBrowserInstance(browser=browser)
-</code></pre>
-<p>If Playwright is not installed, a helpful <code>RuntimeError</code> is raised:</p>
-<pre><code>RuntimeError: Playwright is not installed. Install it with:
-  pip install playwright
-  playwright install chromium
-</code></pre>
-<h3 id="capabilities">Capabilities</h3>
-<p>The provider advertises these capabilities:</p>
-<pre><code class="language-python">PLAYWRIGHT_CAPABILITIES = frozenset({
-    &quot;screenshot&quot;,
-    &quot;pdf&quot;,
-    &quot;network_intercept&quot;,
-    &quot;js_eval&quot;,
-    &quot;multi_context&quot;,
-    &quot;emulation&quot;,
-})
-</code></pre>
-<h3 id="launch-argument-mapping">Launch Argument Mapping</h3>
-<p><code>BrowserConfig</code> fields are mapped to Playwright <code>launch()</code> kwargs as follows:</p>
-<table>
-<thead>
-<tr>
-<th>BrowserConfig Field</th>
-<th>Playwright kwarg</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>headless</code></td>
-<td><code>headless</code></td>
-</tr>
-<tr>
-<td><code>proxy</code></td>
-<td><code>proxy={"server": config.proxy}</code></td>
-</tr>
-<tr>
-<td><code>args</code></td>
-<td><code>args=list(config.args)</code></td>
-</tr>
-</tbody>
-</table>
+<h2 id="deprecated-playwrightprovider">Deprecated: PlaywrightProvider</h2>
+<p>The original <code>PlaywrightBrowserProvider</code> (<code>_playwright_provider.py</code>) has been replaced by <code>SeleniumBrowserProvider</code>. The old file is preserved as dead code for reference but has <strong>no active imports</strong>. Its test file (<code>tests/browser/test_playwright_provider.py</code>) is entirely skipped via <code>@pytest.mark.skip</code>.</p>
 <h2 id="cli-commands">CLI Commands</h2>
 <p>Browser automation is accessible via the <code>fiona browser</code> command (aliased as <code>fiona br</code>).</p>
 <pre><code class="language-bash">fiona browser start          # Start the browser engine
@@ -651,7 +645,7 @@ fiona browser screenshot     # Capture a screenshot
 <h4 id="fiona-browser-start"><code>fiona browser start</code></h4>
 <pre><code>fiona browser start
 </code></pre>
-<p>Starts the browser. Shows an error if already running.</p>
+<p>Starts the browser. Safe to call when already running (no-op).</p>
 <h4 id="fiona-browser-stop"><code>fiona browser stop</code></h4>
 <pre><code>fiona browser stop
 </code></pre>
@@ -663,8 +657,7 @@ fiona browser screenshot     # Capture a screenshot
 <pre><code class="language-json">{
   &quot;state&quot;: &quot;running&quot;,
   &quot;config&quot;: {
-    &quot;headless&quot;: false,
-    &quot;slow_mo&quot;: null,
+    &quot;headless&quot;: true,
     &quot;viewport_width&quot;: 1280,
     &quot;viewport_height&quot;: 720
   }
@@ -775,7 +768,7 @@ fiona browser screenshot     # Capture a screenshot
 </tbody>
 </table>
 <h4 id="fiona-browser-screenshot"><code>fiona browser screenshot</code></h4>
-<pre><code>fiona browser screenshot [--output path] [--full-page]
+<pre><code>fiona browser screenshot [--output path]
 </code></pre>
 <p>Arguments:</p>
 <table>
@@ -794,14 +787,9 @@ fiona browser screenshot     # Capture a screenshot
 <td>stdout</td>
 <td>Output file path. If omitted, raw PNG bytes are written to stdout.</td>
 </tr>
-<tr>
-<td><code>--full-page</code></td>
-<td>flag</td>
-<td><code>False</code></td>
-<td>Capture the full scrollable page, not just the viewport.</td>
-</tr>
 </tbody>
 </table>
+<p>Note: <code>--full-page</code> is not supported by the Selenium provider (Playwright-only feature).</p>
 <h3 id="alias">Alias</h3>
 <p>The entire <code>browser</code> command group is aliased as <code>br</code>:</p>
 <pre><code class="language-bash">fiona br start
@@ -809,13 +797,13 @@ fiona br status
 fiona br navigate https://example.com
 </code></pre>
 <h2 id="dependencies">Dependencies</h2>
-<p>Playwright is an <strong>optional</strong> dependency of Fiona. Install it with:</p>
+<p>Selenium is a required dependency of Fiona. Install it with:</p>
 <pre><code class="language-bash">pip install fiona[browser]
 # or directly:
-pip install &quot;playwright&gt;=1.45.0&quot;
-playwright install chromium
+pip install selenium&gt;=4.20.0 webdriver-manager&gt;=4.0.0
 </code></pre>
-<p>The minimum required version is <code>playwright&gt;=1.45.0</code>, declared under the <code>[browser]</code> optional-dependencies group in <code>pyproject.toml</code>.</p></div>
+<p>The minimum required versions are <code>selenium&gt;=4.20.0</code> and <code>webdriver-manager&gt;=4.0.0</code>, declared under the <code>[browser]</code> optional-dependencies group in <code>pyproject.toml</code>.</p>
+<p><code>webdriver-manager</code> automatically handles ChromeDriver binary management — no manual <code>chromedriver</code> installation needed. A Chrome/Chromium browser must be available on the system PATH or pointed to via the <code>FIONA_CHROME_BINARY</code> environment variable.</p></div>
             </div>
         </div>
 

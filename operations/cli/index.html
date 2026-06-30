@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -374,7 +382,7 @@
 <tr>
 <td><code>fiona browser ...</code></td>
 <td>BrowserAutomation</td>
-<td>Playwright-based browser automation</td>
+<td>Selenium-based browser automation</td>
 <td>mixed</td>
 </tr>
 <tr>
@@ -672,7 +680,7 @@ fiona agent commands
 <li><code>commands</code> exposes an agent-readable registry of Fiona actions and available QuikTieper apps.</li>
 </ul>
 <h2 id="browser-commands">Browser Commands</h2>
-<p>Playwright-based browser automation subsystem.</p>
+<p>Selenium-based browser automation subsystem (headless by default).</p>
 <pre><code class="language-bash">fiona browser start            # Start the browser automation engine
 fiona browser stop             # Stop the browser automation engine
 fiona browser status           # Show current browser state
@@ -683,9 +691,11 @@ fiona browser screenshot       # Capture a screenshot of the current page
 </code></pre>
 <p>Startup flow:</p>
 <pre><code class="language-text">fiona browser start
-  -&gt; BrowserManager state: STOPPED -&gt; STARTING -&gt; RUNNING
+  -&gt; BrowserManager state: STOPPED/ERROR -&gt; STARTING -&gt; RUNNING
   -&gt; module-level default manager created
-  -&gt; Playwright provider launches browser (chromium by default)
+  -&gt; Selenium WebDriver launches Chrome (headless by default)
+  -&gt; Chrome binary resolved via: FIONA_CHROME_BINARY env &gt; PATH &gt; Playwright fallback
+  -&gt; webdriver-manager handles chromedriver automatically
   -&gt; optional EventBus publishes BrowserLaunched event
   -&gt; isolated contexts can be created for multi-session workflows
 </code></pre>
@@ -919,8 +929,8 @@ fiona action clear
 </tr>
 <tr>
 <td>Browser cannot start</td>
-<td>Playwright/browser missing</td>
-<td>run <code>playwright install</code> to install browser binaries</td>
+<td>Chrome missing or webdriver-manager mismatch</td>
+<td>ensure <code>google-chrome-stable</code> is on PATH, or set <code>FIONA_CHROME_BINARY</code> env var. Selenium uses <code>webdriver-manager</code> for auto chromedriver management</td>
 </tr>
 <tr>
 <td>Browser navigate times out</td>

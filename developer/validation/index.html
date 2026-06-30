@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -280,7 +288,7 @@
 <h2 id="latest-test-result">Latest Test Result</h2>
 <p>Recorded on 2026-06-23:</p>
 <pre><code class="language-text">1598 tests across Python and JavaScript:
-  Python:   1413 passed, 14 env-failures (pytest)
+  Python:   1462 passed, 14 env-failures (pytest) — includes 49 CmdTrace/RecallVault tests
   CAD JS:    87 passed (vitest)
   CAD Srv:   98 passed (pytest)
   compileall OK
@@ -340,7 +348,7 @@ camcoms trust --list returned an empty sender list for a missing trusted directo
 <p>Command:</p>
 <pre><code class="language-bash">python -m pytest tests/browser/ -v
 </code></pre>
-<p>Result: 52 tests pass. Covers BrowserManager state machine (STOPPED → STARTING → RUNNING → DEGRADED → ERROR), auto-restart on crash, thread safety, Playwright provider navigation, element interaction, script execution, and all error types.</p>
+<p>Result: 24 tests pass (28 skipped for deprecated Playwright provider). Covers BrowserManager state machine (STOPPED/ERROR → STARTING → RUNNING), graceful start (no-op on running, recovery from ERROR), thread safety, and state transitions.</p>
 <h2 id="latest-agent-orchestration-test-result">Latest Agent Orchestration Test Result</h2>
 <p>Command:</p>
 <pre><code class="language-bash">python -m pytest tests/test_agent_orchestrator.py tests/test_agent_orchestration.py tests/test_agent_foreman_handler.py tests/test_agent_stress.py -v

@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>DataClient - Fiona</title>
+        <title>SciPhi — Scientific Operating System - Fiona</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -76,7 +76,7 @@
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -100,7 +100,7 @@
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active" aria-current="page">DataClient</a>
+    <a href="../dataclient/" class="dropdown-item">DataClient</a>
 </li>
                                     
 <li>
@@ -190,16 +190,6 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
-                            <li class="nav-item">
-                                <a rel="prev" href="../phiconnect/" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../vsee/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
                     </ul>
                 </div>
             </div>
@@ -218,29 +208,37 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#dataclient" class="nav-link">DataClient</a>
+            <li class="nav-item" data-bs-level="1"><a href="#sciphi-scientific-operating-system" class="nav-link">SciPhi — Scientific Operating System</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#open-the-app" class="nav-link">Open The App</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#gui-areas" class="nav-link">GUI Areas</a>
+            <li class="nav-item" data-bs-level="2"><a href="#architecture" class="nav-link">Architecture</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#research-mode" class="nav-link">Research Mode</a>
+            <li class="nav-item" data-bs-level="2"><a href="#opsim-kernel-sciphikernel" class="nav-link">Opsim Kernel (SciPhi/kernel/)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#output-columns" class="nav-link">Output Columns</a>
+            <li class="nav-item" data-bs-level="2"><a href="#scientific-models-sciphimodels" class="nav-link">Scientific Models (SciPhi/models/)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#miniexcel" class="nav-link">MiniExcel</a>
+            <li class="nav-item" data-bs-level="2"><a href="#solvers-sciphisolvers" class="nav-link">Solvers (SciPhi/solvers/)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#convert-and-preview" class="nav-link">Convert And Preview</a>
+            <li class="nav-item" data-bs-level="2"><a href="#cli-usage" class="nav-link">CLI Usage</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#visualization" class="nav-link">Visualization</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#provenance" class="nav-link">Provenance</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#test-status" class="nav-link">Test Status</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -251,81 +249,219 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="dataclient">DataClient</h1>
-<p>DataClient is Fiona's standalone research and data collection app. It is not part of the shared <code>fiona edit</code> GUI.</p>
-<h2 id="open-the-app">Open The App</h2>
-<pre><code class="language-bash">python3 -m fiona.cli dataclient
+<h1 id="sciphi-scientific-operating-system">SciPhi — Scientific Operating System</h1>
+<p>SciPhi is a scientific investigation and simulation engine for Fiona. It is built around the <strong>Opsim (Optimized Simulation) Kernel</strong> — a reasoning engine that plans, constructs, executes, validates, and explains scientific investigations. It behaves like a lead scientist coordinating a research team, not like a function that computes equations.</p>
+<p>SciPhi is <strong>not</strong> a general-purpose chatbot or a simple calculator. It is a structured scientific computation platform designed for reproducibility, transparency, and rigor.</p>
+<h2 id="architecture">Architecture</h2>
+<pre><code>User Request → Opsim Kernel → Scientific Planner → Scientific Model
+    → Problem Compiler → Solver Selection Engine → Solver
+    → Validation → Uncertainty Analysis → Report Generation
 </code></pre>
-<p>If Fiona is installed into the active environment:</p>
-<pre><code class="language-bash">fiona dataclient
+<p>The system is split into three independent layers:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Responsibility</th>
+<th>Never knows about</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Models</strong></td>
+<td>Equations, variables, parameters, assumptions</td>
+<td>Solvers, computation</td>
+</tr>
+<tr>
+<td><strong>Solvers</strong></td>
+<td>Numerical methods, convergence criteria</td>
+<td>Science, domains</td>
+</tr>
+<tr>
+<td><strong>Kernel</strong></td>
+<td>Planning, compiling, selecting, validating</td>
+<td>Neither science nor numerics directly</td>
+</tr>
+</tbody>
+</table>
+<h2 id="opsim-kernel-sciphikernel">Opsim Kernel (<code>SciPhi/kernel/</code>)</h2>
+<p>The central orchestrator that owns the full investigation lifecycle:</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opsim.py</code></td>
+<td>OpsimKernel</td>
+<td>Orchestrator — runs the full pipeline</td>
+</tr>
+<tr>
+<td><code>advisor.py</code></td>
+<td>SimulationAdvisor</td>
+<td>Checks if simulation is needed (or if analytical solution exists)</td>
+</tr>
+<tr>
+<td><code>planner.py</code></td>
+<td>ScientificPlanner</td>
+<td>Determines domain, governing equations, mathematical form</td>
+</tr>
+<tr>
+<td><code>compiler.py</code></td>
+<td>ProblemCompiler</td>
+<td>Translates scientific model → computational problem</td>
+</tr>
+<tr>
+<td><code>solver_selector.py</code></td>
+<td>SolverSelectionEngine</td>
+<td>Matches problem form to solver capabilities</td>
+</tr>
+<tr>
+<td><code>evaluator.py</code></td>
+<td>ScientificEvaluator</td>
+<td>Unit consistency, conservation laws, physical bounds</td>
+</tr>
+<tr>
+<td><code>uncertainty.py</code></td>
+<td>UncertaintyAnalyzer</td>
+<td>Error propagation, confidence estimates</td>
+</tr>
+<tr>
+<td><code>hypothesis.py</code></td>
+<td>HypothesisEngine</td>
+<td>Generates and evaluates testable hypotheses</td>
+</tr>
+<tr>
+<td><code>provenance.py</code></td>
+<td>ProvenanceTracker</td>
+<td>Structured record of every scientific decision</td>
+</tr>
+<tr>
+<td><code>report.py</code></td>
+<td>ReportGenerator</td>
+<td>Compiles all phases into structured investigation report</td>
+</tr>
+</tbody>
+</table>
+<h2 id="scientific-models-sciphimodels">Scientific Models (<code>SciPhi/models/</code>)</h2>
+<p>Models describe <strong>only the science</strong> — equations, variables, parameters, assumptions, constraints, and domain-specific constants. They never reference solvers or numerical methods.</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Models</th>
+<th>Form</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Physics</strong></td>
+<td>Kinematics, Dynamics (harmonic oscillator), Thermodynamics (ideal gas), Electromagnetism (Coulomb/RC circuits), Quantum (particle in a box)</td>
+<td>ALGEBRAIC, ODE_INITIAL_VALUE, PDE, HYBRID</td>
+</tr>
+<tr>
+<td><strong>Chemistry</strong></td>
+<td>Reaction kinetics (Arrhenius), Equilibrium (van't Hoff), Stoichiometry (mass/mole/yield)</td>
+<td>ODE_INITIAL_VALUE, ALGEBRAIC</td>
+</tr>
+<tr>
+<td><strong>Biology</strong></td>
+<td>Logistic growth (population dynamics), SIR epidemic model</td>
+<td>ODE_INITIAL_VALUE</td>
+</tr>
+<tr>
+<td><strong>Earth Science</strong></td>
+<td>Energy balance climate model (zero-dimensional)</td>
+<td>HYBRID</td>
+</tr>
+<tr>
+<td><strong>Engineering</strong></td>
+<td>Structural analysis (beam bending/buckling), Circuit analysis (RC/RL)</td>
+<td>ALGEBRAIC, HYBRID</td>
+</tr>
+</tbody>
+</table>
+<p>Total: <strong>13 models</strong> across <strong>5 domains</strong>.</p>
+<p>All models implement the <code>ScientificModel</code> abstract base class from <code>SciPhi.interfaces.model</code>.</p>
+<h2 id="solvers-sciphisolvers">Solvers (<code>SciPhi/solvers/</code>)</h2>
+<p>Solvers describe <strong>only the computation</strong> — numerical methods, convergence criteria, and algorithmic parameters. They never reference scientific domains.</p>
+<table>
+<thead>
+<tr>
+<th>Solver</th>
+<th>Methods</th>
+<th>Forms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ODESolver</td>
+<td>RK4, Euler, DOPRI5 (adaptive)</td>
+<td>ODE initial value problems</td>
+</tr>
+<tr>
+<td>AlgebraicSolver</td>
+<td>Newton-Raphson, Bisection, Fixed-point</td>
+<td>Algebraic systems</td>
+</tr>
+<tr>
+<td>MonteCarloSolver</td>
+<td>Standard MC, Importance sampling</td>
+<td>Stochastic problems</td>
+</tr>
+<tr>
+<td>SymbolicSolver</td>
+<td>SymPy solve/simplify/dsolve</td>
+<td>Symbolic mathematics</td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>Gradient descent, Nelder-Mead, BFGS</td>
+<td>Optimization problems</td>
+</tr>
+</tbody>
+</table>
+<p>All solvers implement the <code>Solver</code> ABC from <code>SciPhi.interfaces.solver</code> and declare capabilities for automatic selection.</p>
+<h2 id="cli-usage">CLI Usage</h2>
+<pre><code class="language-bash"># Full scientific investigation (Opsim pipeline)
+fiona sciphi research &quot;What is the trajectory of a projectile launched at 45 degrees?&quot;
+
+# Run a specific model directly with custom parameters
+fiona sciphi simulate KinematicsModel --params '{&quot;initial_angle&quot;: 45, &quot;initial_velocity&quot;: 10}'
+
+# Validate a simulation result against known data
+fiona sciphi validate result.json
+
+# List available models and solvers
+fiona sciphi list-models
+fiona sciphi list-models --domain physics
+fiona sciphi list-solvers
 </code></pre>
-<h2 id="gui-areas">GUI Areas</h2>
-<p>The GUI has two main tabs:</p>
+<h2 id="visualization">Visualization</h2>
+<p>SciPhi includes an optional visualization module (<code>SciPhi.visualization</code>) for plotting simulation results:</p>
 <ul>
-<li><code>Research</code>: quick topic mining and bounded deep research.</li>
-<li><code>MiniExcel</code>: lightweight CSV/JSON/SQLite viewer and editor.</li>
+<li><code>plot_result(result)</code> — time-series, bar, or heatmap plots from SimulationResult data</li>
+<li><code>plot_report(report)</code> — multi-panel figure with results, validation status, and uncertainty</li>
+<li><code>plot_comparison(results, labels)</code> — overlay multiple scenarios</li>
 </ul>
-<p>The app menu includes a <code>Miner</code> menu for starting quick mining, starting deep research, and clearing the miner log without switching tabs.</p>
-<h2 id="research-mode">Research Mode</h2>
-<p>Quick mode:</p>
+<p>All functions use dark theme styling and return base64 data URLs or save to file. Requires <code>matplotlib</code> (optional dependency).</p>
+<h2 id="provenance">Provenance</h2>
+<p>Every investigation produces a complete provenance record containing:</p>
 <ul>
-<li>searches DuckDuckGo HTML results</li>
-<li>scrapes the selected number of pages</li>
-<li>summarizes page text</li>
-<li>saves the results as CSV</li>
+<li>Models used and their versions</li>
+<li>Governing equations and constants</li>
+<li>Solver selection and configuration</li>
+<li>Assumptions and approximations</li>
+<li>Validation results</li>
+<li>Uncertainty estimates</li>
+<li>Full decision traceability</li>
 </ul>
-<p>Deep mode:</p>
-<ul>
-<li>starts from search result seed pages</li>
-<li>follows same-domain links by default</li>
-<li>obeys depth and page-limit controls</li>
-<li>records page depth and parent URL</li>
-</ul>
-<p>CLI quick mining:</p>
-<pre><code class="language-bash">python3 -m fiona.cli dataclient mine &quot;local desktop automation&quot; --out ./research.csv --max-links 30
-</code></pre>
-<p>CLI deep research:</p>
-<pre><code class="language-bash">python3 -m fiona.cli dataclient deep &quot;local desktop automation&quot; --out ./deep-research.csv --seed-links 10 --depth 1 --page-limit 50
-</code></pre>
-<p>Deep mode is intentionally bounded. Use <code>--cross-domain</code> only when broader crawling is intentional.</p>
-<h2 id="output-columns">Output Columns</h2>
-<p>DataClient research exports use these columns:</p>
-<ul>
-<li><code>topic</code></li>
-<li><code>url</code></li>
-<li><code>title</code></li>
-<li><code>summary</code></li>
-<li><code>depth</code></li>
-<li><code>parent_url</code></li>
-</ul>
-<h2 id="miniexcel">MiniExcel</h2>
-<p>MiniExcel can:</p>
-<ul>
-<li>open CSV, JSON, and SQLite tables</li>
-<li>display data in rows and columns</li>
-<li>edit the selected cell</li>
-<li>add rows</li>
-<li>add columns</li>
-<li>delete rows</li>
-<li>save or export the table</li>
-<li>use a formula bar for selected cells</li>
-</ul>
-<p>Formula bar examples:</p>
-<pre><code class="language-text">=A1
-=B1:B5
-=SUM(B1:B5)
-=AVG(C1:C10)
-=LOWER(A1)
-</code></pre>
-<p>Supported safe functions include <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>, <code>COUNT</code>, <code>LEN</code>, <code>LOWER</code>, and <code>UPPER</code>.</p>
-<h2 id="convert-and-preview">Convert And Preview</h2>
-<p>Convert between table formats:</p>
-<pre><code class="language-bash">python3 -m fiona.cli dataclient convert ./research.csv --out ./research.json
-python3 -m fiona.cli dataclient convert ./research.json --out ./research.db --table research
-</code></pre>
-<p>Preview a table from the terminal:</p>
-<pre><code class="language-bash">python3 -m fiona.cli dataclient view ./research.csv --limit 5
-</code></pre></div>
+<h2 id="test-status">Test Status</h2>
+<p><strong>322 tests pass, 6 skipped</strong> (sympy optional dependency).</p></div>
             </div>
         </div>
 

@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>Testing - Fiona</title>
+        <title>Using the Dashboard - Fiona</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -39,7 +39,7 @@
                                 <a href="../.." class="nav-link">Home</a>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Getting Started</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -51,7 +51,7 @@
 </li>
                                     
 <li>
-    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+    <a href="./" class="dropdown-item active" aria-current="page">Using the Dashboard</a>
 </li>
                                 </ul>
                             </li>
@@ -154,31 +154,31 @@
                                 <a href="../../prototypes/" class="nav-link">Prototypes</a>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="../build-order/" class="dropdown-item">Build Order</a>
+    <a href="../../developer/build-order/" class="dropdown-item">Build Order</a>
 </li>
                                     
 <li>
-    <a href="../security/" class="dropdown-item">Security</a>
+    <a href="../../developer/security/" class="dropdown-item">Security</a>
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active" aria-current="page">Testing</a>
+    <a href="../../developer/testing/" class="dropdown-item">Testing</a>
 </li>
                                     
 <li>
-    <a href="../test-suites/" class="dropdown-item">Test Suites</a>
+    <a href="../../developer/test-suites/" class="dropdown-item">Test Suites</a>
 </li>
                                     
 <li>
-    <a href="../validation/" class="dropdown-item">Validation</a>
+    <a href="../../developer/validation/" class="dropdown-item">Validation</a>
 </li>
                                     
 <li>
-    <a href="../developernote/" class="dropdown-item">Developer Note</a>
+    <a href="../../developer/developernote/" class="dropdown-item">Developer Note</a>
 </li>
                                 </ul>
                             </li>
@@ -191,12 +191,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../security/" class="nav-link">
+                                <a rel="prev" href="../../installation/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../test-suites/" class="nav-link">
+                                <a rel="next" href="../../architecture/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -218,45 +218,65 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#testing" class="nav-link">Testing</a>
+            <li class="nav-item" data-bs-level="1"><a href="#using-the-fiona-dashboard" class="nav-link">Using the Fiona Dashboard</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#run-all-tests" class="nav-link">Run All Tests</a>
+            <li class="nav-item" data-bs-level="2"><a href="#starting-the-dashboard" class="nav-link">Starting the Dashboard</a>
               <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#run-roadmap-tests" class="nav-link">Run Roadmap Tests</a>
+            <li class="nav-item" data-bs-level="3"><a href="#option-1-using-the-startup-script-recommended" class="nav-link">Option 1: Using the startup script (recommended)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#module-specific-test-commands" class="nav-link">Module-Specific Test Commands</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="3"><a href="#browser-automation" class="nav-link">Browser Automation</a>
+            <li class="nav-item" data-bs-level="3"><a href="#option-2-starting-it-directly" class="nav-link">Option 2: Starting it directly</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#agent-orchestration" class="nav-link">Agent Orchestration</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="3"><a href="#contract-tests" class="nav-link">Contract Tests</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="3"><a href="#additional-agent-tests" class="nav-link">Additional Agent Tests</a>
+            <li class="nav-item" data-bs-level="3"><a href="#opening-the-dashboard" class="nav-link">Opening the Dashboard</a>
               <ul class="nav flex-column">
               </ul>
             </li>
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#compile-check" class="nav-link">Compile Check</a>
+            <li class="nav-item" data-bs-level="2"><a href="#navigating-around" class="nav-link">Navigating Around</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#main-sections" class="nav-link">Main Sections</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#camcoms-focused-tests" class="nav-link">CamComs Focused Tests</a>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#common-tasks" class="nav-link">Common Tasks</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#chat-with-the-ai" class="nav-link">Chat with the AI</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#direct-smoke-commands" class="nav-link">Direct Smoke Commands</a>
+            <li class="nav-item" data-bs-level="3"><a href="#browse-and-run-actions" class="nav-link">Browse and Run Actions</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#use-the-terminal" class="nav-link">Use the Terminal</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#automate-a-web-browser" class="nav-link">Automate a Web Browser</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#check-your-system-performance" class="nav-link">Check Your System Performance</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#tips-tricks" class="nav-link">Tips &amp; Tricks</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#troubleshooting" class="nav-link">Troubleshooting</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#stopping-the-dashboard" class="nav-link">Stopping the Dashboard</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -267,99 +287,266 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="testing">Testing</h1>
-<p>Fiona uses Python <code>unittest</code> with pytest runner support.</p>
-<h2 id="run-all-tests">Run All Tests</h2>
-<p>From the repository root:</p>
-<pre><code class="language-bash">python -m unittest discover -s tests -v
+<h1 id="using-the-fiona-dashboard">Using the Fiona Dashboard</h1>
+<p>The Fiona Dashboard is a web-based control centre that lets you manage your computer through Fiona — all from your browser. Think of it as a remote control for your desktop, but it runs on your own machine.</p>
+<p>You don't need to know how to code to use it. If you can open a web page and click buttons, you're good.</p>
+<hr />
+<h2 id="starting-the-dashboard">Starting the Dashboard</h2>
+<p><strong>You only need to do this once per session.</strong></p>
+<p>The project includes two handy scripts that handle everything for you:</p>
+<h3 id="option-1-using-the-startup-script-recommended">Option 1: Using the startup script (recommended)</h3>
+<p>Open a terminal in the Fiona project folder and run:</p>
+<pre><code class="language-bash">./scripts/fiona-pages-start
 </code></pre>
-<p>Or with pytest for better output:</p>
-<pre><code class="language-bash">python -m pytest tests/ -v
+<p>This automatically starts the server and shows you the address to open.</p>
+<h3 id="option-2-starting-it-directly">Option 2: Starting it directly</h3>
+<pre><code class="language-bash">python3 fionaLocalPages/server/app.py
 </code></pre>
-<p>Important: <code>python -m unittest discover -v</code> from the repository root currently discovers 0 tests in this layout. Use <code>-s tests</code>.</p>
-<h2 id="run-roadmap-tests">Run Roadmap Tests</h2>
-<p>Tests specific to the Fiona Enhancement Roadmap (740+ total):</p>
-<pre><code class="language-bash"># ACL system
-python -m pytest tests/test_acl.py -v
-
-# Shell safety
-python -m pytest tests/test_shell_safety.py -v
-
-# Verification prompts
-python -m pytest tests/test_verification.py -v
-
-# Pairing protocol
-python -m pytest tests/test_pairing.py -v
-
-# Key rotation &amp; identity
-python -m pytest tests/test_identity.py -v
-
-# Trust store extended
-python -m pytest tests/test_trust_extended.py -v
-
-# Macro engine
-python -m pytest tests/test_macro_engine.py tests/test_macro_engine_runner.py -v
-
-# Process tracker
-python -m pytest tests/test_process_tracker.py -v
-
-# Workspace watcher
-python -m pytest tests/test_workspace_watcher.py -v
-
-# Action discovery
-python -m pytest tests/test_action_discovery.py -v
-
-# Voice subsystem
-python -m pytest tests/test_voice.py -v
-
-# System tray
-python -m pytest tests/test_system_tray.py -v
+<h3 id="opening-the-dashboard">Opening the Dashboard</h3>
+<p>Once the server is running, open your web browser and go to:</p>
+<pre><code>http://fiona.agent:9876
 </code></pre>
-<h2 id="module-specific-test-commands">Module-Specific Test Commands</h2>
-<h3 id="browser-automation">Browser Automation</h3>
-<pre><code class="language-bash">python -m pytest tests/browser/ -v
+<p>You should see the Fiona Dashboard — a dark-themed interface with a sidebar on the left.</p>
+<blockquote>
+<p><strong>Tip:</strong> If <code>fiona.agent</code> doesn't work, try <code>http://127.0.0.1:9876</code> instead.</p>
+</blockquote>
+<hr />
+<h2 id="navigating-around">Navigating Around</h2>
+<p>The sidebar on the left is your main menu. Click any item to open that section.</p>
+<h3 id="main-sections">Main Sections</h3>
+<table>
+<thead>
+<tr>
+<th>Icon</th>
+<th>Section</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📊</td>
+<td><strong>Dashboard</strong></td>
+<td>At-a-glance view: system status, recent activity, agent info</td>
+</tr>
+<tr>
+<td>💬</td>
+<td><strong>AI Chat</strong></td>
+<td>Chat with Fiona's AI assistant — ask questions, get help</td>
+</tr>
+<tr>
+<td>🤖</td>
+<td><strong>Agents</strong></td>
+<td>Manage AI agents: start, pause, stop, or check on them</td>
+</tr>
+<tr>
+<td>⚡</td>
+<td><strong>Actions</strong></td>
+<td>Browse and run Fiona commands (search, filter, see what's safe)</td>
+</tr>
+<tr>
+<td>⌨️</td>
+<td><strong>Key Bindings</strong></td>
+<td>View and edit your keyboard shortcuts for launching apps</td>
+</tr>
+<tr>
+<td>🔒</td>
+<td><strong>PhiConnect</strong></td>
+<td>Send encrypted messages to other computers running Fiona</td>
+</tr>
+<tr>
+<td>▶️</td>
+<td><strong>Macros</strong></td>
+<td>Create and run automation sequences (like mini-programs)</td>
+</tr>
+<tr>
+<td>💻</td>
+<td><strong>Terminal</strong></td>
+<td>A command-line terminal built right into the browser</td>
+</tr>
+<tr>
+<td>🔔</td>
+<td><strong>Notifications</strong></td>
+<td>See alerts and messages from Fiona</td>
+</tr>
+<tr>
+<td>⚙️</td>
+<td><strong>Settings</strong></td>
+<td>Configure how Fiona behaves</td>
+</tr>
+<tr>
+<td>📈</td>
+<td><strong>Performance</strong></td>
+<td>Live CPU and memory usage charts</td>
+</tr>
+<tr>
+<td>📁</td>
+<td><strong>Files</strong></td>
+<td>Browse and edit files on your computer</td>
+</tr>
+<tr>
+<td>🌐</td>
+<td><strong>Browser</strong></td>
+<td>Control an automated browser (for web tasks)</td>
+</tr>
+<tr>
+<td>✅</td>
+<td><strong>Tasks</strong></td>
+<td>A simple to-do board for keeping track of things</td>
+</tr>
+<tr>
+<td>🧩</td>
+<td><strong>Plugins</strong></td>
+<td>See what plugins are available</td>
+</tr>
+<tr>
+<td>📝</td>
+<td><strong>Logs</strong></td>
+<td>View system logs</td>
+</tr>
+<tr>
+<td>🔧</td>
+<td><strong>Configuration</strong></td>
+<td>Edit configuration settings directly</td>
+</tr>
+<tr>
+<td>🏥</td>
+<td><strong>Diagnostics</strong></td>
+<td>Health checks for various parts of Fiona</td>
+</tr>
+<tr>
+<td>🛠️</td>
+<td><strong>Dev Tools</strong></td>
+<td>Developer utilities</td>
+</tr>
+<tr>
+<td>📂</td>
+<td><strong>Workspace</strong></td>
+<td>Overview of your project workspace</td>
+</tr>
+<tr>
+<td>📡</td>
+<td><strong>CamComs</strong></td>
+<td>Encrypted communication status</td>
+</tr>
+<tr>
+<td>🔍</td>
+<td><strong>RecallVault</strong></td>
+<td>Search through stored information</td>
+</tr>
+<tr>
+<td>🖥️</td>
+<td><strong>SeeOnDesk</strong></td>
+<td>See what window is currently active on your desktop</td>
+</tr>
+<tr>
+<td>🎤</td>
+<td><strong>Voice</strong></td>
+<td>Voice command status and control</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="common-tasks">Common Tasks</h2>
+<h3 id="chat-with-the-ai">Chat with the AI</h3>
+<ol>
+<li>Click <strong>AI Chat</strong> in the sidebar.</li>
+<li>Type your message in the box at the bottom.</li>
+<li>Press Enter or click Send.</li>
+<li>Watch the AI respond in real time — words appear as they're generated.</li>
+</ol>
+<p>You can change the AI's personality (General, Planner, Engineer, Analyst, Security) using the dropdown.</p>
+<h3 id="browse-and-run-actions">Browse and Run Actions</h3>
+<ol>
+<li>Click <strong>Actions</strong> in the sidebar.</li>
+<li>Browse the list or use the search bar.</li>
+<li>Each action shows its name, what it does, and how risky it is (safe, medium, or high).</li>
+<li>Click <strong>Run</strong> to execute an action.</li>
+<li>If the action needs approval, you'll see a prompt — confirm to proceed.</li>
+</ol>
+<h3 id="use-the-terminal">Use the Terminal</h3>
+<ol>
+<li>Click <strong>Terminal</strong> in the sidebar.</li>
+<li>Type commands just like you would in a normal terminal.</li>
+<li>The terminal tracks which folder you're in (<code>cd</code> actually works).</li>
+<li>Press Tab for autocomplete suggestions.</li>
+<li>Try <code>help</code> to see available commands, or <code>clear</code> to clear the screen.</li>
+</ol>
+<h3 id="automate-a-web-browser">Automate a Web Browser</h3>
+<ol>
+<li>Make sure you have Chrome or Chromium installed on your system.</li>
+<li>Click <strong>Browser</strong> in the sidebar.</li>
+<li>Click <strong>Start</strong> to launch the automated browser (it runs invisibly by default).</li>
+<li>Enter a URL and click <strong>Navigate</strong>.</li>
+<li>Use the controls to click elements, type text, or take screenshots.</li>
+<li>Click <strong>Stop</strong> when you're done.</li>
+</ol>
+<h3 id="check-your-system-performance">Check Your System Performance</h3>
+<ol>
+<li>Click <strong>Performance</strong> in the sidebar.</li>
+<li>Watch live-updating charts of your CPU and memory usage.</li>
+<li>The charts update automatically every few seconds.</li>
+</ol>
+<hr />
+<h2 id="tips-tricks">Tips &amp; Tricks</h2>
+<ul>
+<li><strong>Sidebar collapse:</strong> Click the collapse button at the bottom of the sidebar to give the main area more room.</li>
+<li><strong>Dark theme:</strong> The dashboard is dark by default (easy on the eyes).</li>
+<li><strong>Keyboard shortcut:</strong> Press <code>Ctrl+K</code> (or <code>Cmd+K</code> on Mac) to open the command palette — a quick-search for pages and actions.</li>
+<li><strong>Multiple tabs:</strong> You can open different sections in different browser tabs — each one works independently.</li>
+<li><strong>Settings are saved:</strong> Your preferences (like sidebar state) are remembered between sessions.</li>
+</ul>
+<hr />
+<h2 id="troubleshooting">Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Likely Cause</th>
+<th>What to Try</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboard won't load</td>
+<td>Server not running</td>
+<td>Run <code>./scripts/fiona-pages-start</code> from the Fiona folder, or start the server directly with <code>python3 fionaLocalPages/server/app.py</code></td>
+</tr>
+<tr>
+<td>Page shows "Failed to Load"</td>
+<td>Server restart needed</td>
+<td>Stop the server (Ctrl+C), start it again, then refresh the page</td>
+</tr>
+<tr>
+<td>Terminal commands don't work</td>
+<td>Command not found</td>
+<td>The terminal runs on your computer — standard Linux commands are available</td>
+</tr>
+<tr>
+<td>Browser controls are greyed out</td>
+<td>Browser not started</td>
+<td>Click "Start" first in the Browser page</td>
+</tr>
+<tr>
+<td>AI Chat is not responding</td>
+<td>Ollama not running</td>
+<td>Make sure Ollama is installed and running (<code>ollama serve</code> in a terminal)</td>
+</tr>
+<tr>
+<td>Settings won't save</td>
+<td>File permissions</td>
+<td>Check that <code>~/.config/fiona/settings.txt</code> is writable</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="stopping-the-dashboard">Stopping the Dashboard</h2>
+<p>When you're done, just close the browser tab. To stop the server completely, use the stop script:</p>
+<pre><code class="language-bash">./scripts/fiona-pages-stop
 </code></pre>
-<p>This covers the <code>BrowserManager</code> state machine and the <code>SeleniumBrowserProvider</code>. The old <code>PlaywrightBrowserProvider</code> tests are skipped.</p>
-<h3 id="agent-orchestration">Agent Orchestration</h3>
-<pre><code class="language-bash">python -m pytest tests/test_agent_orchestration.py tests/test_agent_orchestrator.py tests/test_agent_foreman_handler.py -v
-</code></pre>
-<p>This covers the think-act-observe loop, ForemanAgent task decomposition, sub-agent management, and plan synthesis.</p>
-<h3 id="contract-tests">Contract Tests</h3>
-<pre><code class="language-bash">python -m pytest tests/contracts/ -v
-</code></pre>
-<p>Validates every abstract interface defined in <code>fiona/interfaces.py</code> against contract test suites that verify method signatures, error conditions, and data type invariants.</p>
-<h3 id="additional-agent-tests">Additional Agent Tests</h3>
-<pre><code class="language-bash">python -m pytest tests/test_agent_chat_handler.py tests/test_agent_chat_store.py tests/test_agent_personalities.py tests/test_agent_query_detector.py tests/test_agent_command_registry.py tests/test_agent_stress.py tests/test_agent_backward_compat.py -v
-</code></pre>
-<p>Covers chat session management, token estimation, personality detection, query classification, command discovery, stress/edge cases, and backward compatibility.</p>
-<h2 id="compile-check">Compile Check</h2>
-<pre><code class="language-bash">python -m compileall Agent BrowserAutomation CamComs DataClient EyeControl FionaCore PhiConnect QuikTieper SeeOnDesk TerminalAssist Voice Vsee fiona
-</code></pre>
-<h2 id="camcoms-focused-tests">CamComs Focused Tests</h2>
-<pre><code class="language-bash">python -m unittest tests.test_camcoms_encryption tests.test_camcoms_transport
-</code></pre>
-<h2 id="direct-smoke-commands">Direct Smoke Commands</h2>
-<p>CamComs encryption smoke test:</p>
-<pre><code class="language-bash">python -m fiona.cli camcoms smoke-test
-</code></pre>
-<p>Expected payload:</p>
-<pre><code class="language-text">{&quot;keys&quot;:[&quot;alt&quot;,&quot;s&quot;],&quot;type&quot;:&quot;press&quot;,&quot;version&quot;:1}
-</code></pre>
-<p>Host service smoke checks:</p>
-<pre><code class="language-bash">python -m fiona.cli host init --config /tmp/fiona-host-test.json --force
-python -m fiona.cli host status --config /tmp/fiona-host-test.json
-python -m fiona.cli camcoms audit --path /tmp/fiona-audit-missing.log --limit 5
-python -m fiona.cli camcoms trust --list --trusted-dir /tmp/fiona-trusted-missing
-</code></pre>
-<p>PhiConnect local loopback:</p>
-<pre><code class="language-text">Open PhiConnect, use the local public key as the peer key, start the receiver, and send to 127.0.0.1:5000.
-</code></pre>
-<p>Voice smoke test:</p>
-<pre><code class="language-bash">python -m fiona.cli voice feedback-test
-</code></pre>
-<p>Macro smoke test:</p>
-<pre><code class="language-bash">python -m fiona.cli --list-macros
-</code></pre></div>
+<p>Or, if you started it directly, go back to that terminal and press <code>Ctrl+C</code>.</p>
+<blockquote>
+<p><strong>Note:</strong> Stopping the server doesn't affect other Fiona features (like keyboard shortcuts or the CLI). Only the web dashboard turns off.</p>
+</blockquote></div>
             </div>
         </div>
 

@@ -49,6 +49,10 @@
 <li>
     <a href="./" class="dropdown-item active" aria-current="page">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -188,7 +196,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../architecture/" class="nav-link">
+                                <a rel="next" href="../guides/using-the-dashboard/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -271,7 +279,7 @@
 cd Fiona
 ./scripts/fiona-install
 </code></pre>
-<p>The script handles everything — environment setup, pip install, optional extras (Playwright, aiohttp, EyeControl), system tool detection, and Playwright browser download.</p>
+<p>The script handles everything — environment setup, pip install, optional extras (Selenium, aiohttp, EyeControl), system tool detection, and Chrome browser check for Selenium automation.</p>
 <h3 id="options">Options</h3>
 <table>
 <thead>
@@ -333,7 +341,7 @@ pip install -e .
 <p>LM Studio has been removed from the project — Fiona's Agent bridge now uses <strong>Ollama</strong> for local inference. Support for LM Studio was replaced in favor of the Ollama OpenAI-compatible API.</p>
 <p><strong>Optional extras:</strong></p>
 <ul>
-<li><code>playwright</code> for browser automation via the BrowserAutomation module: install with <code>pip install -e ".[browser]"</code>.</li>
+<li><code>selenium</code> + <code>webdriver-manager</code> for browser automation via the BrowserAutomation module: install with <code>pip install -e ".[browser]"</code>. A Chrome/Chromium browser must be available on the system PATH.</li>
 <li><code>aiohttp</code> for the web frontend (<code>fionaLocalPages/</code> server). Install manually if not resolved by the main dependencies.</li>
 <li>EyeControl dependencies (<code>mediapipe</code>, <code>opencv-python</code>, <code>pyautogui</code>): install with <code>pip install -e ".[eyecontrol]"</code>.</li>
 </ul>
@@ -346,8 +354,9 @@ pip install -e .
 <li><code>xdotool</code> and <code>xprop</code> as fallback/legacy paths</li>
 <li><code>tk</code> / <code>tkinter</code> for GUI windows</li>
 </ul>
-<p>If you plan to use browser automation, also install Playwright browsers:</p>
-<pre><code class="language-bash">playwright install
+<p>If you plan to use browser automation, ensure Chrome/Chromium is available. <code>webdriver-manager</code> will automatically handle ChromeDriver:</p>
+<pre><code class="language-bash"># Selenium + webdriver-manager are installed via pip install fiona[browser]
+# Chrome/Chromium must be on PATH or set via FIONA_CHROME_BINARY env var
 </code></pre>
 <h2 id="web-frontend">Web Frontend</h2>
 <p>The <code>fionaLocalPages/</code> SPA web dashboard has no additional build step — it is served as static files by an aiohttp Python server.</p>
@@ -372,7 +381,7 @@ pip install -e .
 <p>Once installed, try these commands:</p>
 <pre><code class="language-bash">fiona action list                # List all registered actions
 fiona action run my-action       # Run a specific action
-fiona browser start              # Start the Playwright browser automation
+fiona browser start              # Start the Selenium browser automation
 fiona browser navigate --url https://example.com
 fiona voice parse &quot;open browser&quot; # Parse a voice phrase into an action
 fiona voice listen               # Listen to microphone and execute detected action

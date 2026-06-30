@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -226,11 +234,27 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#forget-an-entry" class="nav-link">Forget an entry</a>
+            <li class="nav-item" data-bs-level="3"><a href="#list-categories" class="nav-link">List categories</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="3"><a href="#list-categories" class="nav-link">List categories</a>
+            <li class="nav-item" data-bs-level="3"><a href="#statistics" class="nav-link">Statistics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#export" class="nav-link">Export</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#import" class="nav-link">Import</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#backup" class="nav-link">Backup</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#forget-an-entry" class="nav-link">Forget an entry</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -238,6 +262,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#api-endpoints" class="nav-link">API Endpoints</a>
+              <ul class="nav flex-column">
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#tui-integration" class="nav-link">TUI Integration</a>
@@ -248,6 +276,42 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#python-api" class="nav-link">Python API</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#recallentry-dataclass-fields" class="nav-link">RecallEntry dataclass fields</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#rememberkey-value-category-ttl_seconds-tags-path-path" class="nav-link">remember(key, value, *, category, ttl_seconds, tags, path) -&gt; Path</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#load_recallpath-listrecallentry" class="nav-link">load_recall(path) -&gt; list[RecallEntry]</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#recall_statspath-dict" class="nav-link">recall_stats(path) -&gt; dict</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#export_recallpath-output-fmt-path" class="nav-link">export_recall(path, output, fmt) -&gt; Path</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#import_recallpath-input-fmt-int" class="nav-link">import_recall(path, input, fmt) -&gt; int</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#backup_recallpath-path" class="nav-link">backup_recall(path) -&gt; Path</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#semanticindex-tf-idf-search" class="nav-link">SemanticIndex (TF-IDF search)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -256,34 +320,207 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="recallvault">RecallVault</h1>
-<p>RecallVault is Fiona's persistent "remembrance" store. It allows the system (and future agents) to save, search, and manage small snippets of information categorized for different contexts.</p>
+<p>RecallVault is Fiona's persistent "remembrance" store — a key-value database with categories, tags, TTL-based expiry, import/export, timestamped backups, and optional TF-IDF semantic search.</p>
 <h2 id="purpose">Purpose</h2>
 <ul>
 <li><strong>Long-term Memory</strong>: Store facts, configuration snippets, or notes that persist across sessions.</li>
-<li><strong>Categorization</strong>: Group information into categories such as <code>general</code>, <code>project</code>, <code>network</code>, etc.</li>
-<li><strong>Agent Integration</strong>: Provides the primary memory interface for future AI reasoning tasks.</li>
+<li><strong>Categorization &amp; Tagging</strong>: Group information into categories and attach multiple tags for rich filtering.</li>
+<li><strong>TTL-based Expiry</strong>: Entries can auto-expire after a configurable number of seconds.</li>
+<li><strong>Portability</strong>: Import and export entries as JSON or CSV files.</li>
+<li><strong>Safety</strong>: Automatic timestamped backups before any destructive write.</li>
+<li><strong>Semantic Search</strong>: Pure-Python TF-IDF index ranks results by relevance (no external dependencies).</li>
 </ul>
 <h2 id="commands">Commands</h2>
 <h3 id="save-a-remembrance">Save a remembrance</h3>
 <pre><code class="language-bash">fiona recall remember &quot;phi-host&quot; &quot;192.168.1.10&quot; --category network
+fiona recall remember &quot;db-password&quot; &quot;s3cret&quot; --tags secret,prod --ttl-seconds 86400
+fiona recall remember &quot;theme&quot; &quot;dark&quot; --category gui --tags ui,preferences
 </code></pre>
+<p>Options: <code>--category</code> (default: "general"), <code>--tags</code> (comma-separated list), <code>--ttl-seconds</code> (auto-expire after N seconds).</p>
 <h3 id="search-remembrances">Search remembrances</h3>
-<pre><code class="language-bash">fiona recall search &quot;phi&quot;
-</code></pre>
-<h3 id="forget-an-entry">Forget an entry</h3>
-<pre><code class="language-bash">fiona recall forget &quot;phi-host&quot;
+<pre><code class="language-bash">fiona recall search &quot;phi&quot;                      # Searches key, value, category, AND tags
+fiona recall search                             # List all entries
 </code></pre>
 <h3 id="list-categories">List categories</h3>
 <pre><code class="language-bash">fiona recall categories
 </code></pre>
+<h3 id="statistics">Statistics</h3>
+<pre><code class="language-bash">fiona recall stats
+</code></pre>
+<p>Returns 12 fields: total entries, per-category and per-tag counts, storage size (bytes + human-readable), oldest/newest entry, expired/tagged/untagged counts, categories list.</p>
+<h3 id="export">Export</h3>
+<pre><code class="language-bash">fiona recall export --format json               # Pretty-printed JSON array
+fiona recall export --format csv                # CSV with headers: key,value,category,tags,created_at,ttl_seconds
+fiona recall export --output /path/to/export.json
+</code></pre>
+<h3 id="import">Import</h3>
+<pre><code class="language-bash">fiona recall import /path/to/entries.json       # Auto-detects format from extension
+fiona recall import /path/to/entries.csv
+</code></pre>
+<p>JSON format: list of objects with <code>key</code>, <code>value</code>, optional <code>category</code>, <code>tags</code>, <code>ttl_seconds</code>.
+CSV format: headers <code>key,value,category,tags,created_at,ttl_seconds</code>.
+Imported entries with existing keys overwrite the stored value.</p>
+<h3 id="backup">Backup</h3>
+<pre><code class="language-bash">fiona recall backup                             # Creates recallvault-{timestamp}.json
+</code></pre>
+<h3 id="forget-an-entry">Forget an entry</h3>
+<pre><code class="language-bash">fiona recall forget &quot;phi-host&quot;
+</code></pre>
 <h3 id="clear-the-vault">Clear the vault</h3>
 <pre><code class="language-bash">fiona recall clear
 </code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/recall/search?q=...</code></td>
+<td>Search entries (optional query)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/recall/remember</code></td>
+<td>Save/replace entry (<code>key</code>, <code>value</code>, <code>category?</code>, <code>ttl_seconds?</code>, <code>tags?</code>)</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/v1/recall/forget/{key}</code></td>
+<td>Remove entry by key</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/recall/stats</code></td>
+<td>Vault statistics (12-field object)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="tui-integration">TUI Integration</h2>
-<p>The <strong>Recall</strong> page in the <code>fiona cli</code> TUI displays the 10 most recent snippets from the vault and updates in real-time.</p>
+<p>The <strong>Recall</strong> page in the <code>fiona cli</code> TUI displays the most recent snippets from the vault and updates in real-time.</p>
 <h2 id="storage">Storage</h2>
-<p>Data is stored as a JSON array of objects in:
-<code>~/.config/fiona/recallvault.json</code></p></div>
+<p>Data is stored as a JSON array of objects in:</p>
+<pre><code>~/.config/fiona/recallvault.json
+</code></pre>
+<p>Backups are written to <code>~/.config/fiona/recallvault-{YYYYMMDDTHHMMSS}.json</code>.</p>
+<h2 id="python-api">Python API</h2>
+<pre><code class="language-python">from RecallVault import (
+    DEFAULT_RECALL_PATH,
+    RecallEntry,
+    remember,          # Save/replace an entry (key, value, category?, ttl_seconds?, tags?)
+    search_recall,     # Search by key/value/category/tags
+    forget,            # Remove entry by key
+    list_categories,   # List unique categories
+    clear_recall,      # Delete the vault file
+    load_recall,       # Load all entries (auto-purges expired)
+    recall_stats,      # Get 12-field analytics dictionary
+    export_recall,     # Export vault to JSON or CSV file
+    import_recall,     # Import entries from JSON or CSV file (merges)
+    backup_recall,     # Create timestamped backup copy
+    SemanticIndex,     # TF-IDF semantic search index
+)
+</code></pre>
+<h3 id="recallentry-dataclass-fields"><code>RecallEntry</code> dataclass fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>key</code></td>
+<td><code>str</code></td>
+<td>(required)</td>
+<td>Unique entry identifier</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td><code>str</code></td>
+<td>(required)</td>
+<td>Stored value</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td><code>str</code></td>
+<td><code>"general"</code></td>
+<td>Single category label</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td><code>list[str] \| None</code></td>
+<td><code>None</code></td>
+<td>Optional list of tags</td>
+</tr>
+<tr>
+<td><code>ttl_seconds</code></td>
+<td><code>int \| None</code></td>
+<td><code>None</code></td>
+<td>Time-to-live in seconds (<code>None</code> = no expiry)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>str</code></td>
+<td>(auto)</td>
+<td>ISO-8601 creation timestamp</td>
+</tr>
+<tr>
+<td><code>accessed_at</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Last access timestamp (updated on search)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rememberkey-value-category-ttl_seconds-tags-path-path"><code>remember(key, value, *, category, ttl_seconds, tags, path) -&gt; Path</code></h3>
+<p>Saves or replaces an entry. If <code>ttl_seconds</code> is set, the entry will be auto-purged on the next <code>load_recall()</code> call after that many seconds have elapsed since <code>created_at</code>.</p>
+<h3 id="load_recallpath-listrecallentry"><code>load_recall(path) -&gt; list[RecallEntry]</code></h3>
+<p>Loads all entries, filtering out any that have exceeded their TTL. Expired entries are silently purged and the file is rewritten.</p>
+<h3 id="recall_statspath-dict"><code>recall_stats(path) -&gt; dict</code></h3>
+<p>Returns:
+- <code>total_entries</code>, <code>per_category</code>, <code>per_tag</code>
+- <code>total_storage_bytes</code>, <code>total_storage_human</code>
+- <code>oldest_entry</code> (key + created_at), <code>newest_entry</code>
+- <code>expired_entries</code> (count that would be purged by TTL)
+- <code>tagged_entries</code>, <code>untagged_entries</code>
+- <code>categories</code></p>
+<h3 id="export_recallpath-output-fmt-path"><code>export_recall(path, output, fmt) -&gt; Path</code></h3>
+<ul>
+<li><code>fmt="json"</code> — write as pretty-printed JSON array</li>
+<li><code>fmt="csv"</code> — write as CSV with headers</li>
+<li>If <code>output</code> is None, generates <code>recallvault-export-{timestamp}.{fmt}</code></li>
+</ul>
+<h3 id="import_recallpath-input-fmt-int"><code>import_recall(path, input, fmt) -&gt; int</code></h3>
+<ul>
+<li>Auto-detects format from file extension if <code>fmt</code> is None</li>
+<li>Merges with existing entries (same key = overwrite)</li>
+<li>Returns count of imported entries</li>
+</ul>
+<h3 id="backup_recallpath-path"><code>backup_recall(path) -&gt; Path</code></h3>
+<p>Copies the vault file to <code>recallvault-{YYYYMMDDTHHMMSS}.json</code> in the same directory. Creates an empty backup if the vault doesn't exist.</p>
+<h3 id="semanticindex-tf-idf-search"><code>SemanticIndex</code> (TF-IDF search)</h3>
+<p>Pure-Python TF-IDF implementation with zero external dependencies:</p>
+<pre><code class="language-python">from RecallVault import SemanticIndex
+
+index = SemanticIndex()
+index.build(entries)                       # Build TF-IDF matrix from entry dicts
+results = index.search(&quot;query&quot;, limit=5)   # Returns [{key, score}, ...] sorted by relevance
+index.add_entry(&quot;key&quot;, &quot;text&quot;)             # Marks index for rebuild
+</code></pre>
+<ul>
+<li>Tokenizes by word boundaries, lowercases</li>
+<li>Computes term frequency / inverse document frequency</li>
+<li>Scores by cosine similarity of TF-IDF vectors</li>
+<li>Gracefully degrades (empty results) if no documents indexed</li>
+</ul></div>
             </div>
         </div>
 

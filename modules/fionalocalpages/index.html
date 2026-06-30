@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="../../img/favicon.ico">
-        <title>fionaLocalPages — Web Dashboard - Fiona</title>
+        <title>Web Dashboard (fionaLocalPages) - Fiona</title>
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/fontawesome.min.css" rel="stylesheet">
         <link href="../../css/brands.min.css" rel="stylesheet">
@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -72,7 +76,7 @@
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Modules</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
@@ -134,6 +138,10 @@
 <li>
     <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -182,6 +190,16 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../browserautomation/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../current-state/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -220,6 +238,14 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="3"><a href="#terminal-implementation-detail" class="nav-link">Terminal Implementation Detail</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#sidebar-implementation" class="nav-link">Sidebar Implementation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#running" class="nav-link">Running</a>
@@ -243,7 +269,7 @@
 <pre><code>Python backend (aiohttp) → HTML templates → JS modules (thin SPA layer)
 </code></pre>
 <h3 id="backend-serverapppy">Backend — <code>server/app.py</code></h3>
-<p>Python aiohttp HTTP server with 10+ handler modules and 40+ REST API endpoints at <code>/api/v1/</code>. Also serves WebSocket at <code>/ws</code> for real-time push and SSE at <code>/api/v1/stream</code>.</p>
+<p>Python aiohttp HTTP server with <strong>24 handler modules</strong> and <strong>115+ REST API endpoints</strong> at <code>/api/v1/</code>. Also serves WebSocket at <code>/ws</code> for real-time push and SSE at <code>/api/v1/stream</code>.</p>
 <p><strong>Handler modules:</strong></p>
 <table>
 <thead>
@@ -262,12 +288,12 @@
 <tr>
 <td><code>browser.py</code></td>
 <td>7+</td>
-<td>Playwright browser automation (start, stop, status, navigate, click, type, screenshot)</td>
+<td>Selenium browser automation (start, stop, status, navigate, click, type, screenshot)</td>
 </tr>
 <tr>
 <td><code>terminal.py</code></td>
 <td>4</td>
-<td>Terminal command execution + autocomplete (COMMAND_REFERENCE with 14 categories, 90+ commands)</td>
+<td>Terminal execution + autocomplete + cwd (tracked server-side, every response includes <code>"cwd"</code>)</td>
 </tr>
 <tr>
 <td><code>quiktieper.py</code></td>
@@ -295,19 +321,84 @@
 <td>PhiConnect status, identity, messages, send, trust</td>
 </tr>
 <tr>
-<td><code>vsee.py</code></td>
+<td><code>actions.py</code></td>
 <td>3</td>
-<td>Vsee status, launch, model preview</td>
+<td>Action list, get, run</td>
 </tr>
 <tr>
-<td>Plus: system, agent, actions, voice, files, config, desktop, recall, macros, camcoms</td>
-<td>—</td>
-<td>Routed directly in <code>app.py</code></td>
+<td><code>agent.py</code></td>
+<td>5</td>
+<td>Chat sessions CRUD + message streaming (SSE)</td>
+</tr>
+<tr>
+<td><code>system.py</code></td>
+<td>2</td>
+<td>Health check, capabilities</td>
+</tr>
+<tr>
+<td><code>voice.py</code></td>
+<td>2</td>
+<td>Voice status, command execution</td>
+</tr>
+<tr>
+<td><code>files.py</code></td>
+<td>3</td>
+<td>File browser (list, read, write)</td>
+</tr>
+<tr>
+<td><code>config.py</code></td>
+<td>2</td>
+<td>Configuration get/update</td>
+</tr>
+<tr>
+<td><code>desktop.py</code></td>
+<td>1</td>
+<td>SeeOnDesk desktop status</td>
+</tr>
+<tr>
+<td><code>recall.py</code></td>
+<td>4</td>
+<td>RecallVault search, remember, forget, categories</td>
+</tr>
+<tr>
+<td><code>macros.py</code></td>
+<td>5</td>
+<td>Macro CRUD + run</td>
+</tr>
+<tr>
+<td><code>camcoms.py</code></td>
+<td>4</td>
+<td>CamComs status, encrypt, decrypt, send</td>
+</tr>
+<tr>
+<td><code>tasks.py</code></td>
+<td>1</td>
+<td>Task list</td>
+</tr>
+<tr>
+<td><code>plugins.py</code></td>
+<td>1</td>
+<td>Plugin list</td>
+</tr>
+<tr>
+<td><code>tools_handler.py</code></td>
+<td>2</td>
+<td>Tool list, execute</td>
+</tr>
+<tr>
+<td><code>sciretrieval.py</code></td>
+<td>1</td>
+<td>Scientific knowledge retrieval</td>
+</tr>
+<tr>
+<td><code>camcoms.py</code></td>
+<td>4</td>
+<td>Encryption/decryption service status</td>
 </tr>
 </tbody>
 </table>
 <h3 id="frontend-pages-templates">Frontend — Pages + Templates</h3>
-<p>26 page modules, each following the <code>createPage(routeInfo) → { render, mount, destroy }</code> pattern:</p>
+<p>27 page modules, each following the <code>createPage(routeInfo) → { render, mount, destroy }</code> pattern:</p>
 <ul>
 <li><strong><code>render()</code></strong> returns a mount-point <code>&lt;div&gt;</code> only</li>
 <li><strong><code>mount()</code></strong> is async — calls <code>await loadTemplate('name', data)</code> to fetch and inject HTML from <code>templates/{name}.html</code>, then binds events</li>
@@ -317,7 +408,8 @@
 - <code>{{variable}}</code> — escaped text interpolation
 - <code>{{{rawHtml}}}</code> — raw HTML (used for SVG icons)
 - <code>{{#if}}</code> / <code>{{#each}}</code> — conditionals and loops</p>
-<p><strong>All 26 routes:</strong></p>
+<p><strong>The router also handles plain object exports</strong> (<code>{ render, mount, destroy }</code>) — this was a critical fix for blank pages when <code>browser.js</code>, <code>terminal.js</code>, and <code>file-explorer.js</code> exported objects instead of factory functions.</p>
+<p><strong>All 27 routes:</strong></p>
 <table>
 <thead>
 <tr>
@@ -390,126 +482,126 @@
 <td><code>/terminal</code></td>
 <td>terminal.js</td>
 <td>terminal</td>
-<td>Interactive terminal emulator (backend-driven)</td>
+<td>Interactive terminal (backend-driven, cwd tracked server-side)</td>
 </tr>
 <tr>
 <td>10</td>
-<td><code>/vsee</code></td>
-<td>vsee.js</td>
-<td>vsee</td>
-<td>3D model viewer status + launch</td>
-</tr>
-<tr>
-<td>11</td>
 <td><code>/notifications</code></td>
 <td>notifications.js</td>
 <td>notifications</td>
 <td>Urgency-coded list with dismiss</td>
 </tr>
 <tr>
-<td>12</td>
+<td>11</td>
 <td><code>/settings</code></td>
 <td>settings.js</td>
 <td>config</td>
 <td>Multi-tab settings panels</td>
 </tr>
 <tr>
-<td>13</td>
+<td>12</td>
 <td><code>/performance</code></td>
 <td>performance.js</td>
 <td>system</td>
 <td>Real-time CPU/memory Canvas 2D charts</td>
 </tr>
 <tr>
-<td>14</td>
+<td>13</td>
 <td><code>/files</code></td>
 <td>file-explorer.js</td>
 <td>files</td>
 <td>File tree browser</td>
 </tr>
 <tr>
-<td>15</td>
+<td>14</td>
 <td><code>/browser</code></td>
 <td>browser.js</td>
 <td>browser</td>
-<td>Playwright automation controls</td>
+<td>Selenium automation controls (headless by default)</td>
 </tr>
 <tr>
-<td>16</td>
+<td>15</td>
 <td><code>/tasks</code></td>
 <td>tasks.js</td>
 <td>—</td>
 <td>Kanban task board</td>
 </tr>
 <tr>
-<td>17</td>
+<td>16</td>
 <td><code>/plugins</code></td>
 <td>plugins.js</td>
 <td>—</td>
-<td>Plugin manager</td>
+<td>Plugin manager (headless: true, Selenium-based)</td>
 </tr>
 <tr>
-<td>18</td>
+<td>17</td>
 <td><code>/logs</code></td>
 <td>logs.js</td>
 <td>—</td>
 <td>Log viewer</td>
 </tr>
 <tr>
-<td>19</td>
+<td>18</td>
 <td><code>/config</code></td>
 <td>config.js</td>
 <td>config</td>
 <td>Config file editor</td>
 </tr>
 <tr>
-<td>20</td>
+<td>19</td>
 <td><code>/diagnostics</code></td>
 <td>diagnostics.js</td>
 <td>—</td>
 <td>Health check grid</td>
 </tr>
 <tr>
-<td>21</td>
+<td>20</td>
 <td><code>/devtools</code></td>
 <td>devtools.js</td>
 <td>—</td>
 <td>Developer tools panel</td>
 </tr>
 <tr>
-<td>22</td>
+<td>21</td>
 <td><code>/workspace</code></td>
 <td>workspace.js</td>
 <td>—</td>
 <td>Project workspace overview</td>
 </tr>
 <tr>
-<td>23</td>
+<td>22</td>
 <td><code>/camcoms</code></td>
 <td>camcoms.js</td>
 <td>camcoms</td>
 <td>Service status + fingerprint</td>
 </tr>
 <tr>
-<td>24</td>
+<td>23</td>
 <td><code>/recall</code></td>
 <td>recall.js</td>
 <td>recall</td>
 <td>Key-value memory search</td>
 </tr>
 <tr>
-<td>25</td>
+<td>24</td>
 <td><code>/desktop</code></td>
 <td>desktop.js</td>
 <td>desktop</td>
 <td>Active window + snapshot</td>
 </tr>
 <tr>
-<td>26</td>
+<td>25</td>
 <td><code>/voice</code></td>
 <td>voice.js</td>
 <td>voice</td>
 <td>Command parse + audio transcription</td>
+</tr>
+<tr>
+<td>26</td>
+<td><code>/logs</code></td>
+<td>logs.js</td>
+<td>—</td>
+<td>Log viewer</td>
 </tr>
 </tbody>
 </table>
@@ -525,11 +617,11 @@
 <tbody>
 <tr>
 <td><code>js/app.js</code></td>
-<td>App initialization, 26 route registrations, sidebar/shortcut inits, store wiring</td>
+<td>App initialization, 27 route registrations, sidebar/shortcut inits, store wiring</td>
 </tr>
 <tr>
 <td><code>js/router.js</code></td>
-<td>Hash-based SPA router with lifecycle hooks, lazy page loading, active nav tracking</td>
+<td>Hash-based SPA router with lifecycle hooks, lazy page loading, active nav tracking, object-export fix</td>
 </tr>
 <tr>
 <td><code>js/api.js</code></td>
@@ -542,6 +634,10 @@
 <tr>
 <td><code>js/template-loader.js</code></td>
 <td>HTML template fetcher with <code>{{variable}}</code>, <code>{{{raw}}}</code>, <code>{{#if}}</code>, <code>{{#each}}</code></td>
+</tr>
+<tr>
+<td><code>js/components/Sidebar.js</code></td>
+<td>Static HTML sidebar with data-action event dispatch for nav, collapse, theme toggle</td>
 </tr>
 </tbody>
 </table>
@@ -577,6 +673,18 @@
 </tr>
 </tbody>
 </table>
+<h3 id="terminal-implementation-detail">Terminal Implementation Detail</h3>
+<p>The terminal page (<code>/terminal</code>) runs all logic server-side:</p>
+<ul>
+<li><strong><code>_cwd</code></strong> is a module-level variable in <code>handlers/terminal.py</code>, initialized to <code>os.path.expanduser("~")</code></li>
+<li>Every <code>safe_subprocess_run()</code> call passes <code>cwd=_cwd</code>, so <code>cd</code> has actual persistent effect</li>
+<li>Every response includes <code>"cwd": _cwd</code> — the JS client reads this to update its prompt display</li>
+<li><code>GET /api/v1/terminal/cwd</code> provides the initial directory on page mount</li>
+<li>Autocomplete: <code>POST /api/v1/terminal/autocomplete</code> returns suggestions from a <code>COMMAND_REFERENCE</code> (~90+ commands, 14 categories)</li>
+<li>JS is a thin input/output relay — no client-side <code>cd</code> tracking</li>
+</ul>
+<h3 id="sidebar-implementation">Sidebar Implementation</h3>
+<p>The sidebar is <strong>static HTML</strong> (not a JS component) to avoid stale store subscriptions that caused the Sidebar.js component to accumulate duplicate listeners. Navigation uses <code>data-action</code> attributes dispatched through a global document event listener. The <code>[data-action="toggle-sidebar"]</code> handler is a single listener on the document, not on individual elements — this was the root cause fix for the sidebar toggle bug.</p>
 <h2 id="running">Running</h2>
 <pre><code class="language-bash">./scripts/fiona-pages-start              # default port 8765
 ./scripts/fiona-pages-start --port 8080  # custom port
@@ -584,7 +692,7 @@
 </code></pre>
 <p>Open <code>http://fiona.agent:8765</code> in a browser.</p>
 <h2 id="status">Status</h2>
-<p>All 26 pages fully implemented. Production concerns (authentication, HTTPS) still being addressed. This is a supplementary control surface — the CLI and Tkinter GUI remain the primary Fiona interfaces.</p></div>
+<p>All 27 pages fully implemented. Production concerns (authentication, HTTPS) still being addressed. This is a supplementary control surface — the CLI and Tkinter GUI remain the primary Fiona interfaces.</p></div>
             </div>
         </div>
 

@@ -49,6 +49,10 @@
 <li>
     <a href="installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -215,12 +223,12 @@
               </ul>
             </li>
             
-            <li class="nav-item" data-bs-level="2"><a href="#main-commands" class="nav-link">Main Commands</a>
+            <li class="nav-item" data-bs-level="2"><a href="#quick-start" class="nav-link">Quick Start</a>
               <ul class="nav flex-column">
               </ul>
             </li>
             
-            <li class="nav-item" data-bs-level="2"><a href="#documentation-map" class="nav-link">Documentation Map</a>
+            <li class="nav-item" data-bs-level="2"><a href="#getting-oriented" class="nav-link">Getting Oriented</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -303,7 +311,7 @@
   </a>
   <a class="fiona-card" href="modules/browserautomation/">
     <strong>BrowserAutomation</strong>
-    <span>Browser automation via Playwright with session management, state machine, and error handling.</span>
+    <span>Browser automation via Selenium with session management, state machine, and error handling.</span>
   </a>
   <a class="fiona-card" href="modules/fionalocalpages/">
     <strong>fionaLocalPages</strong>
@@ -311,25 +319,16 @@
   </a>
 </div>
 
-<h2 id="main-commands">Main Commands</h2>
-<pre><code class="language-bash">python3 -m fiona.cli edit              # Open shared GUI
-python3 -m fiona.cli run               # Start chord listener
-python3 -m fiona.cli camcoms smoke-test # Test encryption
-python3 -m fiona.cli phiconnect         # Encrypted chat
-python3 -m fiona.cli seeondesk status   # Desktop awareness
-python3 -m fiona.cli --list-macros      # List automation macros
-python3 -m fiona.cli --tray-only        # Start system tray
-python3 -m fiona.cli voice wake-test    # Test wake word
+<h2 id="quick-start">Quick Start</h2>
+<pre><code class="language-bash">cd Fiona
+python3 -m fiona.cli &lt;command&gt;
 </code></pre>
 <p>After editable installation, <code>fiona ...</code> can be used instead of <code>python3 -m fiona.cli ...</code>.</p>
-<h2 id="documentation-map">Documentation Map</h2>
+<h2 id="getting-oriented">Getting Oriented</h2>
 <ul>
 <li>Start with <a href="getting-started/">Getting Started</a>.</li>
 <li>Install from <a href="installation/">Installation</a>.</li>
-<li>Understand package layout in <a href="architecture/">Architecture</a>.</li>
 <li>Deep-dive into <a href="operations/cli/">CLI Mechanics</a>, <a href="operations/gui/">GUI Mechanics</a>, and <a href="operations/workflows/">System Workflows</a>.</li>
-<li>Read each of the 15 subsystems under <a href="modules/quiktieper/">Modules</a>.</li>
-<li>Track implementation status in <a href="current-state/">Current State</a>, <a href="roadmap/">Roadmap</a>, and <a href="developer/test-suites/">Test Suites</a>.</li>
 </ul></div>
             </div>
         </div>
@@ -412,5 +411,5 @@ python3 -m fiona.cli voice wake-test    # Test wake word
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-06-26 04:33:20.273661+00:00
+Build Date UTC : 2026-06-30 06:14:12.138314+00:00
 -->

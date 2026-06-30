@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -133,6 +137,10 @@
                                     
 <li>
     <a href="../../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
 </li>
                                 </ul>
                             </li>
@@ -500,14 +508,14 @@
 <td>active-app data</td>
 </tr>
 <tr>
-<td><code>tests/browser/test_browser_manager.py</code></td>
-<td>Verifies BrowserManager state machine transitions, auto-restart, and thread safety</td>
+<td><code>tests/browser/test_browser_manager.py</code> (24)</td>
+<td>Verifies BrowserManager state machine transitions, ERROR→STARTING recovery, and graceful no-op on double-start</td>
 <td>browser lifecycle</td>
 </tr>
 <tr>
-<td><code>tests/browser/test_playwright_provider.py</code></td>
-<td>Verifies Playwright provider navigation, element interaction, script execution, and error handling</td>
-<td>browser automation</td>
+<td><code>tests/browser/test_playwright_provider.py</code> (28 skipped)</td>
+<td>Deprecated Playwright provider tests — preserved as dead code, all skipped via <code>@pytest.mark.skip</code></td>
+<td>browser automation (legacy)</td>
 </tr>
 <tr>
 <td><code>tests/contracts/test_interface_contracts.py</code></td>
@@ -618,7 +626,7 @@
 <li>global keyboard listener behavior under every desktop/session type</li>
 <li>real DataClient internet searches in deterministic CI</li>
 <li>true screen-recording or ML behavior for SeeOnDesk</li>
-<li>real Playwright browser launch in CI (all browser tests are fully mocked)</li>
+<li>real Selenium browser launch in CI (all browser tests are fully mocked); Chrome must be available via webdriver-manager</li>
 <li>real CAD server integration end-to-end</li>
 <li>fionaLocalPages dashboard rendering in headless browser</li>
 </ul>

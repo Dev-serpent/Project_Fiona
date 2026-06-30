@@ -17,6 +17,7 @@
 
 html {
   scroll-padding-top: 88px;
+  color-scheme: dark;
 }
 
 body {
@@ -274,51 +275,78 @@ blockquote {
 table {
   width: 100%;
   margin: 16px 0 26px;
-  border: 1px solid var(--fiona-line-strong);
-  border-collapse: collapse;
-  background: #0a0f1a;
+  border: 1px solid var(--fiona-line-strong) !important;
+  border-collapse: collapse !important;
+  background: #0a0f1a !important;
   border-radius: 8px;
+  overflow: hidden;
 }
 
-thead {
-  background: #101826;
+table thead,
+table tbody,
+table tfoot,
+table tr,
+table th,
+table td {
+  background: transparent !important;
+  border-color: var(--fiona-line) !important;
 }
 
-th {
-  color: #f0f6ff;
-  background: rgba(0, 210, 255, 0.08);
+table thead tr,
+table thead th {
+  background: #101826 !important;
+}
+
+table thead th {
+  color: #f0f6ff !important;
+  background: rgba(0, 210, 255, 0.08) !important;
   font-weight: 700;
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-th,
-td {
-  border: 1px solid var(--fiona-line);
+table th,
+table td {
+  border: 1px solid var(--fiona-line) !important;
   padding: 10px 12px;
   vertical-align: top;
 }
 
-tbody tr {
-  background: #0c1320;
+table tbody tr {
+  background: #0c1320 !important;
   transition: background 0.15s ease;
 }
 
-tbody tr:nth-child(even) {
-  background: #0a101c;
+table tbody tr:nth-child(even) {
+  background: #0a101c !important;
 }
 
-tbody tr:hover {
-  background: #121c30;
+table tbody tr:hover {
+  background: #121c30 !important;
 }
 
-td {
-  color: var(--fiona-text);
+table td {
+  color: var(--fiona-text) !important;
 }
 
 .bs-sidebar.affix {
   top: 84px;
+}
+
+.bs-sidebar.well {
+  background: rgba(11, 16, 30, 0.72) !important;
+  border: 1px solid var(--fiona-line) !important;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
+}
+
+.bs-sidebar.well > .navbar-collapse,
+.bs-sidebar.well > .card,
+.bs-sidebar.well .card-body {
+  background: transparent !important;
+  border: none !important;
 }
 
 #toc-collapse.card {
@@ -355,6 +383,136 @@ td {
   color: var(--fiona-cyan);
   background: rgba(0, 210, 255, 0.07);
   border-right-color: var(--fiona-cyan);
+}
+
+td code {
+  color: #8de8ff !important;
+  background: rgba(0, 210, 255, 0.08) !important;
+  border: 1px solid rgba(0, 210, 255, 0.18) !important;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
+
+/* ── Nav / Breadcrumb / Footer Dark Overrides ──────────────── */
+
+.nav,
+.nav-list,
+.nav-list li,
+.nav-list li a {
+  background: transparent !important;
+}
+
+.nav-list li a {
+  color: var(--fiona-muted) !important;
+}
+
+.nav-list li a:hover,
+.nav-list li a:focus,
+.nav-list li.active > a {
+  color: var(--fiona-cyan) !important;
+  background: rgba(0, 210, 255, 0.07) !important;
+}
+
+.breadcrumb {
+  background: transparent !important;
+}
+
+.breadcrumb-item {
+  color: var(--fiona-muted) !important;
+}
+
+.breadcrumb-item a {
+  color: var(--fiona-cyan) !important;
+}
+
+.breadcrumb-item.active {
+  color: var(--fiona-text) !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--fiona-dim) !important;
+}
+
+footer .text-muted {
+  color: var(--fiona-dim) !important;
+}
+
+/* ── Admonition / Callout Dark Overrides ───────────────────── */
+
+.admonition,
+div.admonition,
+div.admonition p,
+div.admonition > * {
+  color: var(--fiona-text) !important;
+}
+
+.admonition.note,
+.admonition.info {
+  background: rgba(0, 210, 255, 0.06) !important;
+  border-color: var(--fiona-cyan) !important;
+}
+
+.admonition.warning,
+.admonition.caution,
+.admonition.attention {
+  background: rgba(255, 184, 107, 0.08) !important;
+  border-color: var(--fiona-warn) !important;
+}
+
+.admonition.danger,
+.admonition.error {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: #ef4444 !important;
+}
+
+.admonition-title {
+  background: transparent !important;
+  color: var(--fiona-text) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Misc Dark Overrides ────────────────────────────────────── */
+
+.btn-default,
+.btn-secondary {
+  color: var(--fiona-text) !important;
+  background: #1a1c25 !important;
+  border-color: var(--fiona-line-strong) !important;
+}
+
+.btn-default:hover {
+  background: #2a2d3a !important;
+  border-color: var(--fiona-cyan) !important;
+}
+
+kbd {
+  color: var(--fiona-text) !important;
+  background: #151f33 !important;
+  border: 1px solid var(--fiona-line) !important;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85em;
+}
+
+img {
+  border-radius: 8px;
+}
+
+/* ── Search Results Dark Overrides ──────────────────────────── */
+
+#mkdocs-search-results > article > h3 > a {
+  color: var(--fiona-cyan) !important;
+}
+
+#mkdocs-search-results > article > p {
+  color: var(--fiona-muted) !important;
+}
+
+#mkdocs-search-query {
+  background: #080d17 !important;
+  border: 1px solid var(--fiona-line-strong) !important;
+  color: var(--fiona-text) !important;
 }
 
 .modal-content {
@@ -529,6 +687,158 @@ footer hr {
   border-left: 4px solid var(--fiona-warn);
   border-radius: 8px;
   background: rgba(255, 184, 107, 0.08);
+}
+
+/* ── Global Card / Panel Dark Override ───────────────────────── */
+
+.card {
+  background: rgba(11, 16, 30, 0.96) !important;
+  border: 1px solid var(--fiona-line) !important;
+  color: var(--fiona-text) !important;
+}
+
+.card-header,
+.card-footer,
+.card-body {
+  background: transparent !important;
+  color: var(--fiona-text) !important;
+  border-color: var(--fiona-line) !important;
+}
+
+/* ── List-group (used in sidebars / navs) ───────────────────── */
+
+.list-group-item {
+  background: transparent !important;
+  border-color: var(--fiona-line) !important;
+  color: var(--fiona-text) !important;
+}
+
+.list-group-item:hover {
+  background: rgba(0, 210, 255, 0.06) !important;
+}
+
+/* ── Alert overrides ─────────────────────────────────────────── */
+
+.alert {
+  color: var(--fiona-text) !important;
+  background: rgba(11, 16, 30, 0.96) !important;
+  border-color: var(--fiona-line) !important;
+}
+
+.alert-info {
+  background: rgba(0, 210, 255, 0.08) !important;
+  border-color: var(--fiona-cyan) !important;
+}
+
+.alert-success {
+  background: rgba(114, 241, 184, 0.08) !important;
+  border-color: var(--fiona-green) !important;
+}
+
+.alert-warning {
+  background: rgba(255, 184, 107, 0.08) !important;
+  border-color: var(--fiona-warn) !important;
+}
+
+.alert-danger {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: #ef4444 !important;
+}
+
+/* ── Well / Jumbotron overrides ──────────────────────────────── */
+
+.well,
+.jumbotron {
+  background: rgba(11, 16, 30, 0.96) !important;
+  border: 1px solid var(--fiona-line) !important;
+  color: var(--fiona-text) !important;
+}
+
+/* ── Progress bars ───────────────────────────────────────────── */
+
+.progress {
+  background: #1a1c25 !important;
+}
+
+.progress-bar {
+  background: var(--fiona-cyan) !important;
+}
+
+/* ── Label / badge overrides ─────────────────────────────────── */
+
+.label,
+.badge {
+  color: var(--fiona-text) !important;
+  background: #151f33 !important;
+}
+
+.label-info,
+.badge-info {
+  background: var(--fiona-blue) !important;
+}
+
+.label-success,
+.badge-success {
+  background: var(--fiona-green) !important;
+  color: #06111f !important;
+}
+
+.label-warning,
+.badge-warning {
+  background: var(--fiona-warn) !important;
+  color: #06111f !important;
+}
+
+.label-danger,
+.badge-danger {
+  background: #ef4444 !important;
+}
+
+/* ── Panel overrides ─────────────────────────────────────────── */
+
+.panel {
+  background: rgba(11, 16, 30, 0.96) !important;
+  border-color: var(--fiona-line) !important;
+}
+
+.panel-heading,
+.panel-footer,
+.panel-body {
+  background: transparent !important;
+  border-color: var(--fiona-line) !important;
+  color: var(--fiona-text) !important;
+}
+
+/* ── Tab content ─────────────────────────────────────────────── */
+
+.tab-content,
+.tab-pane {
+  background: transparent !important;
+}
+
+.nav-tabs {
+  border-bottom-color: var(--fiona-line) !important;
+}
+
+.nav-tabs > li > a {
+  color: var(--fiona-muted) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li > a:hover {
+  color: var(--fiona-cyan) !important;
+  background: rgba(0, 210, 255, 0.06) !important;
+  border-color: var(--fiona-line) !important;
+  border-bottom-color: transparent !important;
+}
+
+/* ── Responsive table wrapper ─────────────────────────────────── */
+
+.table-responsive {
+  background: transparent !important;
+  border: none !important;
 }
 
 @media (max-width: 767.98px) {

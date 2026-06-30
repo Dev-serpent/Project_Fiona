@@ -49,6 +49,10 @@
 <li>
     <a href="../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -183,7 +191,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../modules/browserautomation/" class="nav-link">
+                                <a rel="prev" href="../modules/fionalocalpages/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -246,8 +254,8 @@
 <li>Real-time sliding TUI command center with live search and non-blocking auto-refresh</li>
 <li>DE-aware Quick Actions (Lock, Logout, Suspend) for KDE, GNOME, and XFCE</li>
 <li>System status JSON API via <code>fiona api</code></li>
-<li>RecallVault persistent remembrance store for categorized memory</li>
-<li>CmdTrace high-performance observability log with action filtering</li>
+<li>RecallVault persistent remembrance store with categories, tags, TTL expiry, import/export, timestamped backups, statistics, and TF-IDF semantic search</li>
+<li>CmdTrace high-performance observability log with statistics, advanced search, export (JSON/CSV), auto-compaction by size/age, and live tail</li>
 <li>QuikTieper binding editor/listener/action runner</li>
 <li>CamComs encryption/decryption/transport/receiver/pairing</li>
 <li>trusted sender lifecycle with expiry, audit logging, and key rotation</li>
@@ -270,7 +278,7 @@
 <li>key rotation CLI and GUI</li>
 <li>system tray icon with state indicators and <code>--tray-only</code> mode</li>
 <li>voice wake-word detection, push-to-talk, and feedback engine</li>
-<li>BrowserAutomation module with Playwright lifecycle manager (start, stop, navigate, click, type, screenshot)</li>
+<li>BrowserAutomation module with Selenium lifecycle manager (start, stop, navigate, click, type, screenshot) — migrated from Playwright</li>
 <li>fionaLocalPages SPA web dashboard with aiohttp REST API (10+ handler modules, 40+ endpoints), WebSocket, SSE, 26 HTML/JS pages, terminal emulator, settings persistence, and QuikTieper API</li>
 <li>Python tests for core model, crypto, transport, service, GUI, ACL, shell safety, macro engine, pairing, voice, system tray, browser automation, and CLI command surface</li>
 </ul>
@@ -287,7 +295,7 @@
 <h2 id="latest-known-validation">Latest Known Validation</h2>
 <p>The latest recorded project validation is:</p>
 <pre><code class="language-text">Tests:
-  Python:   1413+ passed (pytest) + 54 CLI surface subtests
+  Python:   1462+ passed (pytest) + 54 CLI surface subtests (49 CmdTrace/RecallVault tests)
   CAD JS:    87 passed (vitest)
   CAD Srv:   98 passed (pytest)
   Browser:   52 passed (pytest)

@@ -49,6 +49,10 @@
 <li>
     <a href="../../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="../browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="../fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -218,6 +226,10 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#commands" class="nav-link">Commands</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#statistics" class="nav-link">Statistics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="3"><a href="#view-recent-history" class="nav-link">View recent history</a>
               <ul class="nav flex-column">
               </ul>
@@ -226,10 +238,30 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="3"><a href="#advanced-search" class="nav-link">Advanced search</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#export" class="nav-link">Export</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#compact-rotate" class="nav-link">Compact / Rotate</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="3"><a href="#clear-the-trace-log" class="nav-link">Clear the trace log</a>
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="3"><a href="#live-tail-follow-new-entries" class="nav-link">Live tail (follow new entries)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#api-endpoints" class="nav-link">API Endpoints</a>
+              <ul class="nav flex-column">
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#tui-integration" class="nav-link">TUI Integration</a>
@@ -238,6 +270,34 @@
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#storage" class="nav-link">Storage</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#auto-compaction" class="nav-link">Auto-compaction</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#python-api" class="nav-link">Python API</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="3"><a href="#trace_statspath-dict" class="nav-link">trace_stats(path) -&gt; dict</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#trace_search-query-action_name-status-start_time-end_time-regex-limit-path-listdict" class="nav-link">trace_search(*, query, action_name, status, start_time, end_time, regex, limit, path) -&gt; list[dict]</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#trace_exportpath-output-fmt-path" class="nav-link">trace_export(path, output, fmt) -&gt; Path</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#trace_compact-max_size_mb-max_age_days-keep_last-path-dict" class="nav-link">trace_compact(*, max_size_mb, max_age_days, keep_last, path) -&gt; dict</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="3"><a href="#trace_tailpath-interval-iteratordict" class="nav-link">trace_tail(path, interval) -&gt; Iterator[dict]</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
               </ul>
@@ -248,28 +308,118 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="cmdtrace">CmdTrace</h1>
-<p>CmdTrace provides a high-performance observability layer for Fiona. It records every action routed through the central <code>ActionRouter</code> into an append-only JSONL log.</p>
+<p>CmdTrace provides a high-performance observability layer for Fiona. It records every action routed through the central <code>ActionRouter</code> into an append-only JSONL log and exposes analytics, search, export, compaction, and live-tailing.</p>
 <h2 id="purpose">Purpose</h2>
 <ul>
-<li><strong>Audit Trail</strong>: Perfect record of every command executed via Fiona CLI, GUI, or remote ESP32 instructions.</li>
-<li><strong>Performance Monitoring</strong>: Records the execution time (<code>elapsed_ms</code>) of every action.</li>
-<li><strong>Failure Analysis</strong>: Logs the success/failure status and error messages for every routed task.</li>
+<li><strong>Audit Trail</strong>: Immutable record of every command executed via Fiona CLI, GUI, or remote ESP32 instructions.</li>
+<li><strong>Performance Monitoring</strong>: Records execution duration of every action for latency analysis.</li>
+<li><strong>Failure Analysis</strong>: Logs success/failure status and error messages for every routed task.</li>
+<li><strong>Operations</strong>: Statistics, advanced search, export to JSON/CSV, auto-compaction by size or age, and real-time tail monitoring.</li>
 </ul>
 <h2 id="commands">Commands</h2>
+<h3 id="statistics">Statistics</h3>
+<pre><code class="language-bash">fiona action stats
+</code></pre>
+<p>Returns 14 fields: total/success/failure/unknown event counts, per-action breakdown, duration statistics (total/avg/max), time range, file size.</p>
 <h3 id="view-recent-history">View recent history</h3>
 <pre><code class="language-bash">fiona action history --limit 20
 </code></pre>
 <h3 id="filter-history-by-action-name">Filter history by action name</h3>
 <pre><code class="language-bash">fiona action history --name host.status
 </code></pre>
+<h3 id="advanced-search">Advanced search</h3>
+<pre><code class="language-bash">fiona action search --query &quot;timeout&quot;           # Full-text search across all event fields
+fiona action search --status ok                 # Only successful actions
+fiona action search --status fail               # Only failed actions
+fiona action search --regex &quot;host\.\w+&quot;         # Python regex match against serialized JSON
+fiona action search --start-time 2026-01-01T00:00:00 --end-time 2026-06-30T23:59:59
+fiona action search --limit 100
+</code></pre>
+<h3 id="export">Export</h3>
+<pre><code class="language-bash">fiona action export --format json               # Pretty-printed JSON array
+fiona action export --format csv                # CSV with auto-discovered columns
+fiona action export --output /path/to/export.json
+</code></pre>
+<h3 id="compact-rotate">Compact / Rotate</h3>
+<pre><code class="language-bash">fiona action compact                            # Default: 10 MB max, 30 days, keep last 10k
+fiona action compact --max-size-mb 5 --max-age-days 7 --keep-last 1000
+</code></pre>
+<p>Returns a report: original/new size, original/new entry count, how many trimmed by size vs age.</p>
 <h3 id="clear-the-trace-log">Clear the trace log</h3>
 <pre><code class="language-bash">fiona action clear
 </code></pre>
+<h3 id="live-tail-follow-new-entries">Live tail (follow new entries)</h3>
+<pre><code class="language-bash">fiona action tail                               # Follow new entries in real-time
+fiona action tail --interval 0.5                # Poll every 0.5 seconds
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/actions/history</code></td>
+<td>Recent trace events (query: <code>limit</code>, <code>name</code>)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/actions/stats</code></td>
+<td>Trace analytics (14-field statistics object)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="tui-integration">TUI Integration</h2>
-<p>The <strong>History</strong> page in the <code>fiona cli</code> TUI provides a real-time sliding view of the latest system activity. It updates every second to reflect new actions.</p>
+<p>The <strong>History</strong> page in the <code>fiona cli</code> TUI provides a real-time sliding view of the latest system activity using <code>CmdTrace.read_trace()</code>.</p>
 <h2 id="storage">Storage</h2>
-<p>Data is stored as a series of JSON objects (one per line) in:
-<code>~/.config/fiona/cmdtrace.jsonl</code></p></div>
+<p>Data is stored as JSON Lines (one JSON object per line) in:</p>
+<pre><code>~/.config/fiona/cmdtrace.jsonl
+</code></pre>
+<h3 id="auto-compaction">Auto-compaction</h3>
+<p>When <code>trace_compact()</code> is called (or configured to run periodically), the file is checked against size and age thresholds. Entries beyond the configured limits are trimmed, with the most recent <code>keep_last</code> entries preserved.</p>
+<h2 id="python-api">Python API</h2>
+<pre><code class="language-python">from CmdTrace import (
+    append_trace,      # Append an event to the trace
+    read_trace,        # Read recent events (filter by action_name, limit)
+    clear_trace,       # Delete the trace file
+    trace_stats,       # Get 14-field analytics dictionary
+    trace_search,      # Advanced search (query, status, regex, time range, limit)
+    trace_export,      # Export trace to JSON or CSV file
+    trace_compact,     # Compact/rotate by file size or entry age
+    trace_tail,        # Iterator that yields new events as they're written
+)
+</code></pre>
+<h3 id="trace_statspath-dict"><code>trace_stats(path) -&gt; dict</code></h3>
+<p>Returns:
+- <code>total_events</code>, <code>skipped_lines</code> — event counts
+- <code>per_action</code> — <code>{action_name: count}</code> sorted by frequency
+- <code>success_count</code>, <code>failure_count</code>, <code>unknown_status_count</code>
+- <code>first_event_time</code>, <code>last_event_time</code>, <code>time_span_seconds</code>
+- <code>total_duration</code>, <code>avg_duration</code>, <code>max_duration</code>
+- <code>file_size_bytes</code>, <code>file_size_human</code></p>
+<h3 id="trace_search-query-action_name-status-start_time-end_time-regex-limit-path-listdict"><code>trace_search(*, query, action_name, status, start_time, end_time, regex, limit, path) -&gt; list[dict]</code></h3>
+<p>All parameters are keyword-only:
+- <code>query</code> — case-insensitive substring search across ALL string values
+- <code>action_name</code> — exact match on <code>event["action"]</code>
+- <code>status</code> — <code>True</code> for ok, <code>False</code> for failures, <code>None</code> for no filter
+- <code>start_time</code> / <code>end_time</code> — ISO timestamp range filter
+- <code>regex</code> — Python <code>re.search</code> against <code>json.dumps(event)</code>
+- <code>limit</code> — max results (default 100)</p>
+<h3 id="trace_exportpath-output-fmt-path"><code>trace_export(path, output, fmt) -&gt; Path</code></h3>
+<ul>
+<li><code>fmt="json"</code> — write as pretty-printed JSON array</li>
+<li><code>fmt="csv"</code> — write as CSV with auto-discovered headers</li>
+<li>If <code>output</code> is None, generates <code>cmdtrace-export-{timestamp}.{fmt}</code></li>
+</ul>
+<h3 id="trace_compact-max_size_mb-max_age_days-keep_last-path-dict"><code>trace_compact(*, max_size_mb, max_age_days, keep_last, path) -&gt; dict</code></h3>
+<p>Returns compaction report with <code>original_size_bytes</code>, <code>new_size_bytes</code>, <code>original_entries</code>, <code>new_entries</code>, <code>trimmed_by_size</code>, <code>trimmed_by_age</code>.</p>
+<h3 id="trace_tailpath-interval-iteratordict"><code>trace_tail(path, interval) -&gt; Iterator[dict]</code></h3>
+<p>Returns an iterator that polls for file growth every <code>interval</code> seconds. Handles file truncation gracefully. Call <code>.close()</code> to stop.</p></div>
             </div>
         </div>
 

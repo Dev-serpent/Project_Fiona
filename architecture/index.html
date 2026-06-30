@@ -49,6 +49,10 @@
 <li>
     <a href="../installation/" class="dropdown-item">Installation</a>
 </li>
+                                    
+<li>
+    <a href="../guides/using-the-dashboard/" class="dropdown-item">Using the Dashboard</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -134,6 +138,10 @@
 <li>
     <a href="../modules/browserautomation/" class="dropdown-item">BrowserAutomation</a>
 </li>
+                                    
+<li>
+    <a href="../modules/fionalocalpages/" class="dropdown-item">Web Dashboard (fionaLocalPages)</a>
+</li>
                                 </ul>
                             </li>
                             <li class="nav-item">
@@ -183,7 +191,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../installation/" class="nav-link">
+                                <a rel="prev" href="../guides/using-the-dashboard/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -256,7 +264,7 @@
 <li><code>TerminalAssist</code>: btop-style terminal dashboard (fAT), sliding TUI command center, and Zellij workspace helper.</li>
 <li><code>CmdTrace</code>: JSONL-based observability and audit logging for routed actions, with action filtering and high-performance trace reads.</li>
 <li><code>RecallVault</code>: persistent key-value remembrance store for categorized memory — search, categories, and lifecycle management.</li>
-<li><code>BrowserAutomation</code>: browser automation via Playwright with session management, state machine, navigation, clicking, typing, and screenshot capture.</li>
+<li><code>BrowserAutomation</code>: browser automation via Selenium with session management, state machine, navigation, clicking, typing, and screenshot capture.</li>
 </ul>
 <h2 id="web-frontend-fionalocalpages">Web Frontend (fionaLocalPages)</h2>
 <p>The <code>fionaLocalPages/</code> directory contains a standalone aiohttp-based single-page application (SPA) that serves as a modern web dashboard for Fiona. It replaces the need for Tkinter GUIs for most operations.</p>
@@ -294,7 +302,7 @@ FionaCore/             shared primitives: action routing, ACL, shell safety, mac
 CmdTrace/              JSONL observability and audit trace for actions
 RecallVault/           persistent key-value remembrance store
 Voice/                 wake-word detection, push-to-talk, and feedback engine
-BrowserAutomation/     Playwright-based browser automation with state machine
+BrowserAutomation/     Selenium-based browser automation with state machine
 fionaLocalPages/       aiohttp SPA web frontend (REST + WebSocket + SSE)
 scripts/               local launch wrappers
 tests/                 Python tests
