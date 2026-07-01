@@ -167,7 +167,7 @@ python3 -m fiona.cli <command>
 
 ## Subsystem Overview
 
-Fiona exposes **fourteen sibling subsystems**, each in its own package:
+Fiona exposes **fifteen sibling subsystems**, each in its own package:
 
 | Subsystem | Directory | Purpose |
 |-----------|-----------|---------|
@@ -181,8 +181,9 @@ Fiona exposes **fourteen sibling subsystems**, each in its own package:
 | **SeeOnDesk** | `SeeOnDesk/` | Desktop awareness — active window detection, process tracking, workspace monitoring |
 | **TerminalAssist** | `TerminalAssist/` | btop-inspired terminal dashboard (`fAT`), Zellij workspace helper |
 | **RecallVault** | `RecallVault/` | Persistent key-value store with categories, tags, TTL/expiry, import/export (JSON/CSV), timestamped backups, statistics, and optional TF-IDF semantic search |
-| **CmdTrace** | `CmdTrace/` | Action trace observability — JSONL audit log with statistics, advanced search, CSV/JSON export, auto-compaction by size/age, and live tail monitoring |
+| **SciPhi** | `SciPhi/` | Scientific computing framework — model definition, OpsimKernel orchestration, hypothesis engine, uncertainty analysis, domain solvers (physics, chemistry, biology, earth science, engineering) |
 | **SciRetrieval** | `SciRetrieval/` | Scientific knowledge retrieval — domain-aware query routing to NCBI/PubChem/NIST with normalization, entity resolution, and caching |
+| **CmdTrace** | `CmdTrace/` | Action trace observability — JSONL audit log with statistics, advanced search, CSV/JSON export, auto-compaction by size/age, and live tail monitoring |
 | **DataClient** | `DataClient/` | Research and data collection — web mining, deep research, CSV/JSON/SQLite table editor |
 | **EyeControl** | `EyeControl/` | Optional camera-based eye-controlled mouse tracker |
 
@@ -226,6 +227,8 @@ fiona phiconnect                # Open encrypted chat app
 fiona dataclient mine <topic>   # Quick web research
 fiona dataclient deep <topic>   # Deep research
 fiona sire query "question"     # Scientific knowledge retrieval
+fiona sciphi run "prompt"       # SciPhi simulation (via OpsimKernel pipeline)
+fiona sciphi explore "topic"    # Interactive SciPhi exploration mode
 fiona import-apps               # Import desktop .desktop launchers
 fiona assign-keys               # Assign launch keys to apps
 fiona --tray-only               # System tray icon only
@@ -254,6 +257,7 @@ SeeOnDesk/              Desktop awareness, process tracking, workspace watcher
 TerminalAssist/         btop-inspired terminal dashboard (fAT), Zellij helper
 RecallVault/            Persistent remembrance store
 SciRetrieval/           Scientific knowledge retrieval subsystem
+SciPhi/                 Scientific computing framework (OpsimKernel, models, solvers)
 DataClient/             Research/data collection app
 EyeControl/             Optional camera-based eye tracker
 CmdTrace/               Action trace logging
@@ -272,6 +276,7 @@ pip install pvporcupine             # Best wake word detection
 pip install snowboy                 # Alternative wake word
 pip install pystray Pillow          # System tray icon
 pip install -e ".[sciretrieval]"    # aioHTTP for SciRetrieval providers
+pip install -e ".[sciphi]"         # scipy, sympy, matplotlib for SciPhi solvers and visualization
 ```
 
 System tools for local control: `ydotool`, `kdotool`, `xdotool`, `xprop`, `aplay`, `paplay`, `notify-send`, `scrot`.
@@ -316,13 +321,96 @@ python3 -m fiona.cli agent ask --model qwen3:8b "What is the status?"
 
 Includes a think-act-observe loop for tool use and scientific query enrichment.
 
+### SciRetrieval (Scientific Knowledge Retrieval)
+
+SciRetrieval provides domain-aware scientific literature and database retrieval:
+
+```bash
+python3 -m fiona.cli sire query "What is the band gap of silicon carbide?"
+```
+
+**Providers:**
+- **NCBI** — PubMed article search, E-Utilities (ESummary, EFetch, ESearch)
+- **PubChem** — compound search, substance search, chemical property lookup
+- **NIST** — physical constant and material property database queries
+
+**Architecture:**
+- `MainText` → Scientific Domain Identifier → Provider Selection → SciLab processing
+- Temporary-by-default memory with one-link-deep SQLite exception for long-term traces
+- CPU-inspired hierarchical caching for NIST datasets
+- All queries routed through a DI-resolved bridge: `GetData(dataset, request)`
+- 6 REST API endpoints exposed via FLoP at `/api/v1/sciretrieval/*`
+
+### SciPhi (Scientific Computing Framework)
+
+SciPhi is a scientific computing framework for defining models, connecting them to numerical solvers, and running simulations with uncertainty analysis and provenance tracking. It follows a strict directive workflow: **Analyze → Consult Documentation → Design Before Coding → Build Using Opsim → Validate Scientific Correctness → Test**.
+
+```bash
+python3 -m sciphi run "SIR epidemiological model with vaccination"
+python3 -m sciphi explore "quantum harmonic oscillator"
+```
+
+**Architecture — OpsimKernel Pipeline:**
+
+```
+User/Agent Request → OpsimKernel → Simulation Advisor → Scientific Planner
+  → Hypothesis Engine → Model Selector → Problem Compiler
+  → Solver Selection Engine → Solver → Validation
+  → Uncertainty Analysis → Provenance → Report
+```
+
+**Key components:**
+
+| Component | Module | Purpose |
+|-----------|--------|---------|
+| **OpsimKernel** | `kernel/opsim.py` | Central orchestration — routes queries through the full pipeline |
+| **Simulation Advisor** | `kernel/advisor.py` | Analyzes query intent, suggests simulation strategies |
+| **Scientific Planner** | `kernel/planner.py` | Decomposes problems into step-by-step scientific plans |
+| **Model Selector** | `kernel/compiler.py` | Selects and instantiates domain models |
+| **Problem Compiler** | `kernel/compiler.py` | Compiles models + parameters into computational problems |
+| **Hypothesis Engine** | `kernel/hypothesis.py` | Form-aware hypothesis generation with 6 evaluation strategies |
+| **Solver Selector** | `kernel/solver_selector.py` | Picks optimal solver based on problem form |
+| **Validation** | `kernel/evaluator.py` | Scientific correctness checks, convergence validation |
+| **Uncertainty** | `kernel/uncertainty.py` | Error propagation, Monte Carlo uncertainty estimation |
+| **Provenance** | `kernel/provenance.py` | Complete audit trail — every simulation step recorded |
+| **Report** | `kernel/report.py` | Structured investigation reports |
+
+**Domain Models** (12+ built-in):
+
+| Domain | Models |
+|--------|--------|
+| **Physics** | Kinematics, Dynamics, Thermodynamics, Electromagnetism, Quantum |
+| **Chemistry** | Equilibrium, Reaction kinetics, Stoichiometry |
+| **Biology** | Epidemiology (SIR/SEIR), Population dynamics |
+| **Earth Science** | Climate modeling |
+| **Engineering** | Circuits, Structural mechanics |
+
+**Solvers** (4 categories, 7 implementations):
+
+| Category | Solvers |
+|----------|---------|
+| **Deterministic** | ODE solver (RK4, Euler), Algebraic solver |
+| **Stochastic** | Monte Carlo simulation |
+| **Optimization** | Gradient descent, simulated annealing |
+| **Symbolic** | Analytical solution derivation (via sympy) |
+
+**Design principles:**
+- **Models** describe the science, never the computation
+- **Solvers** describe the computation, never the science
+- **OpsimKernel** bridges both, remaining domain-agnostic
+- stdlib-first: numpy core, scipy/sympy/matplotlib optional
+- Every simulation goes through the Problem Compiler → Solver Selection Engine → Solver pipeline, never directly
+- Provenance by construction — every transformation recorded automatically
+
+**Test coverage:** 394+ tests (72 hypothesis tests, form-aware generation, 6 evaluation strategies, ranking methods)
+
 ## Running Tests
 
 ```bash
 python -m pytest tests/ -v
-# 1058+ tests across all subsystems (49 in test_cmdtrace_recallvault.py)
+# 1450+ tests across all subsystems (394 in SciPhi, 49 in test_cmdtrace_recallvault.py)
 python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect \
-  QuikTieper SciRetrieval SeeOnDesk TerminalAssist Voice Vsee fiona
+  QuikTieper SciPhi SciRetrieval SeeOnDesk TerminalAssist Voice Vsee fiona
 ```
 
 ## Current State
@@ -345,9 +433,10 @@ python -m compileall Agent CamComs DataClient EyeControl FionaCore PhiConnect \
 - Ollama local inference bridge with planning loop
 - Encrypted computer-to-computer chat (PhiConnect)
 - Scientific knowledge retrieval (NCBI/PubChem/NIST) with caching
+- SciPhi scientific computing framework — OpsimKernel pipeline, 12+ domain models, 7 solvers, hypothesis engine, uncertainty analysis, provenance
 - CmdTrace action audit log with statistics, advanced search, export (JSON/CSV), auto-compaction, and live tail
 - RecallVault key-value store with TTL expiry, tags, import/export (JSON/CSV), timestamped backup, statistics dashboard, and TF-IDF semantic search
-- Python test suite (1058+ tests)
+- Python test suite (1450+ tests)
 
 **Still in progress:**
 
